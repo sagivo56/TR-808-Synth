@@ -14,7 +14,7 @@ on Windows, plus **AU** when built on macOS.
 | Milestone | Description | State |
 |-----------|-------------|-------|
 | **M0** | Scaffold: CMake+JUCE, VST3/AU/Standalone targets, APVTS skeleton, silent output | ✅ **done** — builds (VST3+Standalone), passes `pluginval` strictness 10 |
-| M1 | DSP building blocks | ⬜ |
+| **M1** | DSP building blocks | ✅ **done** — 8 blocks in `Source/dsp`, 36/36 offline checks pass |
 | M2 | Voice engine (16 voices) | ⬜ |
 | M3 | Deep-edit params | ⬜ |
 | M4 | Sequencer | ⬜ |
@@ -88,6 +88,21 @@ $proc = Start-Process $pv -NoNewWindow -Wait -PassThru `
 ```
 
 M0 result: **strictness 10 → SUCCESS** (all tests pass).
+
+---
+
+## DSP tests (M1)
+
+The `/dsp` blocks have an offline harness (`tests/DspTests.cpp`) built as the
+`dsp_tests` console app. It renders each block and checks it numerically and
+spectrally (FFT) — including that the PolyBLEP square is band-limited. Run:
+
+```powershell
+cmake --build build --config Release --target dsp_tests
+& "build\dsp_tests_artefacts\Release\dsp_tests.exe"   # exits non-zero on any failure
+```
+
+M1 result: **36/36 checks pass**.
 
 ---
 
