@@ -25,6 +25,7 @@ public:
 
     void trigger() noexcept;                       // gate on
     void noteOff() noexcept;                        // gate off (AR only)
+    void forceRelease (float ms) noexcept;          // start a fast exp release from the current level (choke)
 
     bool  isActive() const noexcept { return stage != Stage::idle; }
     float getLevel() const noexcept { return level; }
