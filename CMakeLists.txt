@@ -78,6 +78,7 @@ set(TR808_VOICE_SOURCES
     Source/voices/MetalVoice.cpp
     Source/voices/MaracasVoice.cpp
     Source/engine/VoiceManager.cpp
+    Source/engine/Sequencer.cpp
 )
 
 target_sources(TR808Synth PRIVATE
@@ -160,6 +161,32 @@ if(TR808_BUILD_TESTS)
         PRIVATE
             juce::juce_dsp
             juce::juce_audio_basics
+        PUBLIC
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+    )
+
+    # Sequencer tests (M4): step timing, swing, accent/flam, mute/solo,
+    # host vs internal transport, and state round-trip.
+    juce_add_console_app(seq_tests PRODUCT_NAME "TR808 Sequencer Tests")
+
+    target_sources(seq_tests PRIVATE
+        tests/SeqTests.cpp
+        Source/engine/Sequencer.cpp
+    )
+
+    target_include_directories(seq_tests PRIVATE Source)
+
+    target_compile_definitions(seq_tests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+    )
+
+    target_link_libraries(seq_tests
+        PRIVATE
+            juce::juce_dsp
+            juce::juce_audio_basics
+            juce::juce_data_structures
         PUBLIC
             juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags

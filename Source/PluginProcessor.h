@@ -8,6 +8,7 @@
 
 #include "params/ParameterLayout.h"
 #include "engine/VoiceManager.h"
+#include "engine/Sequencer.h"
 
 //==============================================================================
 // TR-808-style drum synthesiser — top-level AudioProcessor.
@@ -54,11 +55,17 @@ public:
     //==============================================================================
     juce::AudioProcessorValueTreeState apvts;
 
+    tr808::Sequencer& getSequencer() noexcept { return sequencer; }
+
 private:
     void updateMacrosFromApvts();
     void updateDeepFromApvts();
 
     tr808::VoiceManager voiceManager;
+    tr808::Sequencer    sequencer;
+
+    // Reusable, pre-reserved per-block event buffer (no audio-thread allocation).
+    std::vector<tr808::TriggerEvent> eventBuffer;
 
     juce::LinearSmoothedValue<float> masterGain;
     std::atomic<float>* masterGainParam = nullptr;

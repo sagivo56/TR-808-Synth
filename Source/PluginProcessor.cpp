@@ -2,6 +2,8 @@
 #include "PluginEditor.h"
 #include "params/ParameterIDs.h"
 
+#include <algorithm>
+
 //==============================================================================
 TR808AudioProcessor::TR808AudioProcessor()
     : AudioProcessor (BusesProperties()
@@ -14,6 +16,8 @@ TR808AudioProcessor::TR808AudioProcessor()
 void TR808AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     voiceManager.prepare (sampleRate, samplesPerBlock);
+    sequencer.prepare (sampleRate);
+    eventBuffer.reserve (1024);
 
     masterGainParam = apvts.getRawParameterValue (ParamIDs::masterGain);
     masterGain.reset (sampleRate, 0.02);
@@ -84,9 +88,35 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     updateMacrosFromApvts();
     updateDeepFromApvts();
 
-    // The VoiceManager clears the buffer, then renders the voices with
-    // sample-accurate triggers driven by the incoming MIDI.
-    voiceManager.process (buffer, midiMessages);
+    // Transport from the host (falls back to the sequencer's internal clock).
+    tr808::Sequencer::TransportInfo transport;
+    transport.sampleRate = getSampleRate();
+    transport.numSamples = buffer.getNumSamples();
+    if (auto* ph = getPlayHead())
+        if (const auto pos = ph->getPosition())
+        {
+            transport.hostPlaying = pos->getIsPlaying();
+            if (const auto bpm = pos->getBpm())         transport.bpm         = *bpm;
+            if (const auto ppq = pos->getPpqPosition()) transport.ppqPosition = *ppq;
+        }
+
+    // Sequencer events for this block, then merge in any incoming MIDI note-ons.
+    sequencer.process (transport, eventBuffer);
+    for (const auto meta : midiMessages)
+    {
+        const auto msg = meta.getMessage();
+        if (msg.isNoteOn())
+        {
+            const int idx = tr808::gmNoteToVoice (msg.getNoteNumber());
+            if (idx >= 0)
+                eventBuffer.push_back ({ meta.samplePosition, idx, msg.getFloatVelocity(),
+                                         msg.getVelocity() >= tr808::VoiceManager::accentVelocity });
+        }
+    }
+    std::sort (eventBuffer.begin(), eventBuffer.end(),
+               [] (const auto& a, const auto& b) { return a.samplePos < b.samplePos; });
+
+    voiceManager.renderEvents (buffer, eventBuffer);
 
     if (masterGainParam != nullptr)
         masterGain.setTargetValue (juce::Decibels::decibelsToGain (masterGainParam->load()));
@@ -102,15 +132,35 @@ juce::AudioProcessorEditor* TR808AudioProcessor::createEditor()
 //==============================================================================
 void TR808AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    if (auto xml = apvts.copyState().createXml())
+    // Wrap params + sequencer so both are saved together.
+    juce::ValueTree root ("TR808STATE");
+    root.appendChild (apvts.copyState(), nullptr);
+    root.appendChild (sequencer.toValueTree(), nullptr);
+
+    if (auto xml = root.createXml())
         copyXmlToBinary (*xml, destData);
 }
 
 void TR808AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    if (auto xml = getXmlFromBinary (data, sizeInBytes))
-        if (xml->hasTagName (apvts.state.getType()))
-            apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    auto xml = getXmlFromBinary (data, sizeInBytes);
+    if (xml == nullptr)
+        return;
+
+    const auto tree = juce::ValueTree::fromXml (*xml);
+    if (! tree.isValid())
+        return;
+
+    if (tree.hasType (apvts.state.getType()))           // legacy: bare PARAMETERS tree
+    {
+        apvts.replaceState (tree);
+        return;
+    }
+
+    if (const auto params = tree.getChildWithName (apvts.state.getType()); params.isValid())
+        apvts.replaceState (params);
+    if (const auto seq = tree.getChildWithName ("SEQUENCER"); seq.isValid())
+        sequencer.fromValueTree (seq);
 }
 
 //==============================================================================

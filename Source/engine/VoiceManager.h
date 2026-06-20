@@ -11,10 +11,20 @@
 
 namespace tr808
 {
+// A single voice trigger at a sample offset within the current block. Built
+// from incoming MIDI and/or the Sequencer, merged and rendered sample-accurately.
+struct TriggerEvent
+{
+    int   samplePos;
+    int   voiceIndex;
+    float velocity;
+    bool  accent;
+};
+
 //==============================================================================
 // Owns the 16 voices, maps GM notes to them, renders with sample-accurate
-// triggers (the block is split at each note-on), sums the mono voices to
-// stereo, and enforces the hi-hat choke group (OH/CH are mutually exclusive).
+// triggers (the block is split at each event), sums the mono voices to stereo,
+// and enforces the hi-hat choke group (OH/CH are mutually exclusive).
 //==============================================================================
 class VoiceManager
 {
@@ -24,7 +34,13 @@ public:
     void prepare (double sampleRate, int maxBlockSize);
     void reset();
 
+    // Convenience MIDI-only path (used by tests): builds events from the MIDI
+    // buffer and renders them.
     void process (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi);
+
+    // Core render: 'events' must be sorted by samplePos. Clears the buffer,
+    // splits at each event, triggers, and sums to stereo.
+    void renderEvents (juce::AudioBuffer<float>& buffer, const std::vector<TriggerEvent>& events);
 
     void noteOn (int voiceIndex, float velocity, bool accent);
     bool isVoiceActive (int voiceIndex) const;

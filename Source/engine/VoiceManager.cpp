@@ -114,27 +114,38 @@ void VoiceManager::renderSegment (juce::AudioBuffer<float>& buffer, int start, i
     }
 }
 
-void VoiceManager::process (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+void VoiceManager::renderEvents (juce::AudioBuffer<float>& buffer, const std::vector<TriggerEvent>& events)
 {
     buffer.clear();
     const int numSamples = buffer.getNumSamples();
 
     int pos = 0;
-    for (const auto meta : midi)
+    for (const auto& e : events)
     {
-        const auto msg = meta.getMessage();
-        if (! msg.isNoteOn())
-            continue;
-
-        const int t = juce::jlimit (0, numSamples, meta.samplePosition);
+        const int t = juce::jlimit (0, numSamples, e.samplePos);
         renderSegment (buffer, pos, t - pos);
         pos = t;
-
-        const int idx = gmNoteToVoice (msg.getNoteNumber());
-        if (idx >= 0)
-            noteOn (idx, msg.getFloatVelocity(), msg.getVelocity() >= accentVelocity);
+        noteOn (e.voiceIndex, e.velocity, e.accent);
     }
 
     renderSegment (buffer, pos, numSamples - pos);
+}
+
+void VoiceManager::process (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+{
+    // Test convenience: translate MIDI note-ons to events (allocates — fine here).
+    std::vector<TriggerEvent> events;
+    for (const auto meta : midi)
+    {
+        const auto msg = meta.getMessage();
+        if (msg.isNoteOn())
+        {
+            const int idx = gmNoteToVoice (msg.getNoteNumber());
+            if (idx >= 0)
+                events.push_back ({ meta.samplePosition, idx, msg.getFloatVelocity(),
+                                    msg.getVelocity() >= accentVelocity });
+        }
+    }
+    renderEvents (buffer, events);
 }
 }
