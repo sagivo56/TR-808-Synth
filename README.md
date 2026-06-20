@@ -15,7 +15,7 @@ on Windows, plus **AU** when built on macOS.
 |-----------|-------------|-------|
 | **M0** | Scaffold: CMake+JUCE, VST3/AU/Standalone targets, APVTS skeleton, silent output | ✅ **done** — builds (VST3+Standalone), passes `pluginval` strictness 10 |
 | **M1** | DSP building blocks | ✅ **done** — 8 blocks in `Source/dsp`, 36/36 offline checks pass |
-| M2 | Voice engine (16 voices) | ⬜ |
+| **M2** | Voice engine (16 voices) | ✅ **done** — GM trigger, Macro params, hat choke; voice_tests 77/77, pluginval 10 |
 | M3 | Deep-edit params | ⬜ |
 | M4 | Sequencer | ⬜ |
 | M5 | Mixer & routing | ⬜ |
@@ -103,6 +103,18 @@ cmake --build build --config Release --target dsp_tests
 ```
 
 M1 result: **36/36 checks pass**.
+
+The voice engine (M2) has its own harness (`tests/VoiceTests.cpp` → `voice_tests`):
+it triggers all 16 voices and checks output/decay, the GM note map, sample-accurate
+triggering and the hi-hat choke.
+
+```powershell
+cmake --build build --config Release --target voice_tests
+& "build\voice_tests_artefacts\Release\voice_tests.exe"
+```
+
+M2 result: **77/77 checks pass**; pluginval strictness 10 → SUCCESS on the
+synthesizing plugin.
 
 ---
 
