@@ -16,7 +16,7 @@ on Windows, plus **AU** when built on macOS.
 | **M0** | Scaffold: CMake+JUCE, VST3/AU/Standalone targets, APVTS skeleton, silent output | ✅ **done** — builds (VST3+Standalone), passes `pluginval` strictness 10 |
 | **M1** | DSP building blocks | ✅ **done** — 8 blocks in `Source/dsp`, 36/36 offline checks pass |
 | **M2** | Voice engine (16 voices) | ✅ **done** — GM trigger, Macro params, hat choke; voice_tests 77/77, pluginval 10 |
-| M3 | Deep-edit params | ⬜ |
+| **M3** | Deep-edit params | ✅ **done** — all per-stage params in APVTS (automatable), macros = modifiers; pluginval 10 |
 | M4 | Sequencer | ⬜ |
 | M5 | Mixer & routing | ⬜ |
 | M6 | UI | ⬜ |
