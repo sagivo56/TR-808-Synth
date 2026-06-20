@@ -78,13 +78,13 @@ set(TR808_VOICE_SOURCES
     Source/voices/MetalVoice.cpp
     Source/voices/MaracasVoice.cpp
     Source/engine/VoiceManager.cpp
-    Source/engine/Sequencer.cpp
 )
 
 target_sources(TR808Synth PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/params/ParameterLayout.cpp
+    Source/engine/Sequencer.cpp
     ${TR808_DSP_SOURCES}
     ${TR808_VOICE_SOURCES}
 )
