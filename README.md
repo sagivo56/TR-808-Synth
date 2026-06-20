@@ -17,7 +17,7 @@ on Windows, plus **AU** when built on macOS.
 | **M1** | DSP building blocks | ✅ **done** — 8 blocks in `Source/dsp`, 36/36 offline checks pass |
 | **M2** | Voice engine (16 voices) | ✅ **done** — GM trigger, Macro params, hat choke; voice_tests 77/77, pluginval 10 |
 | **M3** | Deep-edit params | ✅ **done** — all per-stage params in APVTS (automatable), macros = modifiers; pluginval 10 |
-| M4 | Sequencer | ⬜ |
+| **M4** | Sequencer | ✅ **done** — 16-step, host-synced sample-accurate, accent/flam/swing/AB/mute-solo; seq_tests 18/18, pluginval 10 |
 | M5 | Mixer & routing | ⬜ |
 | M6 | UI | ⬜ |
 | M7 | Presets & polish | ⬜ |
@@ -115,6 +115,18 @@ cmake --build build --config Release --target voice_tests
 
 M2 result: **77/77 checks pass**; pluginval strictness 10 → SUCCESS on the
 synthesizing plugin.
+
+The sequencer (M4) has `tests/SeqTests.cpp` → `seq_tests`: PPQ step timing
+(sample-accuracy), no double-fire across blocks, internal transport, mute/solo,
+swing and a state round-trip.
+
+```powershell
+cmake --build build --config Release --target seq_tests
+& "build\seq_tests_artefacts\Release\seq_tests.exe"
+```
+
+M4 result: **seq_tests 18/18**; pluginval strictness 10 → SUCCESS with the
+sequencer integrated.
 
 ---
 
