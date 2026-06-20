@@ -2,7 +2,10 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <array>
+
 #include "params/ParameterLayout.h"
+#include "engine/VoiceManager.h"
 
 //==============================================================================
 // TR-808-style drum synthesiser — top-level AudioProcessor.
@@ -50,5 +53,15 @@ public:
     juce::AudioProcessorValueTreeState apvts;
 
 private:
+    void updateMacrosFromApvts();
+
+    tr808::VoiceManager voiceManager;
+
+    juce::LinearSmoothedValue<float> masterGain;
+    std::atomic<float>* masterGainParam = nullptr;
+
+    // Cached APVTS pointers per voice (nullptr where a voice lacks that macro).
+    std::array<std::atomic<float>*, tr808::numVoices> levelP {}, toneP {}, decayP {}, snappyP {}, tuneP {};
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TR808AudioProcessor)
 };

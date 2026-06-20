@@ -45,6 +45,16 @@ void Envelope::noteOff() noexcept
         stage = Stage::release;
 }
 
+void Envelope::forceRelease (float ms) noexcept
+{
+    if (stage == Stage::idle)
+        return;
+
+    const double samples = std::max (1.0, (double) std::max (0.1f, ms) * 0.001 * sampleRate);
+    releaseMul = (float) std::exp (std::log ((double) floorLevel) / samples);
+    stage = Stage::release;
+}
+
 float Envelope::processSample() noexcept
 {
     switch (stage)

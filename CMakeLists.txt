@@ -65,11 +65,27 @@ set(TR808_DSP_SOURCES
     Source/dsp/MetalCluster.cpp
 )
 
+# Voice engine (M2): the 16 voices + manager. Pure-DSP voices; the manager uses
+# juce_audio_basics (MidiBuffer/AudioBuffer). Compiled into the plugin and the
+# voice test app.
+set(TR808_VOICE_SOURCES
+    Source/voices/BassDrumVoice.cpp
+    Source/voices/SnareVoice.cpp
+    Source/voices/TomCongaVoice.cpp
+    Source/voices/TunedResonatorVoice.cpp
+    Source/voices/ClapVoice.cpp
+    Source/voices/CowbellVoice.cpp
+    Source/voices/MetalVoice.cpp
+    Source/voices/MaracasVoice.cpp
+    Source/engine/VoiceManager.cpp
+)
+
 target_sources(TR808Synth PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/params/ParameterLayout.cpp
     ${TR808_DSP_SOURCES}
+    ${TR808_VOICE_SOURCES}
 )
 
 target_include_directories(TR808Synth PRIVATE Source)
@@ -115,6 +131,32 @@ if(TR808_BUILD_TESTS)
     )
 
     target_link_libraries(dsp_tests
+        PRIVATE
+            juce::juce_dsp
+            juce::juce_audio_basics
+        PUBLIC
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+    )
+
+    # Voice-engine tests (M2): triggers each voice, checks output, GM mapping,
+    # and the hi-hat choke.
+    juce_add_console_app(voice_tests PRODUCT_NAME "TR808 Voice Tests")
+
+    target_sources(voice_tests PRIVATE
+        tests/VoiceTests.cpp
+        ${TR808_DSP_SOURCES}
+        ${TR808_VOICE_SOURCES}
+    )
+
+    target_include_directories(voice_tests PRIVATE Source)
+
+    target_compile_definitions(voice_tests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+    )
+
+    target_link_libraries(voice_tests
         PRIVATE
             juce::juce_dsp
             juce::juce_audio_basics
