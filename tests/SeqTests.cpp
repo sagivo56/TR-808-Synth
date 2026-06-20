@@ -110,9 +110,10 @@ static void testInternalTransport()
     s.setRunning (false);
     check (runInternal (s, 0.5, 512).empty(), "no events while stopped");
 
-    // Running: one bar (ppq 0..4 = 2 s at 120 BPM) -> BD on steps 0,4,8,12 = 4 hits.
+    // Running: just under one bar (1.9 s -> ppq ~3.8, steps 0..15) keeps the
+    // window off the exact ppq=4.0 boundary. BD on 0,4,8,12 = 4; SD on 4,12 = 2.
     s.setRunning (true);
-    auto ev = runInternal (s, 2.0, 512);
+    auto ev = runInternal (s, 1.9, 512);
     check (countVoice (ev, BD) == 4, "BD fires 4x per bar via internal clock", "n=" + std::to_string (countVoice (ev, BD)));
     check (countVoice (ev, SD) == 2, "SD fires 2x per bar (steps 4,12)", "n=" + std::to_string (countVoice (ev, SD)));
 }
