@@ -37,6 +37,7 @@ void ResonatorBT::update() noexcept
     const double r = std::exp (std::log (0.001) / (double) (decaySeconds * sampleRate));
     a1 = (float) (2.0 * r * std::cos (w));
     a2 = (float) (-(r * r));
+    gainComp = (float) std::sin (w);
 }
 
 float ResonatorBT::processSample() noexcept

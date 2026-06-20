@@ -17,7 +17,9 @@ public:
     void setFrequency (float hz) noexcept;
     void setDecay (float seconds) noexcept;          // time to -60 dB
 
-    void excite (float amplitude) noexcept { pending += amplitude; }
+    // gainComp normalises the impulse-response peak (~1/sin(w)) so the ring is
+    // ~unity amplitude regardless of frequency.
+    void excite (float amplitude) noexcept { pending += amplitude * gainComp; }
 
     float processSample() noexcept;
     bool  isActive() const noexcept;
@@ -30,6 +32,7 @@ private:
     float  decaySeconds = 0.3f;
 
     float a1 = 0.0f, a2 = 0.0f;              // resonator coefficients
+    float gainComp = 1.0f;                   // = sin(w), normalises excitation
     float y1 = 0.0f, y2 = 0.0f;              // output history
     float pending = 0.0f;                    // impulse to inject next sample
 };
