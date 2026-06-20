@@ -1,6 +1,7 @@
 #include "ParameterLayout.h"
 #include "ParameterIDs.h"
 #include "../engine/VoiceDefs.h"
+#include "../engine/DeepParams.h"
 
 namespace params
 {
@@ -14,6 +15,18 @@ static void addMacro (juce::AudioProcessorValueTreeState::ParameterLayout& layou
         label,
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f),
         defaultValue));
+}
+
+static void addDeep (juce::AudioProcessorValueTreeState::ParameterLayout& layout, const DeepDesc& d)
+{
+    juce::NormalisableRange<float> range (d.min, d.max);
+    if (d.skewLow && d.def > d.min && d.def < d.max)
+        range.setSkewForCentre (d.def);
+
+    const juce::String label = juce::String (voiceSpecs()[(size_t) d.voice].name) + " " + d.label;
+    layout.add (std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { macroId (d.voice, d.suffix), 1 },
+        label, range, d.def));
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
@@ -41,6 +54,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         if (s.snappy) addMacro (layout, i, "snappy", n + " Snappy", 0.5f);
         if (s.tune)   addMacro (layout, i, "tune",   n + " Tune",   0.5f);
     }
+
+    // Deep-edit params (per-stage synthesis controls, real units).
+    for (const auto& d : deepParamDescs())
+        addDeep (layout, d);
 
     return layout;
 }

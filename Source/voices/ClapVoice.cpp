@@ -1,4 +1,6 @@
 #include "ClapVoice.h"
+#include <algorithm>
+#include <cmath>
 
 namespace tr808::voices
 {
@@ -8,8 +10,6 @@ void ClapVoice::prepare (double sr, int)
     noise.prepare (sr);
     bp.prepare (sr);
     bp.setType (dsp::SVFilter::Type::bandpass);
-    bp.setCutoff (1000.0f);
-    bp.setResonance (1.3f);
     pulseEnv.prepare (sr); pulseEnv.setMode (dsp::Envelope::Mode::ad); pulseEnv.setAttack (0.1f);
     tailEnv.prepare (sr);  tailEnv.setMode (dsp::Envelope::Mode::ad);  tailEnv.setAttack (0.1f);
     reset();
@@ -31,11 +31,15 @@ void ClapVoice::trigger (float velocity, bool accent)
 
     counter = 0;
     pulseIndex = 0;
-    const int spacing = (int) (0.010 * sampleRate);   // ~10 ms between bursts
-    pulseOffsets = { { 0, spacing, 2 * spacing } };
+    numPulses = std::clamp ((int) std::lround (deep.nPulses), 1, maxPulses);
+    const int spacingSamples = std::max (1, (int) (deep.spacing * 0.001 * sampleRate));
+    for (int k = 0; k < maxPulses; ++k)
+        pulseOffsets[(size_t) k] = k * spacingSamples;
 
+    bp.setCutoff (deep.bpFreq);
+    bp.setResonance (deep.bpQ);
     pulseEnv.setDecay (5.0f);
-    tailEnv.setDecay (120.0f);
+    tailEnv.setDecay (deep.tailDecay);
     pulseEnv.reset();
     tailEnv.reset();
 }
@@ -44,12 +48,12 @@ void ClapVoice::renderAdd (float* mono, int numSamples)
 {
     for (int i = 0; i < numSamples; ++i)
     {
-        if (pulseIndex < 3 && counter == pulseOffsets[(size_t) pulseIndex])
+        if (pulseIndex < numPulses && counter == pulseOffsets[(size_t) pulseIndex])
         {
             pulseEnv.trigger();
             ++pulseIndex;
-            if (pulseIndex == 3)
-                tailEnv.trigger();      // room tail after the last burst
+            if (pulseIndex == numPulses)
+                tailEnv.trigger();          // room tail after the last burst
         }
 
         const float g = pulseEnv.processSample() + 0.6f * tailEnv.processSample();
@@ -60,6 +64,6 @@ void ClapVoice::renderAdd (float* mono, int numSamples)
 
 bool ClapVoice::isActive() const
 {
-    return pulseIndex < 3 || pulseEnv.isActive() || tailEnv.isActive();
+    return pulseIndex < numPulses || pulseEnv.isActive() || tailEnv.isActive();
 }
 }

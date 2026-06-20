@@ -7,7 +7,7 @@
 
 namespace tr808::voices
 {
-// MA: high-passed white noise with a very short decay. Macro: Level.
+// MA: high-passed white noise, very short decay. Deep: HPF, Decay. Macro: Level.
 class MaracasVoice : public Voice
 {
 public:
@@ -17,7 +17,14 @@ public:
     void renderAdd (float* mono, int numSamples) override;
     bool isActive() const override;
 
+    std::vector<DeepRef> deepRefs() override
+    {
+        return { { "hpf", &deep.hpf }, { "decaytime", &deep.decayTime } };
+    }
+
 private:
+    struct Deep { float hpf = 6000.0f, decayTime = 30.0f; } deep;
+
     dsp::NoiseGen noise;
     dsp::SVFilter hpf;
     dsp::Envelope env;

@@ -3,6 +3,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include <array>
+#include <vector>
+#include <utility>
 
 #include "params/ParameterLayout.h"
 #include "engine/VoiceManager.h"
@@ -54,6 +56,7 @@ public:
 
 private:
     void updateMacrosFromApvts();
+    void updateDeepFromApvts();
 
     tr808::VoiceManager voiceManager;
 
@@ -62,6 +65,9 @@ private:
 
     // Cached APVTS pointers per voice (nullptr where a voice lacks that macro).
     std::array<std::atomic<float>*, tr808::numVoices> levelP {}, toneP {}, decayP {}, snappyP {}, tuneP {};
+
+    // Deep params: APVTS atomic -> destination float inside the voice.
+    std::vector<std::pair<std::atomic<float>*, float*>> deepWiring;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TR808AudioProcessor)
 };

@@ -7,11 +7,9 @@
 
 namespace tr808::voices
 {
-// CY / OH / CH: the shared inharmonic MetalCluster shaped per voice.
-//  - Cymbal: high band + a band-passed "clang", balanced by Tone, long decay.
-//  - Open hat: high-passed cluster, medium-long decay.
-//  - Closed hat: high-passed cluster, very short decay.
-// The hats live in a choke group (see VoiceManager) and choke() fades fast.
+// CY / OH / CH: the inharmonic MetalCluster shaped per voice. Deep: HPF + Decay
+// (all), plus Clang band + Band balance for the cymbal. Macros: CY Tone shifts
+// the band balance, CY/OH Decay scales decay, Level trims. Hats choke fast.
 class MetalVoice : public Voice
 {
 public:
@@ -26,10 +24,23 @@ public:
     bool isActive() const override;
     void choke() override;
 
+    std::vector<DeepRef> deepRefs() override
+    {
+        if (type == Type::cymbal)
+            return { { "hpf", &deep.hpf }, { "bpfreq", &deep.bpFreq },
+                     { "decaytime", &deep.decayTime }, { "balance", &deep.balance } };
+        return { { "hpf", &deep.hpf }, { "decaytime", &deep.decayTime } };
+    }
+
 private:
+    struct Deep
+    {
+        float hpf = 7000.0f, bpFreq = 3200.0f, decayTime = 500.0f, balance = 0.5f;
+    } deep;
+
     dsp::MetalCluster cluster;
     dsp::SVFilter     hpf;
-    dsp::SVFilter     bp;        // cymbal "clang" band
+    dsp::SVFilter     bp;
     dsp::Envelope     env;
 
     Type  type    = Type::closedHat;

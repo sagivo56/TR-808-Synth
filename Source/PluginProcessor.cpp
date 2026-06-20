@@ -30,6 +30,21 @@ void TR808AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
         snappyP[(size_t) i] = s.snappy ? apvts.getRawParameterValue (juce::String (tr808::macroId (i, "snappy"))) : nullptr;
         tuneP[(size_t) i]   = s.tune   ? apvts.getRawParameterValue (juce::String (tr808::macroId (i, "tune")))   : nullptr;
     }
+
+    // Pair every voice's Deep param with its APVTS atomic (built once here).
+    deepWiring.clear();
+    for (int i = 0; i < tr808::numVoices; ++i)
+        if (auto* v = voiceManager.voice (i))
+            for (const auto& ref : v->deepRefs())
+                if (auto* atom = apvts.getRawParameterValue (juce::String (tr808::macroId (i, ref.suffix.c_str()))))
+                    if (ref.ptr != nullptr)
+                        deepWiring.push_back ({ atom, ref.ptr });
+}
+
+void TR808AudioProcessor::updateDeepFromApvts()
+{
+    for (auto& w : deepWiring)
+        *w.second = w.first->load();
 }
 
 void TR808AudioProcessor::updateMacrosFromApvts()
@@ -67,6 +82,7 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
 
     updateMacrosFromApvts();
+    updateDeepFromApvts();
 
     // The VoiceManager clears the buffer, then renders the voices with
     // sample-accurate triggers driven by the incoming MIDI.

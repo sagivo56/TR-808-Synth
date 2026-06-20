@@ -6,14 +6,14 @@
 namespace tr808::voices
 {
 // RS (rim shot) and CL (claves): a short, high-pitched impulse-excited
-// resonator. Macro: Level. (Tune/Decay/Tone become Deep-edit params in M3.)
+// resonator. Deep: Tune, Decay. Macro: Level.
 class TunedResonatorVoice : public Voice
 {
 public:
     void setConfig (float frequency, float decaySeconds) noexcept
     {
-        freq     = frequency;
-        decaySec = decaySeconds;
+        deep.freq      = frequency;
+        deep.decayTime = decaySeconds * 1000.0f;
     }
 
     void prepare (double sr, int maxBlock) override;
@@ -22,10 +22,15 @@ public:
     void renderAdd (float* mono, int numSamples) override;
     bool isActive() const override;
 
+    std::vector<DeepRef> deepRefs() override
+    {
+        return { { "freq", &deep.freq }, { "decaytime", &deep.decayTime } };
+    }
+
 private:
+    struct Deep { float freq = 1700.0f, decayTime = 60.0f; } deep;
+
     dsp::ResonatorBT res;
-    float amp      = 0.0f;
-    float freq     = 1700.0f;
-    float decaySec = 0.06f;
+    float amp = 0.0f;
 };
 }

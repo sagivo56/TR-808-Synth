@@ -10,8 +10,9 @@
 namespace tr808::voices
 {
 // BD: sine body with a downward pitch sweep + amplitude decay, plus a short
-// high-passed noise "click" transient. Macros: Tone (click amount/length),
-// Decay (body length), Level.
+// high-passed noise "click", with optional tanh drive. Deep params are the
+// source of truth; macros modify (Tone scales click, Decay scales body length,
+// Level trims output).
 class BassDrumVoice : public Voice
 {
 public:
@@ -21,7 +22,20 @@ public:
     void renderAdd (float* mono, int numSamples) override;
     bool isActive() const override;
 
+    std::vector<DeepRef> deepRefs() override
+    {
+        return { { "freq", &deep.freq }, { "penvamt", &deep.penvAmt }, { "penvtime", &deep.penvTime },
+                 { "bodydecay", &deep.bodyDecay }, { "clicklvl", &deep.clickLvl },
+                 { "clicktone", &deep.clickTone }, { "drive", &deep.drive } };
+    }
+
 private:
+    struct Deep
+    {
+        float freq = 52.0f, penvAmt = 180.0f, penvTime = 45.0f, bodyDecay = 300.0f,
+              clickLvl = 0.3f, clickTone = 0.5f, drive = 1.0f;
+    } deep;
+
     dsp::BandlimitedOsc sine;
     dsp::PitchEnvelope  pitchEnv;
     dsp::Envelope       ampEnv;
@@ -32,5 +46,6 @@ private:
     float amp        = 0.0f;
     float baseFreq   = 52.0f;
     float clickLevel = 0.0f;
+    float driveAmt   = 1.0f;
 };
 }

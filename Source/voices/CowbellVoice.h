@@ -7,8 +7,8 @@
 
 namespace tr808::voices
 {
-// CB: two detuned squares (~540 + ~800 Hz) through a band-pass, with a sharp
-// attack and medium decay. Macro: Level.
+// CB: two squares mixed and band-passed, sharp attack, medium decay.
+// Deep: Osc1/Osc2 freq, mix, BP centre/Q, decay. Macro: Level.
 class CowbellVoice : public Voice
 {
 public:
@@ -18,10 +18,23 @@ public:
     void renderAdd (float* mono, int numSamples) override;
     bool isActive() const override;
 
+    std::vector<DeepRef> deepRefs() override
+    {
+        return { { "o1freq", &deep.o1freq }, { "o2freq", &deep.o2freq }, { "oscmix", &deep.oscmix },
+                 { "bpfreq", &deep.bpFreq }, { "bpq", &deep.bpQ }, { "decaytime", &deep.decayTime } };
+    }
+
 private:
+    struct Deep
+    {
+        float o1freq = 540.0f, o2freq = 800.0f, oscmix = 0.5f,
+              bpFreq = 2640.0f, bpQ = 0.8f, decayTime = 400.0f;
+    } deep;
+
     dsp::BandlimitedOsc o1, o2;
     dsp::SVFilter       bp;
     dsp::Envelope       env;
     float amp = 0.0f;
+    float mix = 0.5f;
 };
 }

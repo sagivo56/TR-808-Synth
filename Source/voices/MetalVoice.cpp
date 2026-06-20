@@ -1,4 +1,5 @@
 #include "MetalVoice.h"
+#include <algorithm>
 
 namespace tr808::voices
 {
@@ -6,16 +7,9 @@ void MetalVoice::prepare (double sr, int)
 {
     sampleRate = sr;
     cluster.prepare (sr);
-    hpf.prepare (sr);
-    hpf.setType (dsp::SVFilter::Type::highpass);
-    hpf.setCutoff (type == Type::cymbal ? 5000.0f : 7000.0f);
-    bp.prepare (sr);
-    bp.setType (dsp::SVFilter::Type::bandpass);
-    bp.setCutoff (3200.0f);
-    bp.setResonance (0.8f);
-    env.prepare (sr);
-    env.setMode (dsp::Envelope::Mode::ad);
-    env.setAttack (0.5f);
+    hpf.prepare (sr); hpf.setType (dsp::SVFilter::Type::highpass);
+    bp.prepare (sr);  bp.setType (dsp::SVFilter::Type::bandpass); bp.setResonance (0.8f);
+    env.prepare (sr); env.setMode (dsp::Envelope::Mode::ad); env.setAttack (0.5f);
     reset();
 }
 
@@ -30,16 +24,16 @@ void MetalVoice::reset()
 
 void MetalVoice::trigger (float velocity, bool accent)
 {
-    amp     = triggerAmp (velocity, accent);
-    toneBal = macros.tone;
+    amp = triggerAmp (velocity, accent);
 
-    switch (type)
+    hpf.setCutoff (deep.hpf);
+    if (type == Type::cymbal)
     {
-        case Type::closedHat: env.setDecay (50.0f); break;
-        case Type::openHat:   env.setDecay (mapExp (macros.decay, 150.0f, 1500.0f)); break;
-        case Type::cymbal:    env.setDecay (mapExp (macros.decay, 400.0f, 4000.0f)); break;
+        bp.setCutoff (deep.bpFreq);
+        toneBal = std::clamp (deep.balance + (macros.tone - 0.5f), 0.0f, 1.0f);   // macro Tone shifts band balance
     }
 
+    env.setDecay (deep.decayTime * centeredScale (macros.decay, 3.0f));           // macro Decay scales (neutral for CH)
     cluster.reset();
     env.trigger();
 }
@@ -71,6 +65,6 @@ bool MetalVoice::isActive() const
 
 void MetalVoice::choke()
 {
-    env.forceRelease (5.0f);    // fast fade to avoid a click
+    env.forceRelease (5.0f);
 }
 }

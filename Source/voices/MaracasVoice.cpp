@@ -8,7 +8,6 @@ void MaracasVoice::prepare (double sr, int)
     noise.prepare (sr);
     hpf.prepare (sr);
     hpf.setType (dsp::SVFilter::Type::highpass);
-    hpf.setCutoff (6000.0f);
     env.prepare (sr);
     env.setMode (dsp::Envelope::Mode::ad);
     env.setAttack (0.5f);
@@ -25,7 +24,8 @@ void MaracasVoice::reset()
 void MaracasVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
-    env.setDecay (30.0f);
+    hpf.setCutoff (deep.hpf);
+    env.setDecay (deep.decayTime);
     env.trigger();
 }
 

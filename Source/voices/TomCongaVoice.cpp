@@ -1,4 +1,5 @@
 #include "TomCongaVoice.h"
+#include <cmath>
 
 namespace tr808::voices
 {
@@ -30,29 +31,37 @@ void TomCongaVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
 
-    fBase = baseFreq * mapExp (macros.tune, 0.5f, 2.0f);   // +/- one octave
+    fBase = deep.freq * centeredPitch (macros.tune, 12.0f);     // macro Tune: +/- one octave
 
     res.setFrequency (fBase);
-    res.setDecay (decaySec);
+    res.setDecay (deep.decayTime * 0.001f);
     res.reset();
     res.excite (1.0f);
 
-    pitchEnv.setAmount (fBase * 0.6f);
-    pitchEnv.setTime (40.0f);
+    pitchEnv.setAmount (fBase * deep.penvAmt);
+    pitchEnv.setTime (deep.penvTime);
     pitchEnv.trigger();
 
+    attackLevel = deep.atkNoise;
     attackEnv.setDecay (4.0f);
     attackEnv.trigger();
+
+    driveAmt = deep.drive;
 }
 
 void TomCongaVoice::renderAdd (float* mono, int numSamples)
 {
+    const bool driven = driveAmt > 1.01f;
+
     for (int i = 0; i < numSamples; ++i)
     {
         res.setFrequency (fBase + pitchEnv.processSample());
-        const float body = res.processSample();
-        const float atk  = attackHpf.processSample (attackNoise.processSample())
-                         * attackEnv.processSample() * attackLevel;
+        float body = res.processSample();
+        if (driven)
+            body = std::tanh (driveAmt * body);
+
+        const float atk = attackHpf.processSample (attackNoise.processSample())
+                        * attackEnv.processSample() * attackLevel;
 
         mono[i] += (body + atk) * amp;
     }

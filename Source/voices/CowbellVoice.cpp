@@ -5,9 +5,9 @@ namespace tr808::voices
 void CowbellVoice::prepare (double sr, int)
 {
     sampleRate = sr;
-    o1.prepare (sr); o1.setWaveform (dsp::BandlimitedOsc::Waveform::square); o1.setFrequency (540.0f);
-    o2.prepare (sr); o2.setWaveform (dsp::BandlimitedOsc::Waveform::square); o2.setFrequency (800.0f);
-    bp.prepare (sr); bp.setType (dsp::SVFilter::Type::bandpass); bp.setCutoff (2640.0f); bp.setResonance (0.8f);
+    o1.prepare (sr); o1.setWaveform (dsp::BandlimitedOsc::Waveform::square);
+    o2.prepare (sr); o2.setWaveform (dsp::BandlimitedOsc::Waveform::square);
+    bp.prepare (sr); bp.setType (dsp::SVFilter::Type::bandpass);
     env.prepare (sr); env.setMode (dsp::Envelope::Mode::ad); env.setAttack (1.0f);
     reset();
 }
@@ -23,8 +23,13 @@ void CowbellVoice::reset()
 void CowbellVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
+    o1.setFrequency (deep.o1freq);
+    o2.setFrequency (deep.o2freq);
     o1.reset(); o2.reset();
-    env.setDecay (400.0f);
+    mix = deep.oscmix;
+    bp.setCutoff (deep.bpFreq);
+    bp.setResonance (deep.bpQ);
+    env.setDecay (deep.decayTime);
     env.trigger();
 }
 
@@ -32,8 +37,8 @@ void CowbellVoice::renderAdd (float* mono, int numSamples)
 {
     for (int i = 0; i < numSamples; ++i)
     {
-        const float s = bp.processSample ((o1.processSample() + o2.processSample()) * 0.5f);
-        mono[i] += s * env.processSample() * amp;
+        const float oscs = (1.0f - mix) * o1.processSample() + mix * o2.processSample();
+        mono[i] += bp.processSample (oscs) * env.processSample() * amp;
     }
 }
 

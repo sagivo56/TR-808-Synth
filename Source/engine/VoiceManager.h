@@ -29,6 +29,11 @@ public:
     void noteOn (int voiceIndex, float velocity, bool accent);
     bool isVoiceActive (int voiceIndex) const;
 
+    voices::Voice* voice (int voiceIndex) noexcept
+    {
+        return (voiceIndex >= 0 && voiceIndex < numVoices) ? voiceArray[(size_t) voiceIndex].get() : nullptr;
+    }
+
     // Per-voice Macro values; the processor refreshes these from the APVTS each
     // block. They are latched into a voice when it is triggered.
     std::array<voices::VoiceMacros, numVoices> macros;

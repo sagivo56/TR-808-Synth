@@ -9,16 +9,17 @@
 
 namespace tr808::voices
 {
-// Toms (LT/MT/HT) and congas (LC/MC/HC): a tuned resonator body with a short
-// downward pitch sweep and a tiny attack-noise click. Congas are just a
-// higher-pitched, shorter-decay configuration. Macros: Tuning, Level.
+// Toms (LT/MT/HT) and congas (LC/MC/HC): tuned resonator body + downward pitch
+// sweep + attack-noise click, with optional drive. Deep = absolute; macros:
+// Tune offsets pitch (+/-12 st), Level trims. setConfig() seeds per-instance
+// defaults (so tests differ without an APVTS attached).
 class TomCongaVoice : public Voice
 {
 public:
     void setConfig (float baseFrequency, float decaySeconds) noexcept
     {
-        baseFreq = baseFrequency;
-        decaySec = decaySeconds;
+        deep.freq      = baseFrequency;
+        deep.decayTime = decaySeconds * 1000.0f;
     }
 
     void prepare (double sr, int maxBlock) override;
@@ -27,7 +28,19 @@ public:
     void renderAdd (float* mono, int numSamples) override;
     bool isActive() const override;
 
+    std::vector<DeepRef> deepRefs() override
+    {
+        return { { "freq", &deep.freq }, { "penvamt", &deep.penvAmt }, { "penvtime", &deep.penvTime },
+                 { "decaytime", &deep.decayTime }, { "atknoise", &deep.atkNoise }, { "drive", &deep.drive } };
+    }
+
 private:
+    struct Deep
+    {
+        float freq = 120.0f, penvAmt = 0.6f, penvTime = 40.0f, decayTime = 500.0f,
+              atkNoise = 0.3f, drive = 1.0f;
+    } deep;
+
     dsp::ResonatorBT   res;
     dsp::PitchEnvelope pitchEnv;
     dsp::NoiseGen      attackNoise;
@@ -35,9 +48,8 @@ private:
     dsp::SVFilter      attackHpf;
 
     float amp         = 0.0f;
-    float baseFreq    = 120.0f;
-    float decaySec    = 0.5f;
     float fBase       = 120.0f;
     float attackLevel = 0.3f;
+    float driveAmt    = 1.0f;
 };
 }

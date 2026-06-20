@@ -18,8 +18,8 @@ void TunedResonatorVoice::reset()
 void TunedResonatorVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
-    res.setFrequency (freq);
-    res.setDecay (decaySec);
+    res.setFrequency (deep.freq);
+    res.setDecay (deep.decayTime * 0.001f);
     res.reset();
     res.excite (1.0f);
 }

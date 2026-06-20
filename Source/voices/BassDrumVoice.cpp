@@ -1,4 +1,5 @@
 #include "BassDrumVoice.h"
+#include <cmath>
 
 namespace tr808::voices
 {
@@ -17,7 +18,6 @@ void BassDrumVoice::prepare (double sr, int)
     clickEnv.setAttack (0.2f);
     clickHpf.prepare (sr);
     clickHpf.setType (dsp::SVFilter::Type::highpass);
-    clickHpf.setCutoff (1200.0f);
     reset();
 }
 
@@ -35,29 +35,35 @@ void BassDrumVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
 
+    baseFreq = deep.freq;
     sine.reset();
     sine.setFrequency (baseFreq);
 
-    pitchEnv.setAmount (180.0f);          // Hz of downward sweep
-    pitchEnv.setTime (45.0f);
+    pitchEnv.setAmount (deep.penvAmt);
+    pitchEnv.setTime (deep.penvTime);
     pitchEnv.trigger();
 
-    ampEnv.setDecay (mapExp (macros.decay, 80.0f, 1200.0f));
+    ampEnv.setDecay (deep.bodyDecay * centeredScale (macros.decay, 4.0f));   // macro Decay scales
     ampEnv.trigger();
 
-    clickLevel = mapLin (macros.tone, 0.05f, 0.6f);
-    clickEnv.setDecay (mapLin (macros.tone, 2.0f, 10.0f));
+    driveAmt   = deep.drive;
+    clickLevel = deep.clickLvl * centeredScale (macros.tone, 2.5f);          // macro Tone scales click
+    clickEnv.setDecay (mapLin (deep.clickTone, 2.0f, 12.0f));
     clickEnv.trigger();
+    clickHpf.setCutoff (mapLin (deep.clickTone, 800.0f, 2500.0f));
 }
 
 void BassDrumVoice::renderAdd (float* mono, int numSamples)
 {
+    const bool driven = driveAmt > 1.01f;
+
     for (int i = 0; i < numSamples; ++i)
     {
-        const float f = baseFreq + pitchEnv.processSample();
-        sine.setFrequency (f);
+        sine.setFrequency (baseFreq + pitchEnv.processSample());
+        float body = sine.processSample() * ampEnv.processSample();
+        if (driven)
+            body = std::tanh (driveAmt * body);
 
-        const float body  = sine.processSample() * ampEnv.processSample();
         const float click = clickHpf.processSample (clickNoise.processSample())
                           * clickEnv.processSample() * clickLevel;
 
