@@ -1,17 +1,19 @@
 #pragma once
 
 #include "Voice.h"
-#include "../dsp/BandlimitedOsc.h"
-#include "../dsp/Envelope.h"
+#include "../dsp/ResonatorBT.h"
 #include "../dsp/PitchEnvelope.h"
+#include "../dsp/Envelope.h"
 #include "../dsp/NoiseGen.h"
 #include "../dsp/SVFilter.h"
 
 namespace tr808::voices
 {
-// SD: two tuned sine partials (shell) + band-passed noise (snappy), mixed by a
-// shell/noise balance and high-passed. Deep = absolute; macros modify: Tone
-// shifts the osc mix, Snappy scales noise level + decay, Level trims.
+// SD — service-manual circuit model: two bridged-T resonators (decaying-sine
+// "skin"/shell tones, the fundamental + harmonic networks) mixed by a balance,
+// plus band-passed noise (the "snappy"), high-passed. A short downward pitch
+// blip gives the struck-skin attack. Macros: Tone shifts the resonator mix,
+// Snappy scales the noise, Level.
 class SnareVoice : public Voice
 {
 public:
@@ -37,8 +39,7 @@ private:
               attack = 1.0f;
     } deep;
 
-    dsp::BandlimitedOsc osc1, osc2;
-    dsp::Envelope       shellEnv;
+    dsp::ResonatorBT    res1, res2;     // bridged-T fundamental + harmonic networks
     dsp::PitchEnvelope  shellPitch;     // membrane "skin" attack
     dsp::NoiseGen       noise;
     dsp::SVFilter       noiseBp;

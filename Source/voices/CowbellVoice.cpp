@@ -5,8 +5,8 @@ namespace tr808::voices
 void CowbellVoice::prepare (double sr, int)
 {
     sampleRate = sr;
-    o1.prepare (sr); o1.setWaveform (dsp::BandlimitedOsc::Waveform::square);
-    o2.prepare (sr); o2.setWaveform (dsp::BandlimitedOsc::Waveform::square);
+    o1.prepare (sr);
+    o2.prepare (sr);
     bp.prepare (sr); bp.setType (dsp::SVFilter::Type::bandpass);
     env.prepare (sr); env.setMode (dsp::Envelope::Mode::ad); env.setAttack (1.0f);
     reset();

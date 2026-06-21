@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Voice.h"
-#include "../dsp/BandlimitedOsc.h"
+#include "../dsp/SchmittOsc.h"
 #include "../dsp/SVFilter.h"
 #include "../dsp/Envelope.h"
 
@@ -32,9 +32,9 @@ private:
               bpFreq = 2640.0f, bpQ = 0.8f, decayTime = 400.0f, attack = 1.0f;
     } deep;
 
-    dsp::BandlimitedOsc o1, o2;
-    dsp::SVFilter       bp;
-    dsp::Envelope       env;
+    dsp::SchmittOsc o1, o2;       // 808 square oscillators (circuit model)
+    dsp::SVFilter   bp;
+    dsp::Envelope   env;
     float amp = 0.0f;
     float mix = 0.5f;
 };
