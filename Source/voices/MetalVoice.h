@@ -4,6 +4,7 @@
 #include "../dsp/MetalCluster.h"
 #include "../dsp/SVFilter.h"
 #include "../dsp/Envelope.h"
+#include "../dsp/NoiseGen.h"
 
 namespace tr808::voices
 {
@@ -39,12 +40,14 @@ private:
     } deep;
 
     dsp::MetalCluster cluster;
+    dsp::NoiseGen     noise;
     dsp::SVFilter     hpf;
     dsp::SVFilter     bp;
     dsp::Envelope     env;
 
-    Type  type    = Type::closedHat;
-    float amp     = 0.0f;
-    float toneBal = 0.5f;
+    Type  type     = Type::closedHat;
+    float amp      = 0.0f;
+    float toneBal  = 0.5f;
+    float noiseMix = 0.0f;   // hats blend in white noise to sound hissy not metallic
 };
 }

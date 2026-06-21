@@ -7,6 +7,7 @@ void MetalVoice::prepare (double sr, int)
 {
     sampleRate = sr;
     cluster.prepare (sr);
+    noise.prepare (sr);
     hpf.prepare (sr); hpf.setType (dsp::SVFilter::Type::highpass);
     bp.prepare (sr);  bp.setType (dsp::SVFilter::Type::bandpass); bp.setResonance (0.8f);
     env.prepare (sr); env.setMode (dsp::Envelope::Mode::ad); env.setAttack (0.5f);
@@ -33,6 +34,9 @@ void MetalVoice::trigger (float velocity, bool accent)
         toneBal = std::clamp (deep.balance + (macros.tone - 0.5f), 0.0f, 1.0f);   // macro Tone shifts band balance
     }
 
+    // Hats lean on hissy noise; the cymbal stays mostly metallic.
+    noiseMix = (type == Type::cymbal) ? 0.12f : 0.62f;
+
     env.setDecay (deep.decayTime * centeredScale (macros.decay, 3.0f));           // macro Decay scales (neutral for CH)
     cluster.reset();
     env.trigger();
@@ -44,8 +48,9 @@ void MetalVoice::renderAdd (float* mono, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
-        const float c    = cluster.processSample();
-        const float high = hpf.processSample (c);
+        const float c   = cluster.processSample();
+        const float src = c * (1.0f - noiseMix) + noise.processSample() * noiseMix;
+        const float high = hpf.processSample (src);
 
         float s = high;
         if (isCymbal)

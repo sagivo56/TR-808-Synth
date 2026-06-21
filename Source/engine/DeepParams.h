@@ -35,8 +35,6 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         { BD, "penvamt",    "Pitch Env Amt", 0.0f,    400.0f,  180.0f, false },
         { BD, "penvtime",   "Pitch Env Time",5.0f,    200.0f,  45.0f,  true  },
         { BD, "bodydecay",  "Body Decay",    50.0f,   1500.0f, 300.0f, true  },
-        { BD, "clicklvl",   "Click Level",   0.0f,    1.0f,    0.3f,   false },
-        { BD, "clicktone",  "Click Tone",    0.0f,    1.0f,    0.5f,   false },
         { BD, "drive",      "Drive",         1.0f,    10.0f,   1.0f,   true  },
 
         // Snare

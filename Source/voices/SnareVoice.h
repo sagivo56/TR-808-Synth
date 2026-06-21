@@ -3,6 +3,7 @@
 #include "Voice.h"
 #include "../dsp/BandlimitedOsc.h"
 #include "../dsp/Envelope.h"
+#include "../dsp/PitchEnvelope.h"
 #include "../dsp/NoiseGen.h"
 #include "../dsp/SVFilter.h"
 
@@ -36,6 +37,7 @@ private:
 
     dsp::BandlimitedOsc osc1, osc2;
     dsp::Envelope       shellEnv;
+    dsp::PitchEnvelope  shellPitch;     // membrane "skin" attack
     dsp::NoiseGen       noise;
     dsp::SVFilter       noiseBp;
     dsp::Envelope       noiseEnv;
@@ -45,5 +47,7 @@ private:
     float oscMix    = 0.5f;
     float shellGain = 0.5f;
     float noiseGain = 0.5f;
+    float o1base    = 180.0f;
+    float o2base    = 330.0f;
 };
 }
