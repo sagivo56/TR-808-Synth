@@ -5,6 +5,7 @@
 #include <array>
 #include <vector>
 #include <cstdint>
+#include <atomic>
 
 #include "VoiceDefs.h"
 #include "VoiceManager.h"   // TriggerEvent
@@ -72,6 +73,15 @@ public:
     void setChainEnabled (bool e) { chainEnabled = e; }
     void setProbabilityEnabled (bool e) { probEnabled = e; }
 
+    //== UI read-back ==========================================================
+    int      getDisplayStep() const { return uiStep.load(); }   // step under the playhead (-1 if stopped)
+    double   getTempo() const       { return internalBpm; }
+    float    getSwing() const       { return swing; }
+    PlayMode getPlayMode() const    { return playMode; }
+    int      getCurrentPattern() const { return currentPattern; }
+    int      getLength (int pat, int var) const;
+    bool     getAccent (int pat, int var, int step) const;
+
     //== State =================================================================
     juce::ValueTree toValueTree() const;
     void fromValueTree (const juce::ValueTree&);
@@ -112,5 +122,7 @@ private:
     double sampleRate = 44100.0;
     double internalPpq = 0.0;
     float  flamMs = 28.0f;
+
+    std::atomic<int> uiStep { -1 };   // current step for the UI playhead
 };
 }

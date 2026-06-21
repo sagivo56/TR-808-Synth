@@ -44,7 +44,10 @@ void Sequencer::process (const TransportInfo& t, std::vector<TriggerEvent>& out)
     const double bpm = t.hostPlaying ? (t.bpm > 0.0 ? t.bpm : 120.0) : internalBpm;
     const double sr  = t.sampleRate > 0.0 ? t.sampleRate : sampleRate;
     if (! playing || bpm <= 0.0 || t.numSamples <= 0)
+    {
+        uiStep.store (-1);
         return;
+    }
 
     const double ppqPerSample = (bpm / 60.0) / sr;
     const double ppqStart = t.hostPlaying ? t.ppqPosition : internalPpq;
@@ -53,6 +56,11 @@ void Sequencer::process (const TransportInfo& t, std::vector<TriggerEvent>& out)
     const double stepQ = 0.25;                                    // a 16th note
     const double flamQ = (double) flamMs * 0.001 * (bpm / 60.0);
     const int    refLen = juce::jmax (1, patterns[(size_t) currentPattern].var[0].length);
+
+    {   // expose the current step for the UI playhead
+        const long long cur = (long long) std::floor (ppqStart / stepQ);
+        uiStep.store ((int) (((cur % refLen) + refLen) % refLen));
+    }
 
     const double margin = stepQ + flamQ + (double) swing * stepQ + ppqPerSample;
     long long sLo = (long long) std::floor ((ppqStart - margin) / stepQ);
@@ -156,6 +164,20 @@ void Sequencer::setLength (int pat, int var, int length)
 {
     if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
         patterns[(size_t) pat].var[var].length = juce::jlimit (1, maxSteps, length);
+}
+
+int Sequencer::getLength (int pat, int var) const
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+        return patterns[(size_t) pat].var[var].length;
+    return maxSteps;
+}
+
+bool Sequencer::getAccent (int pat, int var, int step) const
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+        return patterns[(size_t) pat].var[var].accent[(size_t) step];
+    return false;
 }
 
 //== State =====================================================================
