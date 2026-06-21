@@ -63,6 +63,7 @@ set(TR808_DSP_SOURCES
     Source/dsp/ResonatorBT.cpp
     Source/dsp/Saturator.cpp
     Source/dsp/MetalCluster.cpp
+    Source/dsp/SchmittOsc.cpp
 )
 
 # Voice engine (M2): the 16 voices + manager. Pure-DSP voices; the manager uses

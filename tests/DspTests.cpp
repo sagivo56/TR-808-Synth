@@ -15,6 +15,7 @@
 #include "dsp/ResonatorBT.h"
 #include "dsp/Saturator.h"
 #include "dsp/MetalCluster.h"
+#include "dsp/SchmittOsc.h"
 
 #include <iostream>
 #include <vector>
@@ -383,12 +384,31 @@ static void testMetalCluster()
     check (prominentNear (800.0), "cluster has a peak near 800 Hz");
 }
 
+static void testSchmittOsc()
+{
+    std::cout << "SchmittOsc (circuit-modeled square)\n";
+    const int cycles = 500;
+    const double f0 = cycles * kBinHz;          // ~1345 Hz
+
+    SchmittOsc osc; osc.prepare (kSampleRate);
+    osc.setFrequency ((float) f0);
+
+    std::vector<float> sig (kFftSize);
+    float mn = 1.0e9f, mx = -1.0e9f;
+    for (auto& s : sig) { s = osc.processSample(); mn = std::min (mn, s); mx = std::max (mx, s); }
+
+    check (allFinite (sig, 1.5f), "schmitt osc bounded");
+    check (mx > 0.3f && mn < -0.3f, "schmitt osc swings like a square", "min=" + std::to_string (mn) + " max=" + std::to_string (mx));
+    check (std::abs (dominantBin (magSpectrum (sig)) - cycles) <= 6, "schmitt osc runs at the set frequency");
+}
+
 //==============================================================================
 int main()
 {
     std::cout << "=== TR-808 DSP tests (sr=" << kSampleRate << ") ===\n";
 
     testBandlimitedOsc();
+    testSchmittOsc();
     testNoiseGen();
     testEnvelope();
     testPitchEnvelope();

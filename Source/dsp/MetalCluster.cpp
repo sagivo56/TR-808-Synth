@@ -7,7 +7,6 @@ void MetalCluster::prepare (double sr)
     for (int i = 0; i < numOscillators; ++i)
     {
         oscs[(size_t) i].prepare (sr);
-        oscs[(size_t) i].setWaveform (BandlimitedOsc::Waveform::square);
         oscs[(size_t) i].setFrequency (freqs[(size_t) i]);
     }
 }
