@@ -19,11 +19,11 @@ public:
 
     std::vector<DeepRef> deepRefs() override
     {
-        return { { "hpf", &deep.hpf }, { "decaytime", &deep.decayTime } };
+        return { { "hpf", &deep.hpf }, { "decaytime", &deep.decayTime }, { "attack", &deep.attack } };
     }
 
 private:
-    struct Deep { float hpf = 6000.0f, decayTime = 30.0f; } deep;
+    struct Deep { float hpf = 6000.0f, decayTime = 30.0f, attack = 0.5f; } deep;
 
     dsp::NoiseGen noise;
     dsp::SVFilter hpf;

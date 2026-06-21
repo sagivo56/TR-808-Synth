@@ -37,6 +37,7 @@ void MetalVoice::trigger (float velocity, bool accent)
     // Hats lean on hissy noise; the cymbal stays mostly metallic.
     noiseMix = (type == Type::cymbal) ? 0.12f : 0.62f;
 
+    env.setAttack (deep.attack);
     env.setDecay (deep.decayTime * centeredScale (macros.decay, 3.0f));           // macro Decay scales (neutral for CH)
     cluster.reset();
     env.trigger();

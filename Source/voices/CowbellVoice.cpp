@@ -29,6 +29,7 @@ void CowbellVoice::trigger (float velocity, bool accent)
     mix = deep.oscmix;
     bp.setCutoff (deep.bpFreq);
     bp.setResonance (deep.bpQ);
+    env.setAttack (deep.attack);
     env.setDecay (deep.decayTime);
     env.trigger();
 }

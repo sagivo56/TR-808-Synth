@@ -22,7 +22,7 @@ public:
     std::vector<DeepRef> deepRefs() override
     {
         return { { "bpfreq", &deep.bpFreq }, { "bpq", &deep.bpQ }, { "npulses", &deep.nPulses },
-                 { "spacing", &deep.spacing }, { "taildecay", &deep.tailDecay } };
+                 { "spacing", &deep.spacing }, { "taildecay", &deep.tailDecay }, { "attack", &deep.attack } };
     }
 
 private:
@@ -30,7 +30,8 @@ private:
 
     struct Deep
     {
-        float bpFreq = 1000.0f, bpQ = 1.3f, nPulses = 3.0f, spacing = 10.0f, tailDecay = 120.0f;
+        float bpFreq = 1000.0f, bpQ = 1.3f, nPulses = 3.0f, spacing = 10.0f, tailDecay = 120.0f,
+              attack = 0.1f;
     } deep;
 
     dsp::NoiseGen noise;

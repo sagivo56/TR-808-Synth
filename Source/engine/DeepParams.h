@@ -49,6 +49,7 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         { SD, "ndecay",     "Noise Decay",   20.0f,   600.0f,  200.0f, true  },
         { SD, "hpf",        "HPF",           100.0f,  2000.0f, 300.0f, true  },
         { SD, "balance",    "Shell/Noise",   0.0f,    1.0f,    0.5f,   false },
+        { SD, "attack",     "Attack",        0.1f,    30.0f,   1.0f,   true  },
 
         // Toms
         { LT, "freq",       "Tune",          40.0f,   200.0f,  90.0f,  true  },
@@ -106,6 +107,7 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         { CP, "npulses",    "Pulses",        1.0f,    6.0f,    3.0f,   false },
         { CP, "spacing",    "Pulse Spacing", 3.0f,    30.0f,   10.0f,  false },
         { CP, "taildecay",  "Tail Decay",    20.0f,   400.0f,  120.0f, true  },
+        { CP, "attack",     "Attack",        0.1f,    30.0f,   0.1f,   true  },
 
         // Cowbell
         { CB, "o1freq",     "Osc1 Freq",     400.0f,  700.0f,  540.0f, false },
@@ -114,22 +116,27 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         { CB, "bpfreq",     "BP Centre",     1000.0f, 4000.0f, 2640.0f,true  },
         { CB, "bpq",        "BP Q",          0.3f,    3.0f,    0.8f,   false },
         { CB, "decaytime",  "Decay",         100.0f,  1000.0f, 400.0f, true  },
+        { CB, "attack",     "Attack",        0.1f,    30.0f,   1.0f,   true  },
 
         // Metallic group
         { CY, "hpf",        "HPF",           2000.0f, 9000.0f, 5000.0f,true  },
         { CY, "bpfreq",     "Clang Band",    1500.0f, 6000.0f, 3200.0f,true  },
         { CY, "decaytime",  "Decay",         400.0f,  4000.0f, 1500.0f,true  },
         { CY, "balance",    "Band Balance",  0.0f,    1.0f,    0.5f,   false },
+        { CY, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
 
         { OH, "hpf",        "HPF",           3000.0f, 12000.0f,7000.0f,true  },
         { OH, "decaytime",  "Decay",         150.0f,  1500.0f, 500.0f, true  },
+        { OH, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
 
         { CH, "hpf",        "HPF",           3000.0f, 12000.0f,7000.0f,true  },
         { CH, "decaytime",  "Decay",         20.0f,   150.0f,  50.0f,  true  },
+        { CH, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
 
         // Maracas
         { MA, "hpf",        "HPF",           3000.0f, 12000.0f,6000.0f,true  },
         { MA, "decaytime",  "Decay",         10.0f,   100.0f,  30.0f,  true  },
+        { MA, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
     };
     return d;
 }

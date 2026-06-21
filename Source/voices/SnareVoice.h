@@ -25,14 +25,16 @@ public:
     {
         return { { "o1freq", &deep.o1freq }, { "o2freq", &deep.o2freq }, { "oscmix", &deep.oscmix },
                  { "shelldecay", &deep.shellDecay }, { "nbpfreq", &deep.nbpFreq }, { "nbpq", &deep.nbpQ },
-                 { "ndecay", &deep.nDecay }, { "hpf", &deep.hpf }, { "balance", &deep.balance } };
+                 { "ndecay", &deep.nDecay }, { "hpf", &deep.hpf }, { "balance", &deep.balance },
+                 { "attack", &deep.attack } };
     }
 
 private:
     struct Deep
     {
         float o1freq = 180.0f, o2freq = 330.0f, oscmix = 0.5f, shellDecay = 130.0f,
-              nbpFreq = 1800.0f, nbpQ = 1.1f, nDecay = 200.0f, hpf = 300.0f, balance = 0.5f;
+              nbpFreq = 1800.0f, nbpQ = 1.1f, nDecay = 200.0f, hpf = 300.0f, balance = 0.5f,
+              attack = 1.0f;
     } deep;
 
     dsp::BandlimitedOsc osc1, osc2;

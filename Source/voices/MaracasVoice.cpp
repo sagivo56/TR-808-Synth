@@ -25,6 +25,7 @@ void MaracasVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
     hpf.setCutoff (deep.hpf);
+    env.setAttack (deep.attack);
     env.setDecay (deep.decayTime);
     env.trigger();
 }

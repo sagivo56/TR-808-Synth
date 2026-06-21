@@ -38,6 +38,7 @@ void ClapVoice::trigger (float velocity, bool accent)
 
     bp.setCutoff (deep.bpFreq);
     bp.setResonance (deep.bpQ);
+    pulseEnv.setAttack (deep.attack);
     pulseEnv.setDecay (5.0f);
     tailEnv.setDecay (deep.tailDecay);
     pulseEnv.reset();

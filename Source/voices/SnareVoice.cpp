@@ -36,6 +36,7 @@ void SnareVoice::trigger (float velocity, bool accent)
     osc2.setFrequency (o2base);
     osc1.reset(); osc2.reset();
     oscMix = std::clamp (deep.oscmix + (macros.tone - 0.5f), 0.0f, 1.0f);    // macro Tone shifts mix
+    shellEnv.setAttack (deep.attack);
     shellEnv.setDecay (deep.shellDecay);
     shellEnv.trigger();
 

@@ -21,14 +21,15 @@ public:
     std::vector<DeepRef> deepRefs() override
     {
         return { { "o1freq", &deep.o1freq }, { "o2freq", &deep.o2freq }, { "oscmix", &deep.oscmix },
-                 { "bpfreq", &deep.bpFreq }, { "bpq", &deep.bpQ }, { "decaytime", &deep.decayTime } };
+                 { "bpfreq", &deep.bpFreq }, { "bpq", &deep.bpQ }, { "decaytime", &deep.decayTime },
+                 { "attack", &deep.attack } };
     }
 
 private:
     struct Deep
     {
         float o1freq = 540.0f, o2freq = 800.0f, oscmix = 0.5f,
-              bpFreq = 2640.0f, bpQ = 0.8f, decayTime = 400.0f;
+              bpFreq = 2640.0f, bpQ = 0.8f, decayTime = 400.0f, attack = 1.0f;
     } deep;
 
     dsp::BandlimitedOsc o1, o2;
