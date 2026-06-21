@@ -19,7 +19,7 @@ on Windows, plus **AU** when built on macOS.
 | **M3** | Deep-edit params | ✅ **done** — all per-stage params in APVTS (automatable), macros = modifiers; pluginval 10 |
 | **M4** | Sequencer | ✅ **done** — 16-step, host-synced sample-accurate, accent/flam/swing/AB/mute-solo; seq_tests 18/18, pluginval 10 |
 | **M5** | Mixer & routing | ✅ **done** — per-voice pan/mute/solo, master drive+limiter, stereo ⇄ 16 multi-out + fallback; pluginval 10 |
-| M6 | UI | ⬜ |
+| **M6** | UI | ✅ **done** — PERFORM panel + EDIT deep view + step grid (Grid/Authentic), 808 colors, resizable, APVTS-bound; pluginval 10 (editor + no desync) |
 | M7 | Presets & polish | ⬜ |
 
 ---
