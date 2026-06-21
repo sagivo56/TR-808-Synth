@@ -66,11 +66,11 @@ public:
     virtual std::vector<DeepRef> deepRefs() { return {}; }
 
 protected:
-    // Per-hit output amplitude from level macro, velocity and accent.
-    float triggerAmp (float velocity, bool accent) const noexcept
+    // Per-hit output amplitude from level macro and velocity. The accent boost
+    // is applied to the velocity upstream (VoiceManager), so it stays adjustable.
+    float triggerAmp (float velocity, bool /*accent*/) const noexcept
     {
-        const float v = std::clamp (velocity, 0.0f, 1.0f);
-        return macros.level * v * (accent ? 1.3f : 1.0f);
+        return macros.level * std::max (0.0f, velocity);
     }
 
     double      sampleRate = 44100.0;

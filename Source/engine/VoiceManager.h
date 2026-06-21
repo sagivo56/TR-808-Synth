@@ -52,6 +52,8 @@ public:
     void noteOn (int voiceIndex, float velocity, bool accent);
     bool isVoiceActive (int voiceIndex) const;
 
+    void setAccentAmount (float a) noexcept { accentAmount = juce::jmax (1.0f, a); }
+
     voices::Voice* voice (int voiceIndex) noexcept
     {
         return (voiceIndex >= 0 && voiceIndex < numVoices) ? voiceArray[(size_t) voiceIndex].get() : nullptr;
@@ -68,6 +70,7 @@ private:
 
     std::array<std::unique_ptr<voices::Voice>, numVoices> voiceArray;
     std::vector<float> monoBuf;
-    int maxBlock = 0;
+    int   maxBlock = 0;
+    float accentAmount = 1.5f;
 };
 }

@@ -30,7 +30,7 @@ namespace tr808
 class Sequencer
 {
 public:
-    static constexpr int maxSteps    = 16;
+    static constexpr int maxSteps    = 32;   // up to a double bar
     static constexpr int numPatterns = 8;
 
     enum class PlayMode { a, b, ab };
@@ -59,6 +59,8 @@ public:
     void setFlam        (int pat, int var, int voice, int step, bool on);
     void setProbability (int pat, int var, int voice, int step, float p);
     void setLength      (int pat, int var, int length);
+    void setStepDiv     (int pat, int var, float quartersPerStep);   // 0.25 = 1/16, ~0.1667 = 1/16 triplet
+    float getStepDiv    (int pat, int var) const;
 
     void setMute (int voice, bool m) { if (validVoice (voice)) muted[(size_t) voice]  = m; }
     void setSolo (int voice, bool s) { if (validVoice (voice)) soloed[(size_t) voice] = s; }
@@ -89,7 +91,8 @@ public:
 private:
     struct Variation
     {
-        int length = 16;
+        int   length  = 16;
+        float stepDiv = 0.25f;   // quarter-notes per step (0.25 = 16ths, 1/6 = 16th triplets)
         std::array<std::array<bool, maxSteps>, numVoices>  steps {};
         std::array<std::array<bool, maxSteps>, numVoices>  flam {};
         std::array<std::array<float, maxSteps>, numVoices> prob;

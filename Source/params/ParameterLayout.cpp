@@ -79,6 +79,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID { ParamIDs::multiOut, 1 }, "Multi-Out", false));
 
+    // Global accent amount (how much accented steps boost).
+    layout.add (std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { ParamIDs::accentLevel, 1 }, "Accent",
+        juce::NormalisableRange<float> (1.0f, 3.0f, 0.01f), 1.5f));
+
     return layout;
 }
 }

@@ -59,13 +59,14 @@ private:
     juce::TextButton gridButton  { "GRID" };
     juce::TextButton varAButton  { "A" }, varBButton { "B" };
     juce::ComboBox   abModeBox;
-    juce::ComboBox   kitBox, patternBox;
-    juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" };
+    juce::ComboBox   kitBox, patternBox, lenBox;
+    juce::TextButton tripButton { "1/16" };
+    juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" }, lenLabel { {}, "LEN" };
     std::unique_ptr<juce::FileChooser> chooser;
     juce::Slider     tempoSlider, swingSlider;
     juce::Label      tempoLabel { {}, "TEMPO" }, swingLabel { {}, "SWING" }, varLabel { {}, "EDIT" };
 
-    std::unique_ptr<tr808::ui::ParamKnob>   masterGainKnob, masterDriveKnob;
+    std::unique_ptr<tr808::ui::ParamKnob>   masterGainKnob, masterDriveKnob, accentKnob;
     std::unique_ptr<tr808::ui::ParamToggle> multiOutToggle;
 
     juce::Viewport  performViewport;

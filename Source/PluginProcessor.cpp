@@ -32,6 +32,7 @@ void TR808AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     masterDriveParam = apvts.getRawParameterValue (ParamIDs::masterDrive);
     multiOutParam    = apvts.getRawParameterValue (ParamIDs::multiOut);
+    accentLevelParam = apvts.getRawParameterValue (ParamIDs::accentLevel);
     for (int i = 0; i < tr808::numVoices; ++i)
     {
         panP[(size_t) i]  = apvts.getRawParameterValue (juce::String (tr808::macroId (i, "pan")));
@@ -87,6 +88,7 @@ void TR808AudioProcessor::updateMixerFromApvts()
         sequencer.setSolo (i, s);
     }
     mixer.setMasterDrive (masterDriveParam != nullptr ? masterDriveParam->load() : 1.0f);
+    voiceManager.setAccentAmount (accentLevelParam != nullptr ? accentLevelParam->load() : 1.5f);
 }
 
 void TR808AudioProcessor::updateMacrosFromApvts()

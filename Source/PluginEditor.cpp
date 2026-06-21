@@ -123,7 +123,33 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     masterGainKnob  = std::make_unique<ParamKnob>   (proc.apvts, ParamIDs::masterGain,  "MAIN");
     masterDriveKnob = std::make_unique<ParamKnob>   (proc.apvts, ParamIDs::masterDrive, "DRIVE");
     multiOutToggle  = std::make_unique<ParamToggle> (proc.apvts, ParamIDs::multiOut,    "MULTI", Colors::orange);
-    addAndMakeVisible (*masterGainKnob); addAndMakeVisible (*masterDriveKnob); addAndMakeVisible (*multiOutToggle);
+    accentKnob = std::make_unique<ParamKnob> (proc.apvts, ParamIDs::accentLevel, "ACCENT");
+    addAndMakeVisible (*masterGainKnob); addAndMakeVisible (*masterDriveKnob);
+    addAndMakeVisible (*accentKnob); addAndMakeVisible (*multiOutToggle);
+
+    lenBox.addItem ("16", 1); lenBox.addItem ("32", 2); lenBox.addItem ("8", 3);
+    lenBox.onChange = [this]
+    {
+        const int id = lenBox.getSelectedId();
+        const int L = (id == 2 ? 32 : id == 3 ? 8 : 16);
+        const int pat = proc.getSequencer().getCurrentPattern();
+        proc.getSequencer().setLength (pat, 0, L);
+        proc.getSequencer().setLength (pat, 1, L);
+        stepView.repaint();
+    };
+    lenLabel.setFont (juce::FontOptions (10.0f));
+    addAndMakeVisible (lenBox); addAndMakeVisible (lenLabel);
+
+    tripButton.setClickingTogglesState (true);
+    tripButton.onClick = [this]
+    {
+        const bool trip = tripButton.getToggleState();
+        const int pat = proc.getSequencer().getCurrentPattern();
+        proc.getSequencer().setStepDiv (pat, 0, trip ? (1.0f / 6.0f) : 0.25f);
+        proc.getSequencer().setStepDiv (pat, 1, trip ? (1.0f / 6.0f) : 0.25f);
+        tripButton.setButtonText (trip ? "1/16T" : "1/16");
+    };
+    addAndMakeVisible (tripButton);
 
     performViewport.setViewedComponent (&performPanel, false);
     performViewport.setScrollBarsShown (false, true);
@@ -282,6 +308,12 @@ void TR808AudioProcessorEditor::syncTransport()
     const auto pm = seq.getPlayMode();
     abModeBox.setSelectedId (pm == Sequencer::PlayMode::a ? 1 : pm == Sequencer::PlayMode::b ? 2 : 3,
                              juce::dontSendNotification);
+
+    const int L = seq.getLength (seq.getCurrentPattern(), 0);
+    lenBox.setSelectedId (L == 32 ? 2 : L == 8 ? 3 : 1, juce::dontSendNotification);
+    const bool trip = seq.getStepDiv (seq.getCurrentPattern(), 0) < 0.22f;
+    tripButton.setToggleState (trip, juce::dontSendNotification);
+    tripButton.setButtonText (trip ? "1/16T" : "1/16");
 }
 
 void TR808AudioProcessorEditor::paint (juce::Graphics& g)
@@ -310,15 +342,19 @@ void TR808AudioProcessorEditor::resized()
     swingLabel.setBounds (scol.removeFromTop (13));
     swingSlider.setBounds (scol);
     abModeBox.setBounds (row1.removeFromLeft (56).reduced (2, 12));
-    if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (58));
-    if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (58));
-    if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (56).reduced (2, 12));
+    if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
+    if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
+    if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
+    if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (52).reduced (2, 12));
 
-    // row 2: presets + view/grid/variation
+    // row 2: presets + length/triplet + view/grid/variation
     kitLabel.setBounds (row2.removeFromLeft (28));
-    kitBox.setBounds (row2.removeFromLeft (150).reduced (2, 8));
+    kitBox.setBounds (row2.removeFromLeft (140).reduced (2, 8));
     patternLabel.setBounds (row2.removeFromLeft (54));
-    patternBox.setBounds (row2.removeFromLeft (150).reduced (2, 8));
+    patternBox.setBounds (row2.removeFromLeft (140).reduced (2, 8));
+    lenLabel.setBounds (row2.removeFromLeft (26));
+    lenBox.setBounds (row2.removeFromLeft (50).reduced (2, 8));
+    tripButton.setBounds (row2.removeFromLeft (54).reduced (2, 8));
     viewButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
     gridButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
     varBButton.setBounds (row2.removeFromRight (26).reduced (2, 8));

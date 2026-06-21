@@ -53,7 +53,9 @@ void Sequencer::process (const TransportInfo& t, std::vector<TriggerEvent>& out)
     const double ppqStart = t.hostPlaying ? t.ppqPosition : internalPpq;
     const double ppqEnd   = ppqStart + (double) t.numSamples * ppqPerSample;
 
-    const double stepQ = 0.25;                                    // a 16th note
+    // Step duration in quarter notes (0.25 = 16ths; smaller = triplets).
+    double stepQ = (double) patterns[(size_t) currentPattern].var[0].stepDiv;
+    if (stepQ < 1.0e-4) stepQ = 0.25;
     const double flamQ = (double) flamMs * 0.001 * (bpm / 60.0);
     const int    refLen = juce::jmax (1, patterns[(size_t) currentPattern].var[0].length);
 
@@ -173,6 +175,19 @@ int Sequencer::getLength (int pat, int var) const
     return maxSteps;
 }
 
+void Sequencer::setStepDiv (int pat, int var, float div)
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+        patterns[(size_t) pat].var[var].stepDiv = juce::jlimit (0.05f, 1.0f, div);
+}
+
+float Sequencer::getStepDiv (int pat, int var) const
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+        return patterns[(size_t) pat].var[var].stepDiv;
+    return 0.25f;
+}
+
 bool Sequencer::getAccent (int pat, int var, int step) const
 {
     if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
@@ -223,6 +238,7 @@ juce::ValueTree Sequencer::toValueTree() const
             juce::ValueTree vt ("VAR");
             vt.setProperty ("v", var, nullptr);
             vt.setProperty ("length", v.length, nullptr);
+            vt.setProperty ("stepdiv", v.stepDiv, nullptr);
             vt.setProperty ("accent", boolRowToString (v.accent), nullptr);
             for (int vo = 0; vo < numVoices; ++vo)
             {
@@ -273,7 +289,8 @@ void Sequencer::fromValueTree (const juce::ValueTree& state)
             const int var = (int) vt.getProperty ("v", 0);
             if (var != 0 && var != 1) continue;
             auto& v = patterns[(size_t) p].var[var];
-            v.length = juce::jlimit (1, maxSteps, (int) vt.getProperty ("length", 16));
+            v.length  = juce::jlimit (1, maxSteps, (int) vt.getProperty ("length", 16));
+            v.stepDiv = juce::jlimit (0.05f, 1.0f, (float) (double) vt.getProperty ("stepdiv", 0.25));
             stringToBoolRow (vt.getProperty ("accent").toString(), v.accent);
             for (int vo = 0; vo < numVoices; ++vo)
             {

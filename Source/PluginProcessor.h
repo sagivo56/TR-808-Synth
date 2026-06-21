@@ -84,6 +84,7 @@ private:
     std::array<std::atomic<float>*, tr808::numVoices> panP {}, muteP {}, soloP {};
     std::atomic<float>* masterDriveParam = nullptr;
     std::atomic<float>* multiOutParam = nullptr;
+    std::atomic<float>* accentLevelParam = nullptr;
     std::array<float*, tr808::numVoices> auxPtr {};   // per-block aux channel pointers
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TR808AudioProcessor)

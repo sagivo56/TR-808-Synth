@@ -82,7 +82,7 @@ void VoiceManager::noteOn (int voiceIndex, float velocity, bool accent)
     if (voiceIndex == OH) voiceArray[CH]->choke();
 
     voiceArray[(size_t) voiceIndex]->setMacros (macros[(size_t) voiceIndex]);
-    voiceArray[(size_t) voiceIndex]->trigger (velocity, accent);
+    voiceArray[(size_t) voiceIndex]->trigger (accent ? velocity * accentAmount : velocity, accent);
 }
 
 bool VoiceManager::isVoiceActive (int voiceIndex) const
