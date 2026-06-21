@@ -1,15 +1,15 @@
 #pragma once
 
 #include "Voice.h"
-#include "../dsp/BandlimitedOsc.h"
-#include "../dsp/PitchEnvelope.h"
-#include "../dsp/Envelope.h"
+#include "../dsp/ResonatorBT.h"
 
 namespace tr808::voices
 {
-// BD: a pure sine body with a downward pitch sweep and an amplitude decay (the
-// punch/click comes entirely from the steep pitch modulation — no noise). Macros:
-// Tone scales the pitch sweep (attack punch), Decay scales the body length, Level.
+// BD — service-manual circuit model: a bridged-T resonator (decaying sine, decay
+// set by Q/feedback). On trigger it rings at a "punch" multiple of the inherent
+// frequency for the first half-cycle, then drops to the inherent frequency and a
+// retrigger pulse re-excites it (the Q41-Q43 trick). Macros: Tone scales the
+// punch, Decay scales the ring, Level.
 class BassDrumVoice : public Voice
 {
 public:
@@ -21,22 +21,24 @@ public:
 
     std::vector<DeepRef> deepRefs() override
     {
-        return { { "freq", &deep.freq }, { "penvamt", &deep.penvAmt }, { "penvtime", &deep.penvTime },
-                 { "bodydecay", &deep.bodyDecay }, { "drive", &deep.drive } };
+        return { { "freq", &deep.freq }, { "bodydecay", &deep.decay }, { "punch", &deep.punch },
+                 { "retrig", &deep.retrig }, { "drive", &deep.drive } };
     }
 
 private:
     struct Deep
     {
-        float freq = 52.0f, penvAmt = 180.0f, penvTime = 45.0f, bodyDecay = 300.0f, drive = 1.0f;
+        float freq = 55.0f, decay = 320.0f, punch = 2.0f, retrig = 0.5f, drive = 1.0f;
     } deep;
 
-    dsp::BandlimitedOsc sine;
-    dsp::PitchEnvelope  pitchEnv;
-    dsp::Envelope       ampEnv;
+    dsp::ResonatorBT res;
 
-    float amp      = 0.0f;
-    float baseFreq = 52.0f;
-    float driveAmt = 1.0f;
+    float amp        = 0.0f;
+    float baseFreq   = 55.0f;
+    float driveAmt   = 1.0f;
+    float retrigAmt  = 0.5f;
+    int   switchSample = 0;
+    int   sampleCount  = 0;
+    bool  switched     = true;
 };
 }
