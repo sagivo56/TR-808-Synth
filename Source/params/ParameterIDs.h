@@ -9,5 +9,7 @@
 // ===========================================================================
 namespace ParamIDs
 {
-    inline constexpr auto masterGain = "master_gain";
+    inline constexpr auto masterGain  = "master_gain";
+    inline constexpr auto masterDrive = "master_drive";
+    inline constexpr auto multiOut    = "multi_out";
 }

@@ -78,6 +78,7 @@ set(TR808_VOICE_SOURCES
     Source/voices/MetalVoice.cpp
     Source/voices/MaracasVoice.cpp
     Source/engine/VoiceManager.cpp
+    Source/engine/Mixer.cpp
 )
 
 target_sources(TR808Synth PRIVATE

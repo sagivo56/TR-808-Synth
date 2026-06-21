@@ -59,6 +59,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     for (const auto& d : deepParamDescs())
         addDeep (layout, d);
 
+    // Mixer (M5): per-voice pan + mute/solo.
+    for (int i = 0; i < numVoices; ++i)
+    {
+        const juce::String n (voiceSpecs()[(size_t) i].name);
+        layout.add (std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID { macroId (i, "pan"), 1 }, n + " Pan",
+            juce::NormalisableRange<float> (-1.0f, 1.0f, 0.001f), 0.0f));
+        layout.add (std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID { macroId (i, "mute"), 1 }, n + " Mute", false));
+        layout.add (std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID { macroId (i, "solo"), 1 }, n + " Solo", false));
+    }
+
+    // Master drive + gentle limiter, and the stereo/multi-out toggle.
+    layout.add (std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { ParamIDs::masterDrive, 1 }, "Master Drive",
+        juce::NormalisableRange<float> (1.0f, 10.0f, 0.01f), 1.0f));
+    layout.add (std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { ParamIDs::multiOut, 1 }, "Multi-Out", false));
+
     return layout;
 }
 }

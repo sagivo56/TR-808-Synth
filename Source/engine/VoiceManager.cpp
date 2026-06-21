@@ -92,48 +92,76 @@ bool VoiceManager::isVoiceActive (int voiceIndex) const
     return voiceArray[(size_t) voiceIndex]->isActive();
 }
 
-void VoiceManager::renderSegment (juce::AudioBuffer<float>& buffer, int start, int len)
+void VoiceManager::renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& mixer, float* const* auxChannels, int start, int len)
 {
     if (len <= 0)
         return;
 
     len = juce::jmin (len, maxBlock);
-    auto* mb = monoBuf.data();
-    std::fill (mb, mb + len, 0.0f);
+    auto* L = mainBuffer.getWritePointer (0);
+    auto* R = mainBuffer.getNumChannels() > 1 ? mainBuffer.getWritePointer (1) : L;
+    auto* scratch = monoBuf.data();
 
-    for (auto& v : voiceArray)
-        if (v->isActive())
-            v->renderAdd (mb, len);
-
-    const int numCh = buffer.getNumChannels();
-    for (int ch = 0; ch < numCh; ++ch)
+    for (int v = 0; v < numVoices; ++v)
     {
-        auto* dst = buffer.getWritePointer (ch) + start;
-        for (int i = 0; i < len; ++i)
-            dst[i] += mb[i];
+        if (! voiceArray[(size_t) v]->isActive())
+            continue;
+
+        std::fill (scratch, scratch + len, 0.0f);
+        voiceArray[(size_t) v]->renderAdd (scratch, len);
+
+        // Master: panned + mute/solo gated.
+        const auto g = mixer.gainsFor (v);
+        if (g.gate > 0.0f)
+        {
+            const float gl = g.gate * g.panL;
+            const float gr = g.gate * g.panR;
+            for (int i = 0; i < len; ++i)
+            {
+                const float s = scratch[i];
+                L[start + i] += s * gl;
+                R[start + i] += s * gr;
+            }
+        }
+
+        // Aux send (multi-out): the clean mono voice, no pan/gate.
+        if (auxChannels != nullptr && auxChannels[v] != nullptr)
+        {
+            auto* a = auxChannels[v] + start;
+            for (int i = 0; i < len; ++i)
+                a[i] += scratch[i];
+        }
     }
 }
 
-void VoiceManager::renderEvents (juce::AudioBuffer<float>& buffer, const std::vector<TriggerEvent>& events)
+void VoiceManager::renderEvents (juce::AudioBuffer<float>& mainBuffer,
+                                 const std::vector<TriggerEvent>& events,
+                                 Mixer& mixer,
+                                 float* const* auxChannels)
 {
-    buffer.clear();
-    const int numSamples = buffer.getNumSamples();
+    const int numSamples = mainBuffer.getNumSamples();
+    mainBuffer.clear();
+    if (auxChannels != nullptr)
+        for (int v = 0; v < numVoices; ++v)
+            if (auxChannels[v] != nullptr)
+                juce::FloatVectorOperations::clear (auxChannels[v], numSamples);
 
     int pos = 0;
     for (const auto& e : events)
     {
         const int t = juce::jlimit (0, numSamples, e.samplePos);
-        renderSegment (buffer, pos, t - pos);
+        renderSegment (mainBuffer, mixer, auxChannels, pos, t - pos);
         pos = t;
         noteOn (e.voiceIndex, e.velocity, e.accent);
     }
 
-    renderSegment (buffer, pos, numSamples - pos);
+    renderSegment (mainBuffer, mixer, auxChannels, pos, numSamples - pos);
 }
 
 void VoiceManager::process (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
-    // Test convenience: translate MIDI note-ons to events (allocates — fine here).
+    // Test convenience: translate MIDI note-ons to events and render through a
+    // default (centre-pan, nothing muted) mixer with no aux sends.
     std::vector<TriggerEvent> events;
     for (const auto meta : midi)
     {
@@ -146,6 +174,8 @@ void VoiceManager::process (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& 
                                     msg.getVelocity() >= accentVelocity });
         }
     }
-    renderEvents (buffer, events);
+    Mixer defaultMixer;
+    std::array<float*, numVoices> noAux {};
+    renderEvents (buffer, events, defaultMixer, noAux.data());
 }
 }

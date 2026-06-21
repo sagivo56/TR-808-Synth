@@ -5,9 +5,19 @@
 #include <algorithm>
 
 //==============================================================================
+juce::AudioProcessor::BusesProperties TR808AudioProcessor::makeBusesProperties()
+{
+    // Main stereo master + one mono aux ("multi-out") bus per voice, disabled by
+    // default so the default layout is plain stereo. Hosts enable the aux buses
+    // for individual outputs.
+    auto buses = BusesProperties().withOutput ("Master", juce::AudioChannelSet::stereo(), true);
+    for (int i = 0; i < tr808::numVoices; ++i)
+        buses = buses.withOutput (tr808::voiceSpecs()[(size_t) i].name, juce::AudioChannelSet::mono(), false);
+    return buses;
+}
+
 TR808AudioProcessor::TR808AudioProcessor()
-    : AudioProcessor (BusesProperties()
-          .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor (makeBusesProperties()),
       apvts (*this, nullptr, "PARAMETERS", params::createParameterLayout())
 {
 }
@@ -17,7 +27,17 @@ void TR808AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     voiceManager.prepare (sampleRate, samplesPerBlock);
     sequencer.prepare (sampleRate);
+    mixer.prepare (sampleRate, samplesPerBlock);
     eventBuffer.reserve (1024);
+
+    masterDriveParam = apvts.getRawParameterValue (ParamIDs::masterDrive);
+    multiOutParam    = apvts.getRawParameterValue (ParamIDs::multiOut);
+    for (int i = 0; i < tr808::numVoices; ++i)
+    {
+        panP[(size_t) i]  = apvts.getRawParameterValue (juce::String (tr808::macroId (i, "pan")));
+        muteP[(size_t) i] = apvts.getRawParameterValue (juce::String (tr808::macroId (i, "mute")));
+        soloP[(size_t) i] = apvts.getRawParameterValue (juce::String (tr808::macroId (i, "solo")));
+    }
 
     masterGainParam = apvts.getRawParameterValue (ParamIDs::masterGain);
     masterGain.reset (sampleRate, 0.02);
@@ -51,6 +71,24 @@ void TR808AudioProcessor::updateDeepFromApvts()
         *w.second = w.first->load();
 }
 
+void TR808AudioProcessor::updateMixerFromApvts()
+{
+    for (int i = 0; i < tr808::numVoices; ++i)
+    {
+        mixer.setPan (i, panP[(size_t) i] != nullptr ? panP[(size_t) i]->load() : 0.0f);
+
+        const bool m = muteP[(size_t) i] != nullptr && muteP[(size_t) i]->load() > 0.5f;
+        const bool s = soloP[(size_t) i] != nullptr && soloP[(size_t) i]->load() > 0.5f;
+        mixer.setMute (i, m);
+        mixer.setSolo (i, s);
+
+        // Single source of truth: also keep the sequencer from firing them.
+        sequencer.setMute (i, m);
+        sequencer.setSolo (i, s);
+    }
+    mixer.setMasterDrive (masterDriveParam != nullptr ? masterDriveParam->load() : 1.0f);
+}
+
 void TR808AudioProcessor::updateMacrosFromApvts()
 {
     for (int i = 0; i < tr808::numVoices; ++i)
@@ -70,14 +108,24 @@ void TR808AudioProcessor::releaseResources()
 
 bool TR808AudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    // Synthesiser: no audio input. The main output may be mono or stereo (M0);
-    // the selectable 16-channel multi-out layout is added in M5.
+    // Synthesiser: no audio input.
     if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::disabled())
         return false;
 
-    const auto out = layouts.getMainOutputChannelSet();
-    return out == juce::AudioChannelSet::mono()
-        || out == juce::AudioChannelSet::stereo();
+    // Main (master) bus: mono or stereo.
+    const auto main = layouts.getMainOutputChannelSet();
+    if (main != juce::AudioChannelSet::mono() && main != juce::AudioChannelSet::stereo())
+        return false;
+
+    // Per-voice aux buses: each mono or disabled — so the host can run plain
+    // stereo (all aux disabled = fallback) or full multi-out.
+    for (int b = 1; b < layouts.outputBuses.size(); ++b)
+    {
+        const auto set = layouts.outputBuses.getReference (b);
+        if (set != juce::AudioChannelSet::disabled() && set != juce::AudioChannelSet::mono())
+            return false;
+    }
+    return true;
 }
 
 void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
@@ -87,6 +135,7 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     updateMacrosFromApvts();
     updateDeepFromApvts();
+    updateMixerFromApvts();
 
     // Transport from the host (falls back to the sequencer's internal clock).
     tr808::Sequencer::TransportInfo transport;
@@ -116,11 +165,27 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     std::sort (eventBuffer.begin(), eventBuffer.end(),
                [] (const auto& a, const auto& b) { return a.samplePos < b.samplePos; });
 
-    voiceManager.renderEvents (buffer, eventBuffer);
+    // Routing: clear everything, then render the master stereo bus plus any
+    // active per-voice aux (multi-out) sends.
+    buffer.clear();
+
+    const bool multiOut = (multiOutParam != nullptr && multiOutParam->load() > 0.5f);
+    for (int v = 0; v < tr808::numVoices; ++v)
+    {
+        const int busIdx = v + 1;
+        auxPtr[(size_t) v] = (multiOut && busIdx < getBusCount (false) && getChannelCountOfBus (false, busIdx) > 0)
+                           ? getBusBuffer (buffer, false, busIdx).getWritePointer (0)
+                           : nullptr;
+    }
+
+    auto mainBus = getBusBuffer (buffer, false, 0);
+    voiceManager.renderEvents (mainBus, eventBuffer, mixer, auxPtr.data());
+
+    mixer.processMaster (mainBus);
 
     if (masterGainParam != nullptr)
         masterGain.setTargetValue (juce::Decibels::decibelsToGain (masterGainParam->load()));
-    masterGain.applyGain (buffer, buffer.getNumSamples());
+    masterGain.applyGain (mainBus, mainBus.getNumSamples());
 }
 
 //==============================================================================

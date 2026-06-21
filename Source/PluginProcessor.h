@@ -57,12 +57,16 @@ public:
 
     tr808::Sequencer& getSequencer() noexcept { return sequencer; }
 
+    static BusesProperties makeBusesProperties();
+
 private:
     void updateMacrosFromApvts();
     void updateDeepFromApvts();
+    void updateMixerFromApvts();
 
     tr808::VoiceManager voiceManager;
     tr808::Sequencer    sequencer;
+    tr808::Mixer        mixer;
 
     // Reusable, pre-reserved per-block event buffer (no audio-thread allocation).
     std::vector<tr808::TriggerEvent> eventBuffer;
@@ -75,6 +79,12 @@ private:
 
     // Deep params: APVTS atomic -> destination float inside the voice.
     std::vector<std::pair<std::atomic<float>*, float*>> deepWiring;
+
+    // Mixer params.
+    std::array<std::atomic<float>*, tr808::numVoices> panP {}, muteP {}, soloP {};
+    std::atomic<float>* masterDriveParam = nullptr;
+    std::atomic<float>* multiOutParam = nullptr;
+    std::array<float*, tr808::numVoices> auxPtr {};   // per-block aux channel pointers
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TR808AudioProcessor)
 };
