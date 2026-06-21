@@ -7,6 +7,10 @@ on Windows, plus **AU** when built on macOS.
 > Project lives at `C:\dev\808-app` (kept outside OneDrive so the build tree and the
 > fetched JUCE source aren't synced to the cloud).
 
+**✅ All milestones (M0–M7) complete** — builds VST3 + Standalone, passes `pluginval`
+strictness 10, with the full voice engine, host-synced sequencer, mixer/multi-out,
+UI and preset banks. Offline tests: dsp 36/36, voice 87/87, seq 18/18.
+
 ---
 
 ## Status
@@ -20,7 +24,7 @@ on Windows, plus **AU** when built on macOS.
 | **M4** | Sequencer | ✅ **done** — 16-step, host-synced sample-accurate, accent/flam/swing/AB/mute-solo; seq_tests 18/18, pluginval 10 |
 | **M5** | Mixer & routing | ✅ **done** — per-voice pan/mute/solo, master drive+limiter, stereo ⇄ 16 multi-out + fallback; pluginval 10 |
 | **M6** | UI | ✅ **done** — PERFORM panel + EDIT deep view + step grid (Grid/Authentic), 808 colors, resizable, APVTS-bound; pluginval 10 (editor + no desync) |
-| M7 | Presets & polish | ⬜ |
+| **M7** | Presets & polish | ✅ **done** — Kit + Pattern factory banks + user save/load; oversampled master; strict pluginval 10 |
 
 ---
 
@@ -127,6 +131,26 @@ cmake --build build --config Release --target seq_tests
 
 M4 result: **seq_tests 18/18**; pluginval strictness 10 → SUCCESS with the
 sequencer integrated.
+
+---
+
+## Presets (M7)
+
+- **Kit** = the synthesis sound (macro + deep params + master drive). **Pattern** =
+  the sequencer. They're independent.
+- Header **KIT** / **PATTERN** combo boxes: pick a factory entry (Classic/Punchy/
+  Deep/Bright kits; Four-on-Floor/Hip-Hop/Electro/Clave patterns), or **Save…/Load…**
+  user presets (XML in `%APPDATA%/TR-808 Synth/Presets`).
+
+## Notes / future polish
+
+- Master drive/limiter is an oversampled (2×) tanh; oscillators are PolyBLEP
+  band-limited. The light per-voice drive is not separately oversampled.
+- Sequencer pattern edits happen on the message thread while the audio thread reads
+  them (simple bool/int writes). Fine in practice; a lock-free swap would make it
+  formally race-free.
+- Voice tunings/defaults are a faithful starting point — fine-tune by ear via the
+  EDIT view's deep params.
 
 ---
 
