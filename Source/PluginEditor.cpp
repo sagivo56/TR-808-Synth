@@ -97,6 +97,15 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     };
     addAndMakeVisible (abModeBox);
 
+    setupPresetBox (kitBox, PresetManager::kitNames());
+    kitBox.onChange = [this] { handleKitBox(); };
+    setupPresetBox (patternBox, PresetManager::patternNames());
+    patternBox.onChange = [this] { handlePatternBox(); };
+    kitLabel.setFont (juce::FontOptions (10.0f));
+    patternLabel.setFont (juce::FontOptions (10.0f));
+    addAndMakeVisible (kitBox); addAndMakeVisible (patternBox);
+    addAndMakeVisible (kitLabel); addAndMakeVisible (patternLabel);
+
     tempoSlider.setSliderStyle (juce::Slider::LinearHorizontal);
     tempoSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 16);
     tempoSlider.setRange (20.0, 300.0, 1.0);
@@ -205,6 +214,65 @@ void TR808AudioProcessorEditor::showEdit (bool edit)
     resized();
 }
 
+void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce::StringArray& factory)
+{
+    box.clear (juce::dontSendNotification);
+    int id = 1;
+    for (const auto& n : factory) box.addItem (n, id++);
+    box.addSeparator();
+    box.addItem ("Save\xE2\x80\xA6", 100);
+    box.addItem ("Load\xE2\x80\xA6", 101);
+    box.setTextWhenNothingSelected ("\xE2\x80\x94");
+}
+
+void TR808AudioProcessorEditor::handleKitBox()
+{
+    const int id = kitBox.getSelectedId();
+    if (id == 0) return;
+
+    if (id == 100)
+    {
+        chooser = std::make_unique<juce::FileChooser> ("Save Kit", PresetManager::presetsDir(), "*.xml");
+        chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f != juce::File()) PresetManager::saveKit (proc.apvts, f.withFileExtension ("xml")); });
+    }
+    else if (id == 101)
+    {
+        chooser = std::make_unique<juce::FileChooser> ("Load Kit", PresetManager::presetsDir(), "*.xml");
+        chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile()) PresetManager::loadKit (proc.apvts, f); });
+    }
+    else
+    {
+        PresetManager::applyFactoryKit (proc.apvts, id - 1);
+    }
+    kitBox.setSelectedId (0, juce::dontSendNotification);
+}
+
+void TR808AudioProcessorEditor::handlePatternBox()
+{
+    const int id = patternBox.getSelectedId();
+    if (id == 0) return;
+
+    if (id == 100)
+    {
+        chooser = std::make_unique<juce::FileChooser> ("Save Pattern", PresetManager::presetsDir(), "*.xml");
+        chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f != juce::File()) PresetManager::savePattern (proc.getSequencer(), f.withFileExtension ("xml")); });
+    }
+    else if (id == 101)
+    {
+        chooser = std::make_unique<juce::FileChooser> ("Load Pattern", PresetManager::presetsDir(), "*.xml");
+        chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile()) PresetManager::loadPattern (proc.getSequencer(), f); });
+    }
+    else
+    {
+        PresetManager::applyFactoryPattern (proc.getSequencer(), id - 1);
+    }
+    patternBox.setSelectedId (0, juce::dontSendNotification);
+}
+
 void TR808AudioProcessorEditor::syncTransport()
 {
     auto& seq = proc.getSequencer();
@@ -220,35 +288,42 @@ void TR808AudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (Colors::background);
     g.setColour (Colors::panelLight);
-    g.fillRect (getLocalBounds().removeFromTop (76));
+    g.fillRect (getLocalBounds().removeFromTop (112));
 }
 
 void TR808AudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
 
-    // --- header ---
-    auto header = area.removeFromTop (76).reduced (6);
-    titleLabel.setBounds (header.removeFromLeft (84));
-    playButton.setBounds (header.removeFromLeft (58).reduced (2, 16));
+    // --- header (two rows) ---
+    auto headerFull = area.removeFromTop (112);
+    auto row1 = headerFull.removeFromTop (58).reduced (6, 4);
+    auto row2 = headerFull.reduced (6, 4);
 
-    auto tcol = header.removeFromLeft (150);
-    tempoLabel.setBounds (tcol.removeFromTop (14));
-    tempoSlider.setBounds (tcol.reduced (0, 2));
-    auto scol = header.removeFromLeft (150);
-    swingLabel.setBounds (scol.removeFromTop (14));
-    swingSlider.setBounds (scol.reduced (0, 2));
-    abModeBox.setBounds (header.removeFromLeft (64).reduced (2, 22));
+    // row 1: transport + master
+    titleLabel.setBounds (row1.removeFromLeft (78));
+    playButton.setBounds (row1.removeFromLeft (56).reduced (2, 8));
+    auto tcol = row1.removeFromLeft (150);
+    tempoLabel.setBounds (tcol.removeFromTop (13));
+    tempoSlider.setBounds (tcol);
+    auto scol = row1.removeFromLeft (150);
+    swingLabel.setBounds (scol.removeFromTop (13));
+    swingSlider.setBounds (scol);
+    abModeBox.setBounds (row1.removeFromLeft (56).reduced (2, 12));
+    if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (58));
+    if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (58));
+    if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (56).reduced (2, 12));
 
-    // right-aligned cluster
-    if (masterGainKnob)  masterGainKnob->setBounds (header.removeFromRight (62));
-    if (masterDriveKnob) masterDriveKnob->setBounds (header.removeFromRight (62));
-    if (multiOutToggle)  multiOutToggle->setBounds (header.removeFromRight (58).reduced (2, 22));
-    viewButton.setBounds (header.removeFromRight (58).reduced (2, 22));
-    gridButton.setBounds (header.removeFromRight (58).reduced (2, 22));
-    varBButton.setBounds (header.removeFromRight (26).reduced (2, 22));
-    varAButton.setBounds (header.removeFromRight (26).reduced (2, 22));
-    varLabel.setBounds (header.removeFromRight (34).reduced (0, 22));
+    // row 2: presets + view/grid/variation
+    kitLabel.setBounds (row2.removeFromLeft (28));
+    kitBox.setBounds (row2.removeFromLeft (150).reduced (2, 8));
+    patternLabel.setBounds (row2.removeFromLeft (54));
+    patternBox.setBounds (row2.removeFromLeft (150).reduced (2, 8));
+    viewButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
+    gridButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
+    varBButton.setBounds (row2.removeFromRight (26).reduced (2, 8));
+    varAButton.setBounds (row2.removeFromRight (26).reduced (2, 8));
+    varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));
 
     // --- step grid at the bottom ---
     auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * 40 / 100));

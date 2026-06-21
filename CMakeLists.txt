@@ -86,6 +86,7 @@ target_sources(TR808Synth PRIVATE
     Source/PluginEditor.cpp
     Source/params/ParameterLayout.cpp
     Source/engine/Sequencer.cpp
+    Source/engine/PresetManager.cpp
     Source/ui/StepSequencerView.cpp
     ${TR808_DSP_SOURCES}
     ${TR808_VOICE_SOURCES}

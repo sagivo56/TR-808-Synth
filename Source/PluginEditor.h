@@ -8,6 +8,7 @@
 #include "params/ParameterIDs.h"
 #include "engine/VoiceDefs.h"
 #include "engine/DeepParams.h"
+#include "engine/PresetManager.h"
 #include "ui/LookAndFeel808.h"
 #include "ui/ParamComponents.h"
 #include "ui/StepSequencerView.h"
@@ -45,6 +46,9 @@ private:
     void buildEditFor (int voice);
     void showEdit (bool edit);
     void syncTransport();
+    void setupPresetBox (juce::ComboBox&, const juce::StringArray& factory);
+    void handleKitBox();
+    void handlePatternBox();
 
     TR808AudioProcessor&       proc;
     tr808::ui::LookAndFeel808  lnf;
@@ -55,6 +59,9 @@ private:
     juce::TextButton gridButton  { "GRID" };
     juce::TextButton varAButton  { "A" }, varBButton { "B" };
     juce::ComboBox   abModeBox;
+    juce::ComboBox   kitBox, patternBox;
+    juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" };
+    std::unique_ptr<juce::FileChooser> chooser;
     juce::Slider     tempoSlider, swingSlider;
     juce::Label      tempoLabel { {}, "TEMPO" }, swingLabel { {}, "SWING" }, varLabel { {}, "EDIT" };
 
