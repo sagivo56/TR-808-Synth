@@ -9,6 +9,7 @@
 
 #include "engine/VoiceManager.h"
 #include "engine/VoiceDefs.h"
+#include "engine/Mixer.h"
 
 #include <iostream>
 #include <vector>
@@ -137,6 +138,71 @@ static void testHatChoke (VoiceManager& vm)
     check (vm.isVoiceActive (CH), "closed hat itself is sounding");
 }
 
+static void testMixer()
+{
+    std::cout << "Mixer (pan / mute / solo / master)\n";
+    Mixer mix; mix.prepare (kSampleRate, kBlock);
+
+    auto centre = mix.gainsFor (BD);
+    check (std::abs (centre.panL - centre.panR) < 1.0e-4 && std::abs (centre.panL - 0.70710678f) < 1.0e-3,
+           "centre pan is equal-power (~-3 dB both)");
+
+    mix.setPan (BD, -1.0f);
+    auto left = mix.gainsFor (BD);
+    check (left.panL > 0.99f && left.panR < 0.01f, "hard left = L only");
+    mix.setPan (BD, 1.0f);
+    auto right = mix.gainsFor (BD);
+    check (right.panR > 0.99f && right.panL < 0.01f, "hard right = R only");
+
+    mix.setMute (BD, true);
+    check (mix.gainsFor (BD).gate == 0.0f, "mute gates the voice");
+
+    Mixer solo; solo.prepare (kSampleRate, kBlock);
+    solo.setSolo (SD, true);
+    check (solo.gainsFor (SD).gate == 1.0f && solo.gainsFor (BD).gate == 0.0f, "solo isolates the soloed voice");
+
+    // Master gentle limiter: a very loud buffer is bounded by the tanh.
+    juce::AudioBuffer<float> buf (2, kBlock);
+    for (int ch = 0; ch < 2; ++ch) { auto* p = buf.getWritePointer (ch); for (int i = 0; i < kBlock; ++i) p[i] = 5.0f; }
+    solo.setMasterDrive (1.0f);
+    solo.processMaster (buf);
+    float steady = 0.0f, peak = 0.0f;
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        auto* p = buf.getReadPointer (ch);
+        for (int i = 0; i < kBlock; ++i)
+        {
+            peak = std::max (peak, std::abs (p[i]));
+            if (i >= 200) steady = std::max (steady, std::abs (p[i]));   // past the oversampler settling
+        }
+    }
+    check (steady <= 1.001f, "master limiter clamps the sustained level to ~1", "steady=" + std::to_string (steady));
+    check (std::isfinite (peak) && peak < 1.5f, "master bus stays bounded (brief filter overshoot ok)", "peak=" + std::to_string (peak));
+}
+
+static void testMultiOutRouting (VoiceManager& vm)
+{
+    std::cout << "Multi-out routing\n";
+    Mixer mix; mix.prepare (kSampleRate, kBlock);
+    mix.setPan (BD, -1.0f);                       // hard left
+
+    vm.reset();
+    std::vector<TriggerEvent> ev { { 0, BD, 1.0f, false } };
+    juce::AudioBuffer<float> main (2, kBlock);
+    std::vector<float> auxBD ((size_t) kBlock, 0.0f);
+    std::array<float*, numVoices> aux {};
+    aux[(size_t) BD] = auxBD.data();
+
+    vm.renderEvents (main, ev, mix, aux.data());
+
+    std::vector<float> L (main.getReadPointer (0), main.getReadPointer (0) + kBlock);
+    std::vector<float> R (main.getReadPointer (1), main.getReadPointer (1) + kBlock);
+
+    check (rms (L, 0, kBlock) > 1.0e-3, "master L carries the BD (panned left)");
+    check (rms (R, 0, kBlock) < rms (L, 0, kBlock) * 0.05, "master R near-silent for hard-left voice");
+    check (rms (auxBD, 0, kBlock) > 1.0e-3, "BD aux send carries the voice");
+}
+
 int main()
 {
     std::cout << "=== TR-808 voice tests (sr=" << kSampleRate << ") ===\n";
@@ -148,6 +214,8 @@ int main()
     testGmMapping();
     testSampleAccurateTrigger (vm);
     testHatChoke (vm);
+    testMixer();
+    testMultiOutRouting (vm);
 
     std::cout << "\n" << (g_total - g_failed) << "/" << g_total << " checks passed.\n";
     if (g_failed > 0) { std::cout << "*** " << g_failed << " FAILED ***\n"; return 1; }
