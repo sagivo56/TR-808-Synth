@@ -5,6 +5,7 @@
 #include "../dsp/SVFilter.h"
 #include "../dsp/Envelope.h"
 #include "../dsp/NoiseGen.h"
+#include "../dsp/SwingVCA.h"
 
 namespace tr808::voices
 {
@@ -41,6 +42,7 @@ private:
 
     dsp::MetalCluster cluster;
     dsp::NoiseGen     noise;
+    dsp::SwingVCA     swingVca;    // cymbal diode harmonics (Fig 12)
     dsp::SVFilter     hpf;
     dsp::SVFilter     bp;
     dsp::Envelope     env;

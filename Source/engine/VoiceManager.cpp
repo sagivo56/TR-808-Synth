@@ -22,10 +22,11 @@ namespace
         return v;
     }
 
-    std::unique_ptr<Voice> makeResonator (float freq, float decaySec)
+    std::unique_ptr<Voice> makeResonator (float freq, float decaySec, bool swing)
     {
         auto v = std::make_unique<TunedResonatorVoice>();
         v->setConfig (freq, decaySec);
+        v->setSwing (swing);
         return v;
     }
 
@@ -40,7 +41,7 @@ namespace
 VoiceManager::VoiceManager()
 {
     voiceArray[BD] = std::make_unique<BassDrumVoice>();
-    voiceArray[RS] = makeResonator (1700.0f, 0.06f);
+    voiceArray[RS] = makeResonator (1700.0f, 0.06f, true);    // rim shot uses the swing VCA
     voiceArray[SD] = std::make_unique<SnareVoice>();
     voiceArray[CP] = std::make_unique<ClapVoice>();
     voiceArray[LT] = makeTomConga (90.0f,  0.60f);
@@ -54,7 +55,7 @@ VoiceManager::VoiceManager()
     voiceArray[LC] = makeTomConga (220.0f, 0.25f);
     voiceArray[MC] = makeTomConga (280.0f, 0.22f);
     voiceArray[HC] = makeTomConga (370.0f, 0.20f);
-    voiceArray[CL] = makeResonator (2500.0f, 0.05f);
+    voiceArray[CL] = makeResonator (2500.0f, 0.05f, false);
 }
 
 void VoiceManager::prepare (double sampleRate, int maxBlockSize)

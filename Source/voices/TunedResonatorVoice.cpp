@@ -12,6 +12,7 @@ void TunedResonatorVoice::prepare (double sr, int)
 void TunedResonatorVoice::reset()
 {
     res.reset();
+    swingVca.reset();
     amp = 0.0f;
 }
 
@@ -27,7 +28,12 @@ void TunedResonatorVoice::trigger (float velocity, bool accent)
 void TunedResonatorVoice::renderAdd (float* mono, int numSamples)
 {
     for (int i = 0; i < numSamples; ++i)
-        mono[i] += res.processSample() * amp;
+    {
+        float s = res.processSample();
+        if (useSwing)
+            s = swingVca.process (s);
+        mono[i] += s * amp;
+    }
 }
 
 bool TunedResonatorVoice::isActive() const

@@ -17,6 +17,7 @@ void MetalVoice::prepare (double sr, int)
 void MetalVoice::reset()
 {
     cluster.reset();
+    swingVca.reset();
     hpf.reset();
     bp.reset();
     env.reset();
@@ -49,7 +50,9 @@ void MetalVoice::renderAdd (float* mono, int numSamples)
 
     for (int i = 0; i < numSamples; ++i)
     {
-        const float c   = cluster.processSample();
+        float c = cluster.processSample();
+        if (isCymbal)
+            c = swingVca.process (c);            // diode -> ringing metallic harmonics
         const float src = c * (1.0f - noiseMix) + noise.processSample() * noiseMix;
         const float high = hpf.processSample (src);
 
