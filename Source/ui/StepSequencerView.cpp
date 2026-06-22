@@ -65,23 +65,42 @@ void StepSequencerView::paint (juce::Graphics& g)
             cell ({ area.getX() + s * cw, area.getY() + numVoices * rh, cw, rh },
                   seq.getAccent (pat, editVar, s), true, s == playStep);
     }
-    else // authentic: selected voice + accent row
+    else // authentic 808-style: instrument selector (incl. ACCENT) + step keys
     {
-        g.setColour (Colors::orange);
-        g.setFont (juce::FontOptions (15.0f, juce::Font::bold));
-        g.drawText (juce::String (voiceSpecs()[(size_t) selectedVoice].name),
-                    area.removeFromTop (22), juce::Justification::centredLeft);
+        juce::ignoreUnused (cell);
+        const int numInst = numVoices + 1;                 // 16 voices + ACCENT
 
+        // instrument selector
+        auto selRow = area.removeFromTop (juce::jmax (24, area.getHeight() / 5));
+        const float iw = selRow.getWidth() / (float) numInst;
+        for (int i = 0; i < numInst; ++i)
+        {
+            juce::Rectangle<float> r (selRow.getX() + i * iw, (float) selRow.getY(), iw, (float) selRow.getHeight());
+            const bool sel = (i == selectedVoice);
+            g.setColour (sel ? Colors::orange : Colors::panelLight);
+            g.fillRoundedRectangle (r.reduced (1.5f), 3.0f);
+            g.setColour (sel ? Colors::background : Colors::text);
+            g.setFont (juce::FontOptions (9.5f, juce::Font::bold));
+            g.drawText (i == accentIndex ? "ACC" : juce::String (voiceSpecs()[(size_t) i].prefix).toUpperCase(),
+                        r, juce::Justification::centred);
+        }
+
+        area.removeFromTop (6);
+
+        // step keys for the selected instrument (or accent), 808 grouping colours
+        const bool accSel = (selectedVoice == accentIndex);
         const float cw = area.getWidth() / (float) len;
-        auto stepRow   = area.removeFromTop (area.getHeight() / 2).reduced (0, 4);
-        auto accentRow = area.reduced (0, 4);
-
+        const float bh = (float) juce::jmin (area.getHeight(), 90);
         for (int s = 0; s < len; ++s)
         {
-            cell ({ stepRow.getX() + s * cw, (float) stepRow.getY(), cw, (float) stepRow.getHeight() },
-                  seq.getStep (pat, editVar, selectedVoice, s), false, s == playStep);
-            cell ({ accentRow.getX() + s * cw, (float) accentRow.getY(), cw, (float) accentRow.getHeight() },
-                  seq.getAccent (pat, editVar, s), true, s == playStep);
+            juce::Rectangle<float> r (area.getX() + s * cw, (float) area.getY(), cw, bh);
+            const bool on = accSel ? seq.getAccent (pat, editVar, s)
+                                   : seq.getStep (pat, editVar, selectedVoice, s);
+            const juce::Colour offCol = (s % 4 == 0) ? Colors::grayOff.brighter (0.18f) : Colors::grayOff;
+            const juce::Colour onCol  = accSel ? Colors::yellow : ((s % 4 == 0) ? Colors::red : Colors::orange);
+            g.setColour (on ? onCol : offCol);
+            g.fillRoundedRectangle (r.reduced (2.0f), 3.0f);
+            if (s == playStep) { g.setColour (Colors::white); g.drawRoundedRectangle (r.reduced (2.0f), 3.0f, 2.0f); }
         }
     }
 }
@@ -107,14 +126,25 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
     }
     else
     {
-        area.removeFromTop (22);
+        const int numInst = numVoices + 1;
+        auto selRow = area.removeFromTop (juce::jmax (24, area.getHeight() / 5));
+        if (selRow.contains (e.getPosition()))
+        {
+            const float iw = selRow.getWidth() / (float) numInst;
+            const int i = (int) ((e.x - selRow.getX()) / iw);
+            if (i >= 0 && i < numInst) { selectedVoice = i; if (onSelect) onSelect (i); }
+            repaint();
+            return;
+        }
+        area.removeFromTop (6);
         const float cw = area.getWidth() / (float) len;
-        auto stepRow   = area.removeFromTop (area.getHeight() / 2).reduced (0, 4);
-        auto accentRow = area.reduced (0, 4);
+        const float bh = (float) juce::jmin (area.getHeight(), 90);
         const int s = (int) ((e.x - area.getX()) / cw);
-        if (s < 0 || s >= len) return;
-        if (stepRow.contains (e.getPosition()))        seq.setStep (pat, editVar, selectedVoice, s, ! seq.getStep (pat, editVar, selectedVoice, s));
-        else if (accentRow.contains (e.getPosition())) seq.setAccent (pat, editVar, s, ! seq.getAccent (pat, editVar, s));
+        if (s >= 0 && s < len && e.y <= area.getY() + bh)
+        {
+            if (selectedVoice == accentIndex) seq.setAccent (pat, editVar, s, ! seq.getAccent (pat, editVar, s));
+            else                              seq.setStep (pat, editVar, selectedVoice, s, ! seq.getStep (pat, editVar, selectedVoice, s));
+        }
     }
 
     repaint();

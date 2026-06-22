@@ -151,6 +151,16 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     };
     addAndMakeVisible (tripButton);
 
+    for (int i = 1; i <= Sequencer::numPatterns; ++i) patBox.addItem (juce::String (i), i);
+    patBox.onChange = [this]
+    {
+        proc.getSequencer().setCurrentPattern (patBox.getSelectedId() - 1);
+        syncTransport();
+        stepView.repaint();
+    };
+    patLabel.setFont (juce::FontOptions (10.0f));
+    addAndMakeVisible (patBox); addAndMakeVisible (patLabel);
+
     performViewport.setViewedComponent (&performPanel, false);
     performViewport.setScrollBarsShown (false, true);
     addAndMakeVisible (performViewport);
@@ -166,6 +176,11 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
 
     addAndMakeVisible (stepView);
     stepView.setSelectedVoice (selectedVoice);
+    stepView.onSelect = [this] (int v)
+    {
+        selectedVoice = v;
+        if (v >= 0 && v < numVoices) buildEditFor (v);   // accent (== numVoices) has no edit panel
+    };
 
     syncTransport();
     showEdit (false);
@@ -314,6 +329,8 @@ void TR808AudioProcessorEditor::syncTransport()
     const bool trip = seq.getStepDiv (seq.getCurrentPattern(), 0) < 0.22f;
     tripButton.setToggleState (trip, juce::dontSendNotification);
     tripButton.setButtonText (trip ? "1/16T" : "1/16");
+
+    patBox.setSelectedId (seq.getCurrentPattern() + 1, juce::dontSendNotification);
 }
 
 void TR808AudioProcessorEditor::paint (juce::Graphics& g)
@@ -342,6 +359,8 @@ void TR808AudioProcessorEditor::resized()
     swingLabel.setBounds (scol.removeFromTop (13));
     swingSlider.setBounds (scol);
     abModeBox.setBounds (row1.removeFromLeft (56).reduced (2, 12));
+    patLabel.setBounds (row1.removeFromLeft (24));
+    patBox.setBounds (row1.removeFromLeft (44).reduced (2, 12));
     if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
     if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
     if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
