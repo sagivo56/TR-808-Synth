@@ -258,6 +258,11 @@ juce::ValueTree Sequencer::toValueTree() const
             {
                 vt.setProperty ("steps" + juce::String (vo), boolRowToString (v.steps[(size_t) vo]), nullptr);
                 vt.setProperty ("flam"  + juce::String (vo), boolRowToString (v.flam[(size_t) vo]),  nullptr);
+                // probability quantised to 4 levels (1.0/0.75/0.5/0.25) as one char per step
+                juce::String pr;
+                for (float p : v.prob[(size_t) vo])
+                    pr += (juce::juce_wchar) ('0' + juce::jlimit (0, 3, (int) std::lround ((1.0f - p) / 0.25f)));
+                vt.setProperty ("prob" + juce::String (vo), pr, nullptr);
             }
             pt.addChild (vt, -1, nullptr);
         }
@@ -310,6 +315,9 @@ void Sequencer::fromValueTree (const juce::ValueTree& state)
             {
                 stringToBoolRow (vt.getProperty ("steps" + juce::String (vo)).toString(), v.steps[(size_t) vo]);
                 stringToBoolRow (vt.getProperty ("flam"  + juce::String (vo)).toString(), v.flam[(size_t) vo]);
+                const auto pr = vt.getProperty ("prob" + juce::String (vo)).toString();
+                for (int s = 0; s < maxSteps && s < pr.length(); ++s)
+                    v.prob[(size_t) vo][(size_t) s] = 1.0f - (float) juce::jlimit (0, 3, (int) pr[s] - (int) '0') * 0.25f;
             }
         }
     }
