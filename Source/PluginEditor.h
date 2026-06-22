@@ -61,6 +61,8 @@ private:
     juce::ComboBox   abModeBox;
     juce::ComboBox   kitBox, patternBox, lenBox, patBox;
     juce::TextButton tripButton { "1/16" };
+    juce::TextButton songButton { "SONG" };
+    juce::TextEditor chainEditor;
     juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" }, lenLabel { {}, "LEN" }, patLabel { {}, "PAT" };
     std::unique_ptr<juce::FileChooser> chooser;
     juce::Slider     tempoSlider, swingSlider;

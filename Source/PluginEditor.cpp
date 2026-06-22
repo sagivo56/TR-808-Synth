@@ -161,6 +161,29 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     patLabel.setFont (juce::FontOptions (10.0f));
     addAndMakeVisible (patBox); addAndMakeVisible (patLabel);
 
+    songButton.setClickingTogglesState (true);
+    songButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);
+    songButton.onClick = [this] { proc.getSequencer().setChainEnabled (songButton.getToggleState()); };
+    addAndMakeVisible (songButton);
+
+    chainEditor.setTextToShowWhenEmpty ("e.g. 1 2 1 3", Colors::grayOff);
+    chainEditor.setTooltip ("Song / chain: pattern numbers (1-8) played in order when SONG is on");
+    auto applyChain = [this]
+    {
+        const auto toks = juce::StringArray::fromTokens (chainEditor.getText(), " ,", "");
+        std::vector<int> c;
+        for (auto& t : toks)
+            if (t.trim().isNotEmpty())
+            {
+                const int v = t.getIntValue();
+                if (v >= 1 && v <= Sequencer::numPatterns) c.push_back (v - 1);
+            }
+        proc.getSequencer().setChain (c);
+    };
+    chainEditor.onReturnKey = applyChain;
+    chainEditor.onFocusLost = applyChain;
+    addAndMakeVisible (chainEditor);
+
     performViewport.setViewedComponent (&performPanel, false);
     performViewport.setScrollBarsShown (false, true);
     addAndMakeVisible (performViewport);
@@ -331,6 +354,11 @@ void TR808AudioProcessorEditor::syncTransport()
     tripButton.setButtonText (trip ? "1/16T" : "1/16");
 
     patBox.setSelectedId (seq.getCurrentPattern() + 1, juce::dontSendNotification);
+
+    songButton.setToggleState (seq.isChainEnabled(), juce::dontSendNotification);
+    juce::String chainStr;
+    for (int c : seq.getChain()) chainStr += juce::String (c + 1) + " ";
+    chainEditor.setText (chainStr.trim(), juce::dontSendNotification);
 }
 
 void TR808AudioProcessorEditor::paint (juce::Graphics& g)
@@ -385,13 +413,15 @@ void TR808AudioProcessorEditor::resized()
     if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (52).reduced (2, 12));
 
     // row 2: presets + length/triplet + view/grid/variation
-    kitLabel.setBounds (row2.removeFromLeft (28));
-    kitBox.setBounds (row2.removeFromLeft (140).reduced (2, 8));
-    patternLabel.setBounds (row2.removeFromLeft (54));
-    patternBox.setBounds (row2.removeFromLeft (140).reduced (2, 8));
-    lenLabel.setBounds (row2.removeFromLeft (26));
-    lenBox.setBounds (row2.removeFromLeft (50).reduced (2, 8));
-    tripButton.setBounds (row2.removeFromLeft (54).reduced (2, 8));
+    kitLabel.setBounds (row2.removeFromLeft (26));
+    kitBox.setBounds (row2.removeFromLeft (116).reduced (2, 8));
+    patternLabel.setBounds (row2.removeFromLeft (50));
+    patternBox.setBounds (row2.removeFromLeft (116).reduced (2, 8));
+    lenLabel.setBounds (row2.removeFromLeft (24));
+    lenBox.setBounds (row2.removeFromLeft (46).reduced (2, 8));
+    tripButton.setBounds (row2.removeFromLeft (52).reduced (2, 8));
+    songButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
+    chainEditor.setBounds (row2.removeFromLeft (92).reduced (2, 10));
     viewButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
     gridButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
     varBButton.setBounds (row2.removeFromRight (26).reduced (2, 8));

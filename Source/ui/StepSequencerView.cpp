@@ -65,13 +65,14 @@ void StepSequencerView::paint (juce::Graphics& g)
             cell ({ area.getX() + s * cw, area.getY() + numVoices * rh, cw, rh },
                   seq.getAccent (pat, editVar, s), true, s == playStep);
     }
-    else // authentic 808-style: instrument selector (incl. ACCENT) + step keys
+    else // authentic 808-style: instrument selector + edit-layer + step keys
     {
         juce::ignoreUnused (cell);
-        const int numInst = numVoices + 1;                 // 16 voices + ACCENT
+        const int  numInst = numVoices + 1;                // 16 voices + ACCENT
+        const bool accSel  = (selectedVoice == accentIndex);
 
         // instrument selector
-        auto selRow = area.removeFromTop (juce::jmax (24, area.getHeight() / 5));
+        auto selRow = area.removeFromTop (juce::jmax (22, area.getHeight() / 6));
         const float iw = selRow.getWidth() / (float) numInst;
         for (int i = 0; i < numInst; ++i)
         {
@@ -85,21 +86,58 @@ void StepSequencerView::paint (juce::Graphics& g)
                         r, juce::Justification::centred);
         }
 
-        area.removeFromTop (6);
+        area.removeFromTop (4);
 
-        // step keys for the selected instrument (or accent), 808 grouping colours
-        const bool accSel = (selectedVoice == accentIndex);
+        // edit-layer selector: STEP / FLAM / PROB
+        auto layerRow = area.removeFromTop (juce::jmax (16, area.getHeight() / 7));
+        const char* lyNames[3] = { "STEP", "FLAM", "PROB" };
+        const float lw = juce::jmin (66.0f, layerRow.getWidth() / 6.0f);
+        for (int i = 0; i < 3; ++i)
+        {
+            juce::Rectangle<float> r (layerRow.getX() + i * lw, (float) layerRow.getY(), lw - 2.0f, (float) layerRow.getHeight());
+            const bool sel = ((int) layer == i);
+            const bool disabled = accSel && i != 0;
+            g.setColour (sel ? Colors::orange : (disabled ? Colors::background : Colors::panelLight));
+            g.fillRoundedRectangle (r.reduced (1.0f), 3.0f);
+            g.setColour (sel ? Colors::background : (disabled ? Colors::grayOff : Colors::text));
+            g.setFont (juce::FontOptions (9.0f, juce::Font::bold));
+            g.drawText (lyNames[i], r, juce::Justification::centred);
+        }
+
+        area.removeFromTop (4);
+
+        // step keys for the selected instrument, per layer
         const float cw = area.getWidth() / (float) len;
-        const float bh = (float) juce::jmin (area.getHeight(), 90);
+        const float bh = (float) juce::jmin (area.getHeight(), 80);
         for (int s = 0; s < len; ++s)
         {
             juce::Rectangle<float> r (area.getX() + s * cw, (float) area.getY(), cw, bh);
-            const bool on = accSel ? seq.getAccent (pat, editVar, s)
-                                   : seq.getStep (pat, editVar, selectedVoice, s);
-            const juce::Colour offCol = (s % 4 == 0) ? Colors::grayOff.brighter (0.18f) : Colors::grayOff;
-            const juce::Colour onCol  = accSel ? Colors::yellow : ((s % 4 == 0) ? Colors::red : Colors::orange);
-            g.setColour (on ? onCol : offCol);
+            const bool isDown = (s % 4 == 0);
+            const juce::Colour offCol = isDown ? Colors::grayOff.brighter (0.18f) : Colors::grayOff;
+            g.setColour (offCol);
             g.fillRoundedRectangle (r.reduced (2.0f), 3.0f);
+
+            if (accSel)
+            {
+                if (seq.getAccent (pat, editVar, s)) { g.setColour (Colors::yellow); g.fillRoundedRectangle (r.reduced (2.0f), 3.0f); }
+            }
+            else if (layer == Layer::step)
+            {
+                if (seq.getStep (pat, editVar, selectedVoice, s)) { g.setColour (isDown ? Colors::red : Colors::orange); g.fillRoundedRectangle (r.reduced (2.0f), 3.0f); }
+            }
+            else if (layer == Layer::flam)
+            {
+                if (seq.getFlam (pat, editVar, selectedVoice, s)) { g.setColour (Colors::cream); g.fillRoundedRectangle (r.reduced (2.0f), 3.0f); }
+            }
+            else // prob: fill height = probability
+            {
+                const float p = seq.getProbability (pat, editVar, selectedVoice, s);
+                auto fill = r.reduced (2.0f);
+                fill = fill.removeFromBottom (fill.getHeight() * juce::jlimit (0.0f, 1.0f, p));
+                g.setColour (Colors::orange);
+                g.fillRoundedRectangle (fill, 3.0f);
+            }
+
             if (s == playStep) { g.setColour (Colors::white); g.drawRoundedRectangle (r.reduced (2.0f), 3.0f, 2.0f); }
         }
     }
@@ -126,8 +164,10 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
     }
     else
     {
-        const int numInst = numVoices + 1;
-        auto selRow = area.removeFromTop (juce::jmax (24, area.getHeight() / 5));
+        const int  numInst = numVoices + 1;
+        const bool accSel  = (selectedVoice == accentIndex);
+
+        auto selRow = area.removeFromTop (juce::jmax (22, area.getHeight() / 6));
         if (selRow.contains (e.getPosition()))
         {
             const float iw = selRow.getWidth() / (float) numInst;
@@ -136,14 +176,39 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
             repaint();
             return;
         }
-        area.removeFromTop (6);
+
+        area.removeFromTop (4);
+        auto layerRow = area.removeFromTop (juce::jmax (16, area.getHeight() / 7));
+        if (layerRow.contains (e.getPosition()))
+        {
+            const float lw = juce::jmin (66.0f, layerRow.getWidth() / 6.0f);
+            const int i = (int) ((e.x - layerRow.getX()) / lw);
+            if (i >= 0 && i < 3 && ! (accSel && i != 0)) layer = (Layer) i;
+            repaint();
+            return;
+        }
+
+        area.removeFromTop (4);
         const float cw = area.getWidth() / (float) len;
-        const float bh = (float) juce::jmin (area.getHeight(), 90);
+        const float bh = (float) juce::jmin (area.getHeight(), 80);
         const int s = (int) ((e.x - area.getX()) / cw);
         if (s >= 0 && s < len && e.y <= area.getY() + bh)
         {
-            if (selectedVoice == accentIndex) seq.setAccent (pat, editVar, s, ! seq.getAccent (pat, editVar, s));
-            else                              seq.setStep (pat, editVar, selectedVoice, s, ! seq.getStep (pat, editVar, selectedVoice, s));
+            if (accSel || layer == Layer::step)
+            {
+                if (accSel) seq.setAccent (pat, editVar, s, ! seq.getAccent (pat, editVar, s));
+                else        seq.setStep (pat, editVar, selectedVoice, s, ! seq.getStep (pat, editVar, selectedVoice, s));
+            }
+            else if (layer == Layer::flam)
+            {
+                seq.setFlam (pat, editVar, selectedVoice, s, ! seq.getFlam (pat, editVar, selectedVoice, s));
+            }
+            else // prob: cycle 1.0 -> 0.75 -> 0.5 -> 0.25 -> 1.0
+            {
+                const float p = seq.getProbability (pat, editVar, selectedVoice, s);
+                const float next = (p > 0.99f) ? 0.75f : (p > 0.7f) ? 0.5f : (p > 0.45f) ? 0.25f : 1.0f;
+                seq.setProbability (pat, editVar, selectedVoice, s, next);
+            }
         }
     }
 

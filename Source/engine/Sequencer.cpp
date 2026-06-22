@@ -195,6 +195,20 @@ bool Sequencer::getAccent (int pat, int var, int step) const
     return false;
 }
 
+bool Sequencer::getFlam (int pat, int var, int voice, int step) const
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && voice >= 0 && voice < numVoices && step >= 0 && step < maxSteps)
+        return patterns[(size_t) pat].var[var].flam[(size_t) voice][(size_t) step];
+    return false;
+}
+
+float Sequencer::getProbability (int pat, int var, int voice, int step) const
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && voice >= 0 && voice < numVoices && step >= 0 && step < maxSteps)
+        return patterns[(size_t) pat].var[var].prob[(size_t) voice][(size_t) step];
+    return 1.0f;
+}
+
 //== State =====================================================================
 static juce::String boolRowToString (const std::array<bool, Sequencer::maxSteps>& row)
 {

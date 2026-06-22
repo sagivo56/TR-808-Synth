@@ -16,7 +16,8 @@ namespace tr808::ui
 class StepSequencerView : public juce::Component, private juce::Timer
 {
 public:
-    enum class Mode { grid, authentic };
+    enum class Mode  { grid, authentic };
+    enum class Layer { step, flam, prob };   // what the step keys edit (authentic view)
 
     explicit StepSequencerView (Sequencer& sequencer);
     ~StepSequencerView() override;
@@ -41,7 +42,8 @@ private:
     juce::Rectangle<int> gridArea() const;
 
     Sequencer& seq;
-    Mode mode = Mode::grid;
+    Mode  mode = Mode::grid;
+    Layer layer = Layer::step;
     int  selectedVoice = BD;
     int  editVar = 0;
     int  lastDisplay = -2;

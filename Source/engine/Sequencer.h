@@ -83,6 +83,10 @@ public:
     int      getCurrentPattern() const { return currentPattern; }
     int      getLength (int pat, int var) const;
     bool     getAccent (int pat, int var, int step) const;
+    bool     getFlam (int pat, int var, int voice, int step) const;
+    float    getProbability (int pat, int var, int voice, int step) const;
+    bool     isChainEnabled() const { return chainEnabled; }
+    const std::vector<int>& getChain() const { return chain; }
 
     //== State =================================================================
     juce::ValueTree toValueTree() const;
@@ -120,7 +124,7 @@ private:
     double internalBpm = 120.0;
     float  swing = 0.0f;
     bool   running = false;
-    bool   probEnabled = false;
+    bool   probEnabled = true;    // harmless at the default 1.0 per step; active once lowered
 
     double sampleRate = 44100.0;
     double internalPpq = 0.0;
