@@ -122,6 +122,55 @@ void PresetManager::applyFactoryPattern (Sequencer& seq, int index)
     }
 }
 
+//== Musical random ===========================================================
+void PresetManager::randomizeKit (juce::AudioProcessorValueTreeState& apvts)
+{
+    juce::Random r;
+    forEachKitParam ([&] (const juce::String& id)
+    {
+        if (auto* p = apvts.getParameter (id))
+            p->setValueNotifyingHost (0.2f + 0.6f * r.nextFloat());   // mid-biased -> stays musical
+    });
+}
+
+void PresetManager::randomizePattern (Sequencer& seq)
+{
+    juce::Random r;
+    constexpr int p = 0, var = 0, len = 16;
+    seq.setCurrentPattern (0);
+    for (int v = 0; v < numVoices; ++v)
+        for (int s = 0; s < Sequencer::maxSteps; ++s)
+            seq.setStep (p, var, v, s, false);
+    for (int s = 0; s < Sequencer::maxSteps; ++s) seq.setAccent (p, var, s, false);
+    seq.setLength (p, var, len);
+
+    auto chance = [&] (float prob) { return r.nextFloat() < prob; };
+
+    // Kick: downbeat + likely beat-3, light syncopation.
+    seq.setStep (p, var, BD, 0, true);
+    if (chance (0.6f)) seq.setStep (p, var, BD, 8, true);
+    for (int s : { 3, 6, 10, 11, 14 }) if (chance (0.18f)) seq.setStep (p, var, BD, s, true);
+
+    // Snare: backbeat, occasional ghost.
+    seq.setStep (p, var, SD, 4, true);
+    seq.setStep (p, var, SD, 12, true);
+    if (chance (0.15f)) seq.setStep (p, var, SD, 14, true);
+
+    // Hats: steady 8ths or 16ths.
+    const bool sixteenths = chance (0.4f);
+    for (int s = 0; s < len; ++s)
+        if ((sixteenths || s % 2 == 0) && chance (0.85f))
+            seq.setStep (p, var, chance (0.15f) ? OH : CH, s, true);
+
+    // Sparse percussion.
+    if (chance (0.4f)) { seq.setStep (p, var, CP, 4, true); seq.setStep (p, var, CP, 12, true); }
+    for (int s : { 2, 6, 10, 14 }) if (chance (0.15f)) seq.setStep (p, var, chance (0.5f) ? MA : CB, s, true);
+    if (chance (0.3f)) seq.setStep (p, var, LT, r.nextInt (len), true);
+
+    seq.setAccent (p, var, 0, true);
+    if (chance (0.5f)) seq.setAccent (p, var, 8, true);
+}
+
 //== User save / load =========================================================
 juce::File PresetManager::presetsDir()
 {

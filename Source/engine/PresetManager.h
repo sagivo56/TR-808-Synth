@@ -20,6 +20,9 @@ public:
     static void applyFactoryKit (juce::AudioProcessorValueTreeState&, int index);
     static void applyFactoryPattern (Sequencer&, int index);
 
+    static void randomizeKit (juce::AudioProcessorValueTreeState&);     // musical (mid-biased) random
+    static void randomizePattern (Sequencer&);                          // musical random beat
+
     static void saveKit  (juce::AudioProcessorValueTreeState&, const juce::File&);
     static bool loadKit  (juce::AudioProcessorValueTreeState&, const juce::File&);
     static void savePattern (const Sequencer&, const juce::File&);

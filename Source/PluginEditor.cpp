@@ -110,14 +110,16 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     tempoSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 16);
     tempoSlider.setRange (20.0, 300.0, 1.0);
     tempoSlider.onValueChange = [this] { proc.getSequencer().setTempo (tempoSlider.getValue()); };
-    tempoLabel.setFont (juce::FontOptions (10.0f));
+    tempoLabel.setFont (juce::FontOptions (12.5f, juce::Font::bold));
+    tempoLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (tempoSlider); addAndMakeVisible (tempoLabel);
 
     swingSlider.setSliderStyle (juce::Slider::LinearHorizontal);
     swingSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 16);
     swingSlider.setRange (0.0, 0.75, 0.01);
     swingSlider.onValueChange = [this] { proc.getSequencer().setSwing ((float) swingSlider.getValue()); };
-    swingLabel.setFont (juce::FontOptions (10.0f));
+    swingLabel.setFont (juce::FontOptions (12.5f, juce::Font::bold));
+    swingLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (swingSlider); addAndMakeVisible (swingLabel);
 
     masterGainKnob  = std::make_unique<ParamKnob>   (proc.apvts, ParamIDs::masterGain,  "MAIN");
@@ -284,6 +286,7 @@ void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce:
     int id = 1;
     for (const auto& n : factory) box.addItem (n, id++);
     box.addSeparator();
+    box.addItem ("Random", 102);
     box.addItem ("Save\xE2\x80\xA6", 100);
     box.addItem ("Load\xE2\x80\xA6", 101);
     box.setTextWhenNothingSelected ("\xE2\x80\x94");
@@ -305,6 +308,10 @@ void TR808AudioProcessorEditor::handleKitBox()
         chooser = std::make_unique<juce::FileChooser> ("Load Kit", PresetManager::presetsDir(), "*.xml");
         chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
             [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile()) PresetManager::loadKit (proc.apvts, f); });
+    }
+    else if (id == 102)
+    {
+        PresetManager::randomizeKit (proc.apvts);
     }
     else
     {
@@ -330,9 +337,16 @@ void TR808AudioProcessorEditor::handlePatternBox()
         chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
             [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile()) PresetManager::loadPattern (proc.getSequencer(), f); });
     }
+    else if (id == 102)
+    {
+        PresetManager::randomizePattern (proc.getSequencer());
+        syncTransport();
+        stepView.repaint();
+    }
     else
     {
         PresetManager::applyFactoryPattern (proc.getSequencer(), id - 1);
+        stepView.repaint();
     }
     patternBox.setSelectedId (0, juce::dontSendNotification);
 }

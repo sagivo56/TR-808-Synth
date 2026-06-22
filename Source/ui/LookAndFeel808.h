@@ -61,5 +61,14 @@ public:
         g.setColour (Colors::orange);
         g.fillPath (p, juce::AffineTransform::rotation (angle).translated (centre));
     }
+
+    // Larger, centred value text in slider text boxes (e.g. TEMPO / SWING).
+    juce::Label* createSliderTextBox (juce::Slider& slider) override
+    {
+        auto* l = juce::LookAndFeel_V4::createSliderTextBox (slider);
+        l->setFont (juce::FontOptions (13.0f));
+        l->setJustificationType (juce::Justification::centred);
+        return l;
+    }
 };
 }

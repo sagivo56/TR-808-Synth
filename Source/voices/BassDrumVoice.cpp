@@ -24,8 +24,9 @@ void BassDrumVoice::trigger (float velocity, bool accent)
     amp = triggerAmp (velocity, accent);
     baseFreq = deep.freq;
 
-    // Q/feedback -> ring (decay) time; macro Decay scales it.
-    res.setDecay (deep.decay * 0.001f * centeredScale (macros.decay, 4.0f));
+    // Q/feedback -> ring (decay) time; macro Decay scales it, Sustain extends it
+    // dramatically (up to ~9x) for a long booming tail.
+    res.setDecay (deep.decay * 0.001f * centeredScale (macros.decay, 4.0f) * (1.0f + deep.sustain * 8.0f));
 
     // First half-cycle at the "punch" multiple of the inherent frequency.
     const float startMult = std::clamp (deep.punch * centeredScale (macros.tone, 1.5f), 1.0f, 4.0f);

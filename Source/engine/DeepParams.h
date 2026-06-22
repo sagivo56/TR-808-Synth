@@ -37,6 +37,7 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         { BD, "bodydecay",  "Decay",         50.0f,   1500.0f, 320.0f, true  },
         { BD, "punch",      "Punch",         1.0f,    3.0f,    2.0f,   false },
         { BD, "retrig",     "Retrig",        0.0f,    1.0f,    0.5f,   false },
+        { BD, "sustain",    "Sustain",       0.0f,    1.0f,    0.0f,   false },
         { BD, "drive",      "Drive",         1.0f,    10.0f,   1.0f,   true  },
 
         // Snare

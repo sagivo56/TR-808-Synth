@@ -12,7 +12,7 @@ public:
     ParamKnob (juce::AudioProcessorValueTreeState& apvts, const juce::String& paramId, const juce::String& label)
     {
         slider.setSliderStyle (juce::Slider::RotaryVerticalDrag);
-        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 14);
+        slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 60, 18);
         addAndMakeVisible (slider);
 
         name.setText (label, juce::dontSendNotification);

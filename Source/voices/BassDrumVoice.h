@@ -22,13 +22,13 @@ public:
     std::vector<DeepRef> deepRefs() override
     {
         return { { "freq", &deep.freq }, { "bodydecay", &deep.decay }, { "punch", &deep.punch },
-                 { "retrig", &deep.retrig }, { "drive", &deep.drive } };
+                 { "retrig", &deep.retrig }, { "sustain", &deep.sustain }, { "drive", &deep.drive } };
     }
 
 private:
     struct Deep
     {
-        float freq = 55.0f, decay = 320.0f, punch = 2.0f, retrig = 0.5f, drive = 1.0f;
+        float freq = 55.0f, decay = 320.0f, punch = 2.0f, retrig = 0.5f, sustain = 0.0f, drive = 1.0f;
     } deep;
 
     dsp::ResonatorBT res;
