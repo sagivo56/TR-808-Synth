@@ -31,19 +31,22 @@ public:
         if (type == Type::cymbal)
             return { { "hpf", &deep.hpf }, { "bpfreq", &deep.bpFreq },
                      { "decaytime", &deep.decayTime }, { "balance", &deep.balance }, { "attack", &deep.attack } };
-        return { { "hpf", &deep.hpf }, { "decaytime", &deep.decayTime }, { "attack", &deep.attack } };
+        return { { "hpf", &deep.hpf }, { "lpf", &deep.lpFreq },
+                 { "decaytime", &deep.decayTime }, { "attack", &deep.attack } };
     }
 
 private:
     struct Deep
     {
         float hpf = 7000.0f, bpFreq = 3200.0f, decayTime = 500.0f, balance = 0.5f, attack = 0.5f;
+        float lpFreq = 11000.0f;  // hat top roll-off (Color): real 808 hats band-limit ~11 kHz
     } deep;
 
     dsp::MetalCluster cluster;
     dsp::NoiseGen     noise;
     dsp::SwingVCA     swingVca;    // cymbal diode harmonics (Fig 12)
     dsp::SVFilter     hpf;
+    dsp::SVFilter     lpf;         // hat top roll-off (Color)
     dsp::SVFilter     bp;
     dsp::Envelope     env;
 

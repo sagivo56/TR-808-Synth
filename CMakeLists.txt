@@ -195,4 +195,23 @@ if(TR808_BUILD_TESTS)
             juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags
     )
+
+    # Offline tone dump: render a single voice to raw float32 for spectral
+    # measurement against the real-808 reference (ear-tuning by numbers).
+    juce_add_console_app(tone_dump PRODUCT_NAME "TR808 Tone Dump")
+    target_sources(tone_dump PRIVATE
+        tests/ToneDump.cpp
+        ${TR808_DSP_SOURCES}
+        ${TR808_VOICE_SOURCES}
+    )
+    target_include_directories(tone_dump PRIVATE Source)
+    target_compile_definitions(tone_dump PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+    target_link_libraries(tone_dump
+        PRIVATE
+            juce::juce_dsp
+            juce::juce_audio_basics
+        PUBLIC
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+    )
 endif()

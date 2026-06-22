@@ -9,6 +9,7 @@ void MetalVoice::prepare (double sr, int)
     cluster.prepare (sr);
     noise.prepare (sr);
     hpf.prepare (sr); hpf.setType (dsp::SVFilter::Type::highpass);
+    lpf.prepare (sr); lpf.setType (dsp::SVFilter::Type::lowpass);
     bp.prepare (sr);  bp.setType (dsp::SVFilter::Type::bandpass); bp.setResonance (0.8f);
     env.prepare (sr); env.setMode (dsp::Envelope::Mode::ad); env.setAttack (0.5f);
     reset();
@@ -19,6 +20,7 @@ void MetalVoice::reset()
     cluster.reset();
     swingVca.reset();
     hpf.reset();
+    lpf.reset();
     bp.reset();
     env.reset();
     amp = 0.0f;
@@ -37,6 +39,7 @@ void MetalVoice::trigger (float velocity, bool accent)
     else
     {
         hpf.setResonance (1.3f);   // a little ring/emphasis for the metallic hat top
+        lpf.setCutoff (deep.lpFreq);   // Color: top roll-off so the hat isn't thin/harsh
     }
 
     // Authentic 808 hats are the pure 6-oscillator metallic cluster (no noise);
@@ -66,6 +69,10 @@ void MetalVoice::renderAdd (float* mono, int numSamples)
         {
             const float clang = bp.processSample (c);
             s = high * toneBal + clang * (1.0f - toneBal);
+        }
+        else
+        {
+            s = lpf.processSample (high);   // Color: band-limit the hat top (real 808 rolls off)
         }
 
         mono[i] += s * env.processSample() * amp;

@@ -126,13 +126,15 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         { CY, "balance",    "Band Balance",  0.0f,    1.0f,    0.5f,   false },
         { CY, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
 
-        { OH, "hpf",        "HPF",           3000.0f, 12000.0f,7000.0f,true  },
-        { OH, "decaytime",  "Decay",         150.0f,  1500.0f, 500.0f, true  },
-        { OH, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
+        { OH, "hpf",        "HPF",           2000.0f, 12000.0f,3000.0f, true  },
+        { OH, "lpf",        "Color",         5000.0f, 16000.0f,12000.0f,true  },
+        { OH, "decaytime",  "Decay",         150.0f,  1500.0f, 600.0f,  true  },
+        { OH, "attack",     "Attack",        0.1f,    30.0f,   0.5f,    true  },
 
-        { CH, "hpf",        "HPF",           3000.0f, 12000.0f,7000.0f,true  },
-        { CH, "decaytime",  "Decay",         20.0f,   150.0f,  50.0f,  true  },
-        { CH, "attack",     "Attack",        0.1f,    30.0f,   0.5f,   true  },
+        { CH, "hpf",        "HPF",           2000.0f, 12000.0f,3000.0f, true  },
+        { CH, "lpf",        "Color",         5000.0f, 16000.0f,11000.0f,true  },
+        { CH, "decaytime",  "Decay",         20.0f,   300.0f,  180.0f,  true  },
+        { CH, "attack",     "Attack",        0.1f,    30.0f,   0.5f,    true  },
 
         // Maracas
         { MA, "hpf",        "HPF",           3000.0f, 12000.0f,6000.0f,true  },
