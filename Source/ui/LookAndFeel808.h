@@ -38,20 +38,27 @@ public:
     void drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height,
                            float pos, float startAngle, float endAngle, juce::Slider&) override
     {
-        const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (3.0f);
+        const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (4.0f);
         const auto radius = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.5f;
         const auto centre = bounds.getCentre();
         const auto angle  = startAngle + pos * (endAngle - startAngle);
+        const auto disc   = juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (centre);
 
-        g.setColour (Colors::cream);
-        g.fillEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (centre));
-        g.setColour (Colors::background);
-        g.drawEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (centre), 1.5f);
+        // drop shadow
+        g.setColour (juce::Colours::black.withAlpha (0.45f));
+        g.fillEllipse (disc.translated (0.0f, 1.5f));
 
-        // pointer
+        // metallic dark body (hardware knob)
+        g.setGradientFill (juce::ColourGradient (juce::Colour (0xff545454), centre.x, centre.y - radius,
+                                                 juce::Colour (0xff242424), centre.x, centre.y + radius, false));
+        g.fillEllipse (disc);
+        g.setColour (Colors::cream.withAlpha (0.55f));
+        g.drawEllipse (disc.reduced (0.5f), 1.0f);
+
+        // bright indicator line
         juce::Path p;
-        p.addRoundedRectangle (-1.5f, -radius + 2.0f, 3.0f, radius * 0.55f, 1.5f);
-        g.setColour (Colors::red);
+        p.addRoundedRectangle (-1.3f, -radius + 2.5f, 2.6f, radius * 0.62f, 1.3f);
+        g.setColour (Colors::orange);
         g.fillPath (p, juce::AffineTransform::rotation (angle).translated (centre));
     }
 };

@@ -83,6 +83,7 @@ private:
     bool editMode = false;
     int  selectedVoice = tr808::BD;
     int  editVariation = 0;
+    juce::Rectangle<int> stepBounds;   // rhythm-section frame (set in resized, drawn in paint)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TR808AudioProcessorEditor)
 };

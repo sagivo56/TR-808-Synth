@@ -335,9 +335,27 @@ void TR808AudioProcessorEditor::syncTransport()
 
 void TR808AudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (Colors::background);
-    g.setColour (Colors::panelLight);
-    g.fillRect (getLocalBounds().removeFromTop (112));
+    // Charcoal metallic 808 chassis.
+    auto bf = getLocalBounds().toFloat();
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff2e2e2e), 0.0f, 0.0f,
+                                             juce::Colour (0xff161616), 0.0f, bf.getHeight(), false));
+    g.fillRect (bf);
+
+    // header band + the signature TR-808 orange/cream stripe beneath it
+    g.setColour (juce::Colour (0xff202020));
+    g.fillRect (0, 0, getWidth(), 112);
+    g.setColour (Colors::orange); g.fillRect (0, 108, getWidth(), 3);
+    g.setColour (Colors::cream);  g.fillRect (0, 111, getWidth(), 1);
+
+    // frame the rhythm (step) section like the 808 panel
+    if (! stepBounds.isEmpty())
+    {
+        const auto sf = stepBounds.toFloat().expanded (4.0f);
+        g.setColour (juce::Colours::black.withAlpha (0.35f));
+        g.fillRoundedRectangle (sf, 5.0f);
+        g.setColour (Colors::orange.withAlpha (0.5f));
+        g.drawRoundedRectangle (sf, 5.0f, 1.0f);
+    }
 }
 
 void TR808AudioProcessorEditor::resized()
@@ -382,7 +400,8 @@ void TR808AudioProcessorEditor::resized()
 
     // --- step grid at the bottom ---
     auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * 40 / 100));
-    stepView.setBounds (stepArea.reduced (6));
+    stepBounds = stepArea.reduced (6);
+    stepView.setBounds (stepBounds);
 
     // --- middle: PERFORM or EDIT ---
     auto mid = area.reduced (6);
