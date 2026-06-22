@@ -240,7 +240,7 @@ void TR808AudioProcessorEditor::buildPerform()
 void TR808AudioProcessorEditor::buildEditFor (int voice)
 {
     editControls.clear();
-    editTitle.setText (juce::String (voiceSpecs()[(size_t) voice].name) + "  \xE2\x80\x94  DEEP EDIT", juce::dontSendNotification);
+    editTitle.setText (juce::String (voiceSpecs()[(size_t) voice].name) + " - DEEP EDIT", juce::dontSendNotification);
 
     auto addKnob = [&] (const std::string& id, const juce::String& label)
     {
@@ -287,9 +287,9 @@ void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce:
     for (const auto& n : factory) box.addItem (n, id++);
     box.addSeparator();
     box.addItem ("Random", 102);
-    box.addItem ("Save\xE2\x80\xA6", 100);
-    box.addItem ("Load\xE2\x80\xA6", 101);
-    box.setTextWhenNothingSelected ("\xE2\x80\x94");
+    box.addItem ("Save...", 100);
+    box.addItem ("Load...", 101);
+    box.setTextWhenNothingSelected ("...");
 }
 
 void TR808AudioProcessorEditor::handleKitBox()
