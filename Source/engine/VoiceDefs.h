@@ -27,7 +27,7 @@ struct VoiceSpec
 inline const std::array<VoiceSpec, numVoices>& voiceSpecs()
 {
     static const std::array<VoiceSpec, numVoices> specs = { {
-        { "bd", "Bass Drum",  36, true,  true,  false, false },
+        { "bd", "Bass Drum",  36, true,  true,  false, true  },
         { "rs", "Rim Shot",   37, false, false, false, false },
         { "sd", "Snare",      38, true,  false, true,  false },
         { "cp", "Hand Clap",  39, false, false, false, false },

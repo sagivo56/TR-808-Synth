@@ -57,6 +57,10 @@ public:
 
     tr808::Sequencer& getSequencer() noexcept { return sequencer; }
 
+    // Audition a voice from the UI (one-shot). Thread-safe: the audio thread
+    // drains the request next block.
+    void previewVoice (int voiceIndex) noexcept { previewRequested.store (voiceIndex); }
+
     static BusesProperties makeBusesProperties();
 
 private:
@@ -70,6 +74,9 @@ private:
 
     // Reusable, pre-reserved per-block event buffer (no audio-thread allocation).
     std::vector<tr808::TriggerEvent> eventBuffer;
+
+    // UI preview request (voice index, or -1). Drained each block.
+    std::atomic<int> previewRequested { -1 };
 
     juce::LinearSmoothedValue<float> masterGain;
     std::atomic<float>* masterGainParam = nullptr;

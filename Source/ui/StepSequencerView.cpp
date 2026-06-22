@@ -64,6 +64,17 @@ void StepSequencerView::paint (juce::Graphics& g)
         for (int s = 0; s < len; ++s)
             cell ({ area.getX() + s * cw, area.getY() + numVoices * rh, cw, rh },
                   seq.getAccent (pat, editVar, s), true, s == playStep);
+
+        // visible beat / bar grouping (4/4 or 3/4): a line at each beat, a bolder
+        // one at each bar boundary.
+        const float gh = (float) (numVoices + 1) * rh;
+        for (int s = stepsPerBeat; s < len; s += stepsPerBeat)
+        {
+            const bool bar = (s % (stepsPerBeat * beatsPerBar)) == 0;
+            const float x = area.getX() + s * cw;
+            g.setColour (bar ? Colors::orange.withAlpha (0.9f) : Colors::cream.withAlpha (0.32f));
+            g.fillRect (x - (bar ? 1.0f : 0.5f), (float) area.getY(), bar ? 2.0f : 1.0f, gh);
+        }
     }
     else // authentic 808-style: instrument selector + edit-layer + step keys
     {
@@ -140,6 +151,15 @@ void StepSequencerView::paint (juce::Graphics& g)
 
             if (s == playStep) { g.setColour (Colors::white); g.drawRoundedRectangle (r.reduced (2.0f), 3.0f, 2.0f); }
         }
+
+        // bar boundary lines over the step keys (visible meter grouping)
+        for (int s = stepsPerBeat; s < len; s += stepsPerBeat)
+        {
+            const bool bar = (s % (stepsPerBeat * beatsPerBar)) == 0;
+            const float x = area.getX() + s * cw;
+            g.setColour (bar ? Colors::orange.withAlpha (0.9f) : Colors::cream.withAlpha (0.28f));
+            g.fillRect (x - (bar ? 1.0f : 0.5f), (float) area.getY(), bar ? 2.0f : 1.0f, bh);
+        }
     }
 }
 
@@ -151,7 +171,15 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
 
     if (mode == Mode::grid)
     {
-        area.removeFromLeft (kLabelW);
+        auto labels = area.removeFromLeft (kLabelW);
+        const int   rowsAll = numVoices + 1;
+        const float rhAll   = area.getHeight() / (float) rowsAll;
+        if (labels.contains (e.getPosition()))            // click an instrument name -> preview
+        {
+            const int row = (int) ((e.y - area.getY()) / rhAll);
+            if (row >= 0 && row < numVoices && onPreview) onPreview (row);
+            return;
+        }
         if (! area.contains (e.getPosition())) return;
         const int   rows = numVoices + 1;
         const float cw = area.getWidth() / (float) len;
@@ -172,7 +200,12 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
         {
             const float iw = selRow.getWidth() / (float) numInst;
             const int i = (int) ((e.x - selRow.getX()) / iw);
-            if (i >= 0 && i < numInst) { selectedVoice = i; if (onSelect) onSelect (i); }
+            if (i >= 0 && i < numInst)
+            {
+                selectedVoice = i;
+                if (onSelect) onSelect (i);
+                if (i < numVoices && onPreview) onPreview (i);   // also audition it
+            }
             repaint();
             return;
         }

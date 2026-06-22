@@ -59,6 +59,7 @@ public:
     void setFlam        (int pat, int var, int voice, int step, bool on);
     void setProbability (int pat, int var, int voice, int step, float p);
     void setLength      (int pat, int var, int length);
+    void clearPattern   (int pat);   // wipe both variations' steps/flam/prob/accent (keeps length/div)
     void setStepDiv     (int pat, int var, float quartersPerStep);   // 0.25 = 1/16, ~0.1667 = 1/16 triplet
     float getStepDiv    (int pat, int var) const;
 

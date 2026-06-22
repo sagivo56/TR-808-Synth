@@ -164,6 +164,11 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                          msg.getVelocity() >= tr808::VoiceManager::accentVelocity });
         }
     }
+    // UI preview: trigger the requested voice once at the top of this block.
+    const int pv = previewRequested.exchange (-1);
+    if (pv >= 0 && pv < tr808::numVoices)
+        eventBuffer.push_back ({ 0, pv, 1.0f, false });
+
     std::sort (eventBuffer.begin(), eventBuffer.end(),
                [] (const auto& a, const auto& b) { return a.samplePos < b.samplePos; });
 

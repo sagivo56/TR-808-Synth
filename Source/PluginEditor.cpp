@@ -153,6 +153,33 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     };
     addAndMakeVisible (tripButton);
 
+    // Time signature: sets the visible beat grouping (4/4 or 3/4) and the bar length.
+    sigBox.addItem ("4/4", 1); sigBox.addItem ("3/4", 2);
+    sigBox.setSelectedId (1, juce::dontSendNotification);
+    sigBox.onChange = [this]
+    {
+        const bool threeFour = (sigBox.getSelectedId() == 2);
+        const int beats = threeFour ? 3 : 4;
+        const int L = beats * 4;                       // 16th-note steps per bar
+        const int pat = proc.getSequencer().getCurrentPattern();
+        proc.getSequencer().setLength (pat, 0, L);
+        proc.getSequencer().setLength (pat, 1, L);
+        stepView.setBeatsPerBar (beats);
+        stepView.repaint();
+    };
+    sigLabel.setFont (juce::FontOptions (10.0f));
+    addAndMakeVisible (sigBox); addAndMakeVisible (sigLabel);
+
+    // Clear: wipe all drum programming in the current pattern (both A/B).
+    clearButton.setColour (juce::TextButton::buttonColourId, Colors::red.withAlpha (0.85f));
+    clearButton.setTooltip ("Clear all steps in the current pattern (A + B)");
+    clearButton.onClick = [this]
+    {
+        proc.getSequencer().clearPattern (proc.getSequencer().getCurrentPattern());
+        stepView.repaint();
+    };
+    addAndMakeVisible (clearButton);
+
     for (int i = 1; i <= Sequencer::numPatterns; ++i) patBox.addItem (juce::String (i), i);
     patBox.onChange = [this]
     {
@@ -206,6 +233,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
         selectedVoice = v;
         if (v >= 0 && v < numVoices) buildEditFor (v);   // accent (== numVoices) has no edit panel
     };
+    stepView.onPreview = [this] (int v) { proc.previewVoice (v); };
 
     syncTransport();
     showEdit (false);
@@ -231,6 +259,7 @@ void TR808AudioProcessorEditor::buildPerform()
             stepView.setSelectedVoice (vi);
             buildEditFor (vi);
             showEdit (true);
+            proc.previewVoice (vi);   // audition the instrument when selected
         });
         voiceColumns.add (col);
         performPanel.addAndMakeVisible (col);
@@ -428,14 +457,17 @@ void TR808AudioProcessorEditor::resized()
 
     // row 2: presets + length/triplet + view/grid/variation
     kitLabel.setBounds (row2.removeFromLeft (26));
-    kitBox.setBounds (row2.removeFromLeft (116).reduced (2, 8));
+    kitBox.setBounds (row2.removeFromLeft (108).reduced (2, 8));
     patternLabel.setBounds (row2.removeFromLeft (50));
-    patternBox.setBounds (row2.removeFromLeft (116).reduced (2, 8));
-    lenLabel.setBounds (row2.removeFromLeft (24));
-    lenBox.setBounds (row2.removeFromLeft (46).reduced (2, 8));
-    tripButton.setBounds (row2.removeFromLeft (52).reduced (2, 8));
-    songButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
-    chainEditor.setBounds (row2.removeFromLeft (92).reduced (2, 10));
+    patternBox.setBounds (row2.removeFromLeft (108).reduced (2, 8));
+    lenLabel.setBounds (row2.removeFromLeft (22));
+    lenBox.setBounds (row2.removeFromLeft (42).reduced (2, 8));
+    sigLabel.setBounds (row2.removeFromLeft (22));
+    sigBox.setBounds (row2.removeFromLeft (46).reduced (2, 8));
+    tripButton.setBounds (row2.removeFromLeft (48).reduced (2, 8));
+    songButton.setBounds (row2.removeFromLeft (46).reduced (2, 8));
+    clearButton.setBounds (row2.removeFromLeft (40).reduced (2, 8));
+    chainEditor.setBounds (row2.removeFromLeft (76).reduced (2, 10));
     viewButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
     gridButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
     varBButton.setBounds (row2.removeFromRight (26).reduced (2, 8));

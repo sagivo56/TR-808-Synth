@@ -23,7 +23,9 @@ void BassDrumVoice::reset()
 void BassDrumVoice::trigger (float velocity, bool accent)
 {
     amp = triggerAmp (velocity, accent);
-    baseFreq = deep.freq;
+    // Pitch: the deep "Pitch" sets the base (Hz); the Tune macro shifts it +/- 1
+    // octave around that (neutral at 0.5) so it's adjustable from PERFORM too.
+    baseFreq = deep.freq * centeredPitch (macros.tune, 12.0f);
 
     // DECAY: Q/feedback -> ring (decay) time; macro Decay scales it, Sustain
     // extends it dramatically (up to ~9x) for a long booming tail.

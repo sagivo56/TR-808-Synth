@@ -59,11 +59,12 @@ private:
     juce::TextButton gridButton  { "GRID" };
     juce::TextButton varAButton  { "A" }, varBButton { "B" };
     juce::ComboBox   abModeBox;
-    juce::ComboBox   kitBox, patternBox, lenBox, patBox;
+    juce::ComboBox   kitBox, patternBox, lenBox, patBox, sigBox;
     juce::TextButton tripButton { "1/16" };
     juce::TextButton songButton { "SONG" };
+    juce::TextButton clearButton { "CLR" };
     juce::TextEditor chainEditor;
-    juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" }, lenLabel { {}, "LEN" }, patLabel { {}, "PAT" };
+    juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" }, lenLabel { {}, "LEN" }, patLabel { {}, "PAT" }, sigLabel { {}, "SIG" };
     std::unique_ptr<juce::FileChooser> chooser;
     juce::Slider     tempoSlider, swingSlider;
     juce::Label      tempoLabel { {}, "TEMPO" }, swingLabel { {}, "SWING" }, varLabel { {}, "EDIT" };

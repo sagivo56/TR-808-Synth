@@ -175,6 +175,19 @@ int Sequencer::getLength (int pat, int var) const
     return maxSteps;
 }
 
+void Sequencer::clearPattern (int pat)
+{
+    if (pat < 0 || pat >= numPatterns) return;
+    for (int var = 0; var < 2; ++var)
+    {
+        auto& v = patterns[(size_t) pat].var[var];
+        for (auto& row : v.steps) row.fill (false);
+        for (auto& row : v.flam)  row.fill (false);
+        for (auto& row : v.prob)  row.fill (1.0f);
+        v.accent.fill (false);
+    }
+}
+
 void Sequencer::setStepDiv (int pat, int var, float div)
 {
     if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))

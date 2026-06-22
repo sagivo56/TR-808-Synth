@@ -30,9 +30,15 @@ public:
     int  getSelectedVoice() const    { return selectedVoice; }
     void setEditVariation (int v)    { editVar = v; repaint(); }
 
+    // Beat grouping for the visible bar lines (stepsPerBeat is always 4 = 16ths).
+    void setBeatsPerBar (int n)      { beatsPerBar = juce::jlimit (1, 8, n); repaint(); }
+
     // Called when the authentic-view instrument selector picks an instrument
     // (0..numVoices, where numVoices == ACCENT).
     std::function<void (int)> onSelect;
+
+    // Called to audition an instrument (0..numVoices-1) when its name is clicked.
+    std::function<void (int)> onPreview;
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
@@ -47,6 +53,8 @@ private:
     int  selectedVoice = BD;
     int  editVar = 0;
     int  lastDisplay = -2;
+    int  beatsPerBar = 4;                  // 4 = 4/4, 3 = 3/4 (visible grouping)
+    static constexpr int stepsPerBeat = 4; // 16th-note steps
 
     static constexpr int kLabelW = 58;
 };
