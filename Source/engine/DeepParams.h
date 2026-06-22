@@ -34,7 +34,7 @@ inline const std::vector<DeepDesc>& deepParamDescs()
         // Bridged-T resonator BD (service-manual topology): inherent tune + Q
         // decay, a "punch" first-half-cycle frequency multiplier and a retrigger.
         { BD, "freq",       "Tune",          40.0f,   80.0f,   55.0f,  false },
-        { BD, "bodydecay",  "Decay",         50.0f,   1500.0f, 320.0f, true  },
+        { BD, "bodydecay",  "Decay",         50.0f,   1500.0f, 650.0f, true  },
         { BD, "punch",      "Punch",         1.0f,    3.0f,    2.0f,   false },
         { BD, "retrig",     "Retrig",        0.0f,    1.0f,    0.5f,   false },
         { BD, "sustain",    "Sustain",       0.0f,    1.0f,    0.0f,   false },
