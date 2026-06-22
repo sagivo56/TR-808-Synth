@@ -5,7 +5,17 @@ namespace tr808::dsp
 {
 float Saturator::shape (float x, float drive) noexcept
 {
-    return std::tanh (drive * x);
+    // Soft limiter with a linear "knee": transparent below the knee so a clean
+    // mix at unity drive passes through uncoloured, and only peaks approaching
+    // full scale are soft-clipped (asymptotes to 1.0, never clips hard). Turning
+    // drive up pushes more signal past the knee, restoring the saturation/drive.
+    const float y = drive * x;
+    const float a = std::abs (y);
+    constexpr float knee = 0.7f;
+    if (a <= knee)
+        return y;
+    const float over = (a - knee) / (1.0f - knee);
+    return std::copysign (knee + (1.0f - knee) * std::tanh (over), y);
 }
 
 void Saturator::prepare (double /*sampleRate*/, int maxBlockSize, int numChannels, int oversampleLog2)
