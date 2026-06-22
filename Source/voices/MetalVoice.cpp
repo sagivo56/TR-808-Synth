@@ -34,9 +34,14 @@ void MetalVoice::trigger (float velocity, bool accent)
         bp.setCutoff (deep.bpFreq);
         toneBal = std::clamp (deep.balance + (macros.tone - 0.5f), 0.0f, 1.0f);   // macro Tone shifts band balance
     }
+    else
+    {
+        hpf.setResonance (1.3f);   // a little ring/emphasis for the metallic hat top
+    }
 
-    // Hats lean on hissy noise; the cymbal stays mostly metallic.
-    noiseMix = (type == Type::cymbal) ? 0.12f : 0.62f;
+    // Authentic 808 hats are the pure 6-oscillator metallic cluster (no noise);
+    // CH/OH differ only in decay. The cymbal keeps a hair of air.
+    noiseMix = (type == Type::cymbal) ? 0.12f : 0.0f;
 
     env.setAttack (deep.attack);
     env.setDecay (deep.decayTime * centeredScale (macros.decay, 3.0f));           // macro Decay scales (neutral for CH)

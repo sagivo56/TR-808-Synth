@@ -50,6 +50,6 @@ private:
     Type  type     = Type::closedHat;
     float amp      = 0.0f;
     float toneBal  = 0.5f;
-    float noiseMix = 0.0f;   // hats blend in white noise to sound hissy not metallic
+    float noiseMix = 0.0f;   // authentic hats use 0 (pure metal cluster); cymbal a hair
 };
 }
