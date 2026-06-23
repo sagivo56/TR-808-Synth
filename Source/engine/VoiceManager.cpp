@@ -69,6 +69,14 @@ void VoiceManager::prepare (double sampleRate, int maxBlockSize)
         v->prepare (sampleRate, maxBlock);
     if (bassVoice) bassVoice->prepare (sampleRate, maxBlock);
 
+    if (bassVoice)
+        for (auto& r : bassVoice->deepRefs())
+        {
+            if (r.suffix == "bodydecay") bassDeepDecay = r.ptr;
+            else if (r.suffix == "punch") bassDeepPunch = r.ptr;
+            else if (r.suffix == "drive") bassDeepDrive = r.ptr;
+        }
+
     reverbFx.prepare (sampleRate);
     delayFx.prepare (sampleRate);
     revBuf.assign ((size_t) maxBlock, 0.0f);
@@ -100,10 +108,13 @@ void VoiceManager::noteOnBass (float velocity, float freqHz, bool accent)
 {
     if (bassVoice == nullptr || freqHz <= 0.0f)
         return;
-    bassMacros.level = 0.9f;
-    bassMacros.tone  = 0.25f;                 // a little click for note definition
-    bassMacros.decay = juce::jlimit (0.0f, 1.0f, bassGate);   // note length -> ring
+    bassMacros.level = bassLevel;
+    bassMacros.tone  = bassTone;              // click / attack
+    bassMacros.decay = juce::jlimit (0.0f, 1.0f, bassGate);   // per-note length -> ring
     bassMacros.tune  = 0.5f;
+    if (bassDeepDecay) *bassDeepDecay = bassDecayMs;          // base ring
+    if (bassDeepPunch) *bassDeepPunch = bassPunch;
+    if (bassDeepDrive) *bassDeepDrive = bassDrive;
     bassVoice->setMacros (bassMacros);
     bassVoice->setPlayFrequency (freqHz);
     bassVoice->trigger (accent ? velocity * accentAmount : velocity, accent);

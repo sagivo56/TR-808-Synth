@@ -14,6 +14,13 @@ namespace ParamIDs
     inline constexpr auto multiOut    = "multi_out";
     inline constexpr auto accentLevel = "accent_level";
 
+    // Melodic BD Bass voice controls.
+    inline constexpr auto bassLevel    = "bdbass_level";
+    inline constexpr auto bassTone     = "bdbass_tone";
+    inline constexpr auto bassDecay    = "bdbass_decay";
+    inline constexpr auto bassPunch    = "bdbass_punch";
+    inline constexpr auto bassDrive    = "bdbass_drive";
+
     // Parallel FX (global). Per-voice sends use macroId(v, "revsend"/"dlysend").
     inline constexpr auto bassRevSend  = "bdbass_revsend";
     inline constexpr auto bassDlySend  = "bdbass_dlysend";

@@ -102,6 +102,9 @@ private:
     std::array<std::atomic<float>*, tr808::numVoices> revSendP {}, dlySendP {};
     std::atomic<float>* bassRevSendP = nullptr;
     std::atomic<float>* bassDlySendP = nullptr;
+    std::atomic<float>* bassLevelP = nullptr; std::atomic<float>* bassToneP = nullptr;
+    std::atomic<float>* bassDecayP = nullptr; std::atomic<float>* bassPunchP = nullptr;
+    std::atomic<float>* bassDriveP = nullptr;
     std::atomic<float>* revPredelayP = nullptr; std::atomic<float>* revDecayP = nullptr;
     std::atomic<float>* revBassP = nullptr;     std::atomic<float>* revCrossP = nullptr;
     std::atomic<float>* revDampP = nullptr;     std::atomic<float>* revDepthP = nullptr;

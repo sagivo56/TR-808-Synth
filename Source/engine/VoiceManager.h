@@ -61,6 +61,11 @@ public:
     static constexpr int bassVoiceIndex = numVoices;
     void  noteOnBass (float velocity, float freqHz, bool accent);
     void  setBassGate (float g) noexcept { bassGate = juce::jlimit (0.0f, 1.0f, g); }
+    void  setBassLevel (float v) noexcept { bassLevel = v; }
+    void  setBassTone  (float v) noexcept { bassTone = v; }
+    void  setBassDecay (float ms) noexcept { bassDecayMs = ms; }
+    void  setBassPunch (float v) noexcept { bassPunch = v; }
+    void  setBassDrive (float v) noexcept { bassDrive = v; }
     bool  isBassActive() const { return bassVoice != nullptr && bassVoice->isActive(); }
 
     void setAccentAmount (float a) noexcept { accentAmount = juce::jmax (1.0f, a); }
@@ -92,6 +97,10 @@ private:
     voices::VoiceMacros bassMacros;
     float bassGate = 0.5f;                              // note length -> ring (0..1)
     float bassGain = 0.9f;
+    float bassLevel = 0.9f, bassTone = 0.25f, bassDecayMs = 650.0f, bassPunch = 2.0f, bassDrive = 1.0f;
+    float* bassDeepDecay = nullptr;                     // cached deepRef pointers
+    float* bassDeepPunch = nullptr;
+    float* bassDeepDrive = nullptr;
     std::vector<float> monoBuf;
     int   maxBlock = 0;
     float accentAmount = 1.5f;

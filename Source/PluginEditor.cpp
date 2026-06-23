@@ -20,6 +20,8 @@ TR808AudioProcessorEditor::VoiceColumn::VoiceColumn (juce::AudioProcessorValueTr
     if (s.snappy) knobs.add (new ParamKnob (apvts, macroId (v, "snappy"), "SNP"));
     if (s.tune)   knobs.add (new ParamKnob (apvts, macroId (v, "tune"),   "TUNE"));
     knobs.add (new ParamKnob (apvts, macroId (v, "pan"), "PAN"));
+    knobs.add (new ParamKnob (apvts, macroId (v, "revsend"), "RVB"));
+    knobs.add (new ParamKnob (apvts, macroId (v, "dlysend"), "DLY"));
     for (auto* k : knobs) addAndMakeVisible (k);
 
     mute = std::make_unique<ParamToggle> (apvts, macroId (v, "mute"), "M", Colors::red);
@@ -43,10 +45,14 @@ void TR808AudioProcessorEditor::VoiceColumn::resized()
     mute->setBounds (ms.removeFromLeft (ms.getWidth() / 2).reduced (1));
     solo->setBounds (ms.reduced (1));
 
+    // Two knobs per row (side by side) so the extra send knobs fit without a
+    // very tall column.
     const int n = knobs.size();
-    const int kh = n > 0 ? r.getHeight() / n : r.getHeight();
-    for (auto* k : knobs)
-        k->setBounds (r.removeFromTop (kh));
+    const int rows = (n + 1) / 2;
+    const int kh = rows > 0 ? r.getHeight() / rows : r.getHeight();
+    const int colW = r.getWidth() / 2;
+    for (int i = 0; i < n; ++i)
+        knobs[i]->setBounds (r.getX() + (i % 2) * colW, r.getY() + (i / 2) * kh, colW, kh);
 }
 
 //==============================================================================
@@ -95,10 +101,16 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
             gridButton.setButtonText ("AUTH");
             stepView.setMode (StepSequencerView::Mode::authentic);
             stepView.setSelectedVoice (StepSequencerView::bassIndex);
+            selectedVoice = StepSequencerView::bassIndex;
+            buildBassEdit();
+            showEdit (true);                         // open the bass controls too
         }
         else
         {
-            stepView.setSelectedVoice (selectedVoice >= 0 && selectedVoice < numVoices ? selectedVoice : BD);
+            selectedVoice = BD;
+            stepView.setSelectedVoice (BD);
+            buildEditFor (BD);
+            showEdit (false);
         }
         stepView.repaint();
     };
@@ -263,7 +275,8 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     {
         selectedVoice = v;
         bassButton.setToggleState (v == StepSequencerView::bassIndex, juce::dontSendNotification);
-        if (v >= 0 && v < numVoices) buildEditFor (v);   // accent / bass have no deep-edit panel
+        if (v >= 0 && v < numVoices)              { buildEditFor (v); }
+        else if (v == StepSequencerView::bassIndex) { buildBassEdit(); showEdit (true); }
     };
     stepView.onPreview = [this] (int v) { proc.previewVoice (v); };
     stepView.onPreviewBass = [this] (int note) { proc.previewBass (note); };
@@ -344,6 +357,26 @@ void TR808AudioProcessorEditor::buildEditFor (int voice)
     resized();
 }
 
+void TR808AudioProcessorEditor::buildBassEdit()
+{
+    editControls.clear();
+    editTitle.setText ("BD BASS - EDIT", juce::dontSendNotification);
+    auto add = [&] (const char* id, const juce::String& label)
+    {
+        auto* k = new tr808::ui::ParamKnob (proc.apvts, id, label);
+        editControls.add (k);
+        editPanel.addAndMakeVisible (k);
+    };
+    add (ParamIDs::bassLevel,   "LEVEL");
+    add (ParamIDs::bassTone,    "TONE");
+    add (ParamIDs::bassDecay,   "DECAY");
+    add (ParamIDs::bassPunch,   "PUNCH");
+    add (ParamIDs::bassDrive,   "DRIVE");
+    add (ParamIDs::bassRevSend, "RVB SEND");
+    add (ParamIDs::bassDlySend, "DLY SEND");
+    resized();
+}
+
 void TR808AudioProcessorEditor::buildFx()
 {
     fxControls.clear();
@@ -405,8 +438,10 @@ void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce:
     for (const auto& n : factory) box.addItem (n, id++);
     box.addSeparator();
     box.addItem ("Random", 102);
-    box.addItem ("Save...", 100);
+    box.addItem ("Save", 103);          // updates the last Save As (disabled until then)
+    box.addItem ("Save As...", 100);
     box.addItem ("Load...", 101);
+    box.setItemEnabled (103, false);
     box.setTextWhenNothingSelected (placeholder);   // shows e.g. "KIT" / "PATTERN" until a preset is picked
 }
 
@@ -417,15 +452,21 @@ void TR808AudioProcessorEditor::handleKitBox()
 
     if (id == 100)
     {
-        chooser = std::make_unique<juce::FileChooser> ("Save Kit", PresetManager::presetsDir(), "*.xml");
+        chooser = std::make_unique<juce::FileChooser> ("Save Kit As", PresetManager::presetsDir(), "*.xml");
         chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
-            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f != juce::File()) PresetManager::saveKit (proc.apvts, f.withFileExtension ("xml")); });
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f != juce::File())
+                { lastKitFile = f.withFileExtension ("xml"); PresetManager::saveKit (proc.apvts, lastKitFile); kitBox.setItemEnabled (103, true); } });
+    }
+    else if (id == 103)                 // Save: update the last Save As
+    {
+        if (lastKitFile != juce::File()) PresetManager::saveKit (proc.apvts, lastKitFile);
     }
     else if (id == 101)
     {
         chooser = std::make_unique<juce::FileChooser> ("Load Kit", PresetManager::presetsDir(), "*.xml");
         chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile()) PresetManager::loadKit (proc.apvts, f); });
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile())
+                { PresetManager::loadKit (proc.apvts, f); lastKitFile = f; kitBox.setItemEnabled (103, true); } });
     }
     else if (id == 102)
     {
@@ -445,15 +486,21 @@ void TR808AudioProcessorEditor::handlePatternBox()
 
     if (id == 100)
     {
-        chooser = std::make_unique<juce::FileChooser> ("Save Pattern", PresetManager::presetsDir(), "*.xml");
+        chooser = std::make_unique<juce::FileChooser> ("Save Pattern As", PresetManager::presetsDir(), "*.xml");
         chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
-            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f != juce::File()) PresetManager::savePattern (proc.getSequencer(), f.withFileExtension ("xml")); });
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f != juce::File())
+                { lastPatternFile = f.withFileExtension ("xml"); PresetManager::savePattern (proc.getSequencer(), lastPatternFile); patternBox.setItemEnabled (103, true); } });
+    }
+    else if (id == 103)                 // Save: update the last Save As
+    {
+        if (lastPatternFile != juce::File()) PresetManager::savePattern (proc.getSequencer(), lastPatternFile);
     }
     else if (id == 101)
     {
         chooser = std::make_unique<juce::FileChooser> ("Load Pattern", PresetManager::presetsDir(), "*.xml");
         chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile()) PresetManager::loadPattern (proc.getSequencer(), f); });
+            [this] (const juce::FileChooser& fc) { auto f = fc.getResult(); if (f.existsAsFile())
+                { PresetManager::loadPattern (proc.getSequencer(), f); lastPatternFile = f; patternBox.setItemEnabled (103, true); } });
     }
     else if (id == 102)
     {
@@ -575,7 +622,7 @@ void TR808AudioProcessorEditor::resized()
 
     performViewport.setBounds (mid);
     {
-        const int colW = 90;
+        const int colW = 120;
         const int ph = juce::jmax (120, performViewport.getMaximumVisibleHeight());
         performPanel.setSize (numVoices * colW, ph);
         for (int v = 0; v < voiceColumns.size(); ++v)

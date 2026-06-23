@@ -44,6 +44,7 @@ private:
 
     void buildPerform();
     void buildEditFor (int voice);
+    void buildBassEdit();
     void buildFx();
     void selectEditVar (int v);   // choose which variation (0..3 = A..D) the grid edits
     void showEdit (bool edit);
@@ -70,6 +71,7 @@ private:
     juce::TextEditor chainEditor;
     juce::Label      kitLabel { {}, "KIT" }, patternLabel { {}, "PATTERN" }, lenLabel { {}, "LEN" }, patLabel { {}, "PAT" }, sigLabel { {}, "SIG" };
     std::unique_ptr<juce::FileChooser> chooser;
+    juce::File lastKitFile, lastPatternFile;   // for the single "Save" (update last Save As)
     juce::Slider     tempoSlider, swingSlider;
     juce::Label      tempoLabel { {}, "TEMPO" }, swingLabel { {}, "SWING" }, varLabel { {}, "EDIT" };
 
