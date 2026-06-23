@@ -89,6 +89,7 @@ void TR808AudioProcessor::updateMixerFromApvts()
     }
     mixer.setMasterDrive (masterDriveParam != nullptr ? masterDriveParam->load() : 1.0f);
     voiceManager.setAccentAmount (accentLevelParam != nullptr ? accentLevelParam->load() : 1.5f);
+    voiceManager.setBassGate (sequencer.getBassGate());
 }
 
 void TR808AudioProcessor::updateMacrosFromApvts()
@@ -168,6 +169,13 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const int pv = previewRequested.exchange (-1);
     if (pv >= 0 && pv < tr808::numVoices)
         eventBuffer.push_back ({ 0, pv, 1.0f, false });
+
+    const int pb = previewBassNote.exchange (-1);
+    if (pb >= 0)
+    {
+        const float hz = 440.0f * std::pow (2.0f, (float) (pb - 69) / 12.0f);
+        eventBuffer.push_back ({ 0, tr808::VoiceManager::bassVoiceIndex, 1.0f, false, hz });
+    }
 
     std::sort (eventBuffer.begin(), eventBuffer.end(),
                [] (const auto& a, const auto& b) { return a.samplePos < b.samplePos; });

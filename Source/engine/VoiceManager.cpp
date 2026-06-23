@@ -56,6 +56,8 @@ VoiceManager::VoiceManager()
     voiceArray[MC] = makeTomConga (280.0f, 0.22f);
     voiceArray[HC] = makeTomConga (370.0f, 0.20f);
     voiceArray[CL] = makeResonator (2500.0f, 0.05f, false);
+
+    bassVoice = std::make_unique<BassDrumVoice>();   // melodic 808 bass
 }
 
 void VoiceManager::prepare (double sampleRate, int maxBlockSize)
@@ -65,12 +67,27 @@ void VoiceManager::prepare (double sampleRate, int maxBlockSize)
 
     for (auto& v : voiceArray)
         v->prepare (sampleRate, maxBlock);
+    if (bassVoice) bassVoice->prepare (sampleRate, maxBlock);
 }
 
 void VoiceManager::reset()
 {
     for (auto& v : voiceArray)
         v->reset();
+    if (bassVoice) bassVoice->reset();
+}
+
+void VoiceManager::noteOnBass (float velocity, float freqHz, bool accent)
+{
+    if (bassVoice == nullptr || freqHz <= 0.0f)
+        return;
+    bassMacros.level = 0.9f;
+    bassMacros.tone  = 0.25f;                 // a little click for note definition
+    bassMacros.decay = juce::jlimit (0.0f, 1.0f, bassGate);   // note length -> ring
+    bassMacros.tune  = 0.5f;
+    bassVoice->setMacros (bassMacros);
+    bassVoice->setPlayFrequency (freqHz);
+    bassVoice->trigger (accent ? velocity * accentAmount : velocity, accent);
 }
 
 void VoiceManager::noteOn (int voiceIndex, float velocity, bool accent)
@@ -133,6 +150,19 @@ void VoiceManager::renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& m
                 a[i] += scratch[i];
         }
     }
+
+    // Melodic 808 bass: centre-panned, master only.
+    if (bassVoice != nullptr && bassVoice->isActive())
+    {
+        std::fill (scratch, scratch + len, 0.0f);
+        bassVoice->renderAdd (scratch, len);
+        for (int i = 0; i < len; ++i)
+        {
+            const float s = scratch[i] * bassGain;
+            L[start + i] += s;
+            R[start + i] += s;
+        }
+    }
 }
 
 void VoiceManager::renderEvents (juce::AudioBuffer<float>& mainBuffer,
@@ -153,7 +183,8 @@ void VoiceManager::renderEvents (juce::AudioBuffer<float>& mainBuffer,
         const int t = juce::jlimit (0, numSamples, e.samplePos);
         renderSegment (mainBuffer, mixer, auxChannels, pos, t - pos);
         pos = t;
-        noteOn (e.voiceIndex, e.velocity, e.accent);
+        if (e.voiceIndex == bassVoiceIndex) noteOnBass (e.velocity, e.freqHz, e.accent);
+        else                                noteOn (e.voiceIndex, e.velocity, e.accent);
     }
 
     renderSegment (mainBuffer, mixer, auxChannels, pos, numSamples - pos);

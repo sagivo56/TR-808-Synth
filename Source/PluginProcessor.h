@@ -60,6 +60,7 @@ public:
     // Audition a voice from the UI (one-shot). Thread-safe: the audio thread
     // drains the request next block.
     void previewVoice (int voiceIndex) noexcept { previewRequested.store (voiceIndex); }
+    void previewBass  (int midiNote)   noexcept { previewBassNote.store (midiNote); }
 
     static BusesProperties makeBusesProperties();
 
@@ -75,8 +76,10 @@ private:
     // Reusable, pre-reserved per-block event buffer (no audio-thread allocation).
     std::vector<tr808::TriggerEvent> eventBuffer;
 
-    // UI preview request (voice index, or -1). Drained each block.
+    // UI preview requests (drained each block): a drum voice index, or a bass
+    // MIDI note. Both -1 when idle.
     std::atomic<int> previewRequested { -1 };
+    std::atomic<int> previewBassNote { -1 };
 
     juce::LinearSmoothedValue<float> masterGain;
     std::atomic<float>* masterGainParam = nullptr;

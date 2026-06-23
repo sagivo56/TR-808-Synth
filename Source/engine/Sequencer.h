@@ -59,7 +59,16 @@ public:
     void setFlam        (int pat, int var, int voice, int step, bool on);
     void setProbability (int pat, int var, int voice, int step, float p);
     void setLength      (int pat, int var, int length);
-    void clearPattern   (int pat);   // wipe both variations' steps/flam/prob/accent (keeps length/div)
+    void clearPattern   (int pat);   // wipe both variations' steps/flam/prob/accent + bass (keeps length/div)
+
+    //== Melodic 808 bass track =================================================
+    void setBassNote (int pat, int var, int step, int midiNote);   // -1 = off
+    int  getBassNote (int pat, int var, int step) const;
+    void setBassScale (int root, int type) { bassRoot = juce::jlimit (0, 11, root); bassScale = juce::jlimit (0, 4, type); }
+    int  getBassRoot()  const { return bassRoot; }
+    int  getBassScale() const { return bassScale; }
+    void  setBassGate (float g) { bassGate = juce::jlimit (0.0f, 1.0f, g); }
+    float getBassGate() const   { return bassGate; }
     void setStepDiv     (int pat, int var, float quartersPerStep);   // 0.25 = 1/16, ~0.1667 = 1/16 triplet
     float getStepDiv    (int pat, int var) const;
 
@@ -102,8 +111,9 @@ private:
         std::array<std::array<bool, maxSteps>, numVoices>  flam {};
         std::array<std::array<float, maxSteps>, numVoices> prob;
         std::array<bool, maxSteps> accent {};
+        std::array<int,  maxSteps> bassNote;   // melodic bass note per step (-1 = off)
 
-        Variation() { for (auto& row : prob) row.fill (1.0f); }
+        Variation() { for (auto& row : prob) row.fill (1.0f); bassNote.fill (-1); }
     };
 
     struct Pattern { Variation var[2]; };   // [0] = A, [1] = B
@@ -125,6 +135,10 @@ private:
     double internalBpm = 120.0;
     float  swing = 0.0f;
     bool   running = false;
+
+    int    bassRoot  = 0;     // bass scale root (0 = C)
+    int    bassScale = 0;     // 0 chromatic, 1 major, 2 minor, 3 maj-pent, 4 min-pent
+    float  bassGate  = 0.5f;  // bass note length (0..1 -> ring)
     bool   probEnabled = true;    // harmless at the default 1.0 per step; active once lowered
 
     double sampleRate = 44100.0;

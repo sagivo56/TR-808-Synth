@@ -22,16 +22,18 @@ public:
     explicit StepSequencerView (Sequencer& sequencer);
     ~StepSequencerView() override;
 
-    // selectedVoice in [0, numVoices): a voice; == numVoices: the ACCENT track.
+    // selectedVoice in [0, numVoices): a voice; == numVoices: ACCENT track;
+    // == numVoices+1: the melodic BD BASS (tonal piano-roll editor).
     static constexpr int accentIndex = numVoices;
+    static constexpr int bassIndex   = numVoices + 1;
 
     void setMode (Mode m)            { mode = m; repaint(); }
     void setSelectedVoice (int v)    { selectedVoice = v; repaint(); }
     int  getSelectedVoice() const    { return selectedVoice; }
     void setEditVariation (int v)    { editVar = v; repaint(); }
 
-    // Beat grouping for the visible bar lines (stepsPerBeat is always 4 = 16ths).
-    void setBeatsPerBar (int n)      { beatsPerBar = juce::jlimit (1, 8, n); repaint(); }
+    // Beat grouping: alternate cell shading every 'n' steps (4 = 4/4, 3 = 3/4).
+    void setGrouping (int n)         { groupSize = juce::jlimit (1, 8, n); repaint(); }
 
     // Called when the authentic-view instrument selector picks an instrument
     // (0..numVoices, where numVoices == ACCENT).
@@ -39,6 +41,8 @@ public:
 
     // Called to audition an instrument (0..numVoices-1) when its name is clicked.
     std::function<void (int)> onPreview;
+    // Called to audition a bass MIDI note when a piano-roll cell is clicked.
+    std::function<void (int)> onPreviewBass;
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
@@ -46,6 +50,8 @@ public:
 private:
     void timerCallback() override;
     juce::Rectangle<int> gridArea() const;
+    void paintBass (juce::Graphics&, juce::Rectangle<int> area);
+    void mouseBass (const juce::MouseEvent&, juce::Rectangle<int> area);
 
     Sequencer& seq;
     Mode  mode = Mode::grid;
@@ -53,8 +59,7 @@ private:
     int  selectedVoice = BD;
     int  editVar = 0;
     int  lastDisplay = -2;
-    int  beatsPerBar = 4;                  // 4 = 4/4, 3 = 3/4 (visible grouping)
-    static constexpr int stepsPerBeat = 4; // 16th-note steps
+    int  groupSize = 4;                    // shade alternates every this many steps (4=4/4, 3=3/4)
 
     static constexpr int kLabelW = 58;
 };

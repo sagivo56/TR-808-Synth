@@ -25,6 +25,10 @@ public:
     void renderAdd (float* mono, int numSamples) override;
     bool isActive() const override;
 
+    // Melodic ("808 bass") playback: force the next trigger to this absolute
+    // frequency instead of the deep Pitch. <= 0 restores normal kick pitch.
+    void setPlayFrequency (float hz) noexcept { playFreq = hz; }
+
     std::vector<DeepRef> deepRefs() override
     {
         return { { "freq", &deep.freq }, { "bodydecay", &deep.decay }, { "punch", &deep.punch },
@@ -41,6 +45,7 @@ private:
 
     float amp        = 0.0f;
     float baseFreq   = 55.0f;
+    float playFreq   = -1.0f;   // >0 => melodic bass note (overrides deep Pitch)
     float driveAmt   = 1.0f;
     float retrigAmt  = 0.5f;
     int   switchSample = 0;

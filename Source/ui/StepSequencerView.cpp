@@ -1,7 +1,43 @@
 #include "StepSequencerView.h"
 
+#include <cmath>
+#include <vector>
+
 namespace tr808::ui
 {
+namespace
+{
+    const char* kScaleNames[5] = { "CHROM", "MAJOR", "MINOR", "MAJ PENT", "MIN PENT" };
+    const float kGateVals[4]   = { 0.30f, 0.50f, 0.72f, 0.95f };
+    const char* kGateNames[4]  = { "SHORT", "MED", "LONG", "FULL" };
+
+    // MIDI notes of the scale over two octaves, low -> high (C1 base + root).
+    std::vector<int> bassScaleNotes (int root, int type)
+    {
+        static const std::vector<std::vector<int>> degs = {
+            { 0,1,2,3,4,5,6,7,8,9,10,11 },   // chromatic
+            { 0,2,4,5,7,9,11 },              // major
+            { 0,2,3,5,7,8,10 },              // natural minor
+            { 0,2,4,7,9 },                   // major pentatonic
+            { 0,3,5,7,10 }                   // minor pentatonic
+        };
+        const auto& d = degs[(size_t) juce::jlimit (0, 4, type)];
+        const int base = 24 + juce::jlimit (0, 11, root);   // C1 + root
+        std::vector<int> notes;
+        for (int oct = 0; oct < 2; ++oct)
+            for (int s : d) notes.push_back (base + 12 * oct + s);
+        notes.push_back (base + 24);                          // top root
+        return notes;
+    }
+
+    int gateIndex (float g)
+    {
+        int best = 0; float bd = 1.0e9f;
+        for (int i = 0; i < 4; ++i) { const float e = std::abs (g - kGateVals[i]); if (e < bd) { bd = e; best = i; } }
+        return best;
+    }
+}
+
 StepSequencerView::StepSequencerView (Sequencer& sequencer) : seq (sequencer)
 {
     startTimerHz (30);
@@ -30,9 +66,14 @@ void StepSequencerView::paint (juce::Graphics& g)
     const int len = juce::jlimit (1, Sequencer::maxSteps, seq.getLength (pat, editVar));
     auto area = gridArea();
 
-    auto cell = [&] (juce::Rectangle<float> r, bool on, bool accent, bool playing)
+    // Alternate the off-cell shade every 'groupSize' steps so the meter (4/4 or
+    // 3/4) is visible on the pads themselves.
+    auto groupShaded = [&] (int s) { return ((s / groupSize) % 2) == 1; };
+
+    auto cell = [&] (juce::Rectangle<float> r, bool on, bool accent, bool playing, int s)
     {
-        g.setColour (on ? (accent ? Colors::yellow : Colors::orange) : Colors::grayOff);
+        const juce::Colour off = groupShaded (s) ? Colors::grayOff.brighter (0.22f) : Colors::grayOff;
+        g.setColour (on ? (accent ? Colors::yellow : Colors::orange) : off);
         g.fillRoundedRectangle (r.reduced (1.0f), 2.0f);
         if (playing) { g.setColour (Colors::white); g.drawRoundedRectangle (r.reduced (1.0f), 2.0f, 1.5f); }
     };
@@ -53,7 +94,7 @@ void StepSequencerView::paint (juce::Graphics& g)
                         juce::Justification::centredRight);
             for (int s = 0; s < len; ++s)
                 cell ({ area.getX() + s * cw, area.getY() + v * rh, cw, rh },
-                      seq.getStep (pat, editVar, v, s), seq.getAccent (pat, editVar, s), s == playStep);
+                      seq.getStep (pat, editVar, v, s), seq.getAccent (pat, editVar, s), s == playStep, s);
         }
 
         // accent lane
@@ -63,23 +104,12 @@ void StepSequencerView::paint (juce::Graphics& g)
                     juce::Justification::centredRight);
         for (int s = 0; s < len; ++s)
             cell ({ area.getX() + s * cw, area.getY() + numVoices * rh, cw, rh },
-                  seq.getAccent (pat, editVar, s), true, s == playStep);
-
-        // visible beat / bar grouping (4/4 or 3/4): a line at each beat, a bolder
-        // one at each bar boundary.
-        const float gh = (float) (numVoices + 1) * rh;
-        for (int s = stepsPerBeat; s < len; s += stepsPerBeat)
-        {
-            const bool bar = (s % (stepsPerBeat * beatsPerBar)) == 0;
-            const float x = area.getX() + s * cw;
-            g.setColour (bar ? Colors::orange.withAlpha (0.9f) : Colors::cream.withAlpha (0.32f));
-            g.fillRect (x - (bar ? 1.0f : 0.5f), (float) area.getY(), bar ? 2.0f : 1.0f, gh);
-        }
+                  seq.getAccent (pat, editVar, s), true, s == playStep, s);
     }
     else // authentic 808-style: instrument selector + edit-layer + step keys
     {
         juce::ignoreUnused (cell);
-        const int  numInst = numVoices + 1;                // 16 voices + ACCENT
+        const int  numInst = numVoices + 2;                // 16 voices + ACCENT + BASS
         const bool accSel  = (selectedVoice == accentIndex);
 
         // instrument selector
@@ -93,11 +123,15 @@ void StepSequencerView::paint (juce::Graphics& g)
             g.fillRoundedRectangle (r.reduced (1.5f), 3.0f);
             g.setColour (sel ? Colors::background : Colors::text);
             g.setFont (juce::FontOptions (9.5f, juce::Font::bold));
-            g.drawText (i == accentIndex ? "ACC" : juce::String (voiceSpecs()[(size_t) i].prefix).toUpperCase(),
-                        r, juce::Justification::centred);
+            const juce::String nm = (i == accentIndex) ? "ACC"
+                                  : (i == bassIndex)   ? "BASS"
+                                  : juce::String (voiceSpecs()[(size_t) i].prefix).toUpperCase();
+            g.drawText (nm, r, juce::Justification::centred);
         }
 
         area.removeFromTop (4);
+
+        if (selectedVoice == bassIndex) { paintBass (g, area); return; }   // tonal piano-roll
 
         // edit-layer selector: STEP / FLAM / PROB
         auto layerRow = area.removeFromTop (juce::jmax (16, area.getHeight() / 7));
@@ -123,8 +157,9 @@ void StepSequencerView::paint (juce::Graphics& g)
         for (int s = 0; s < len; ++s)
         {
             juce::Rectangle<float> r (area.getX() + s * cw, (float) area.getY(), cw, bh);
-            const bool isDown = (s % 4 == 0);
-            const juce::Colour offCol = isDown ? Colors::grayOff.brighter (0.18f) : Colors::grayOff;
+            const bool shade  = ((s / groupSize) % 2) == 1;
+            const bool isDown = (s % groupSize == 0);
+            const juce::Colour offCol = shade ? Colors::grayOff.brighter (0.22f) : Colors::grayOff;
             g.setColour (offCol);
             g.fillRoundedRectangle (r.reduced (2.0f), 3.0f);
 
@@ -150,15 +185,6 @@ void StepSequencerView::paint (juce::Graphics& g)
             }
 
             if (s == playStep) { g.setColour (Colors::white); g.drawRoundedRectangle (r.reduced (2.0f), 3.0f, 2.0f); }
-        }
-
-        // bar boundary lines over the step keys (visible meter grouping)
-        for (int s = stepsPerBeat; s < len; s += stepsPerBeat)
-        {
-            const bool bar = (s % (stepsPerBeat * beatsPerBar)) == 0;
-            const float x = area.getX() + s * cw;
-            g.setColour (bar ? Colors::orange.withAlpha (0.9f) : Colors::cream.withAlpha (0.28f));
-            g.fillRect (x - (bar ? 1.0f : 0.5f), (float) area.getY(), bar ? 2.0f : 1.0f, bh);
         }
     }
 }
@@ -192,7 +218,7 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
     }
     else
     {
-        const int  numInst = numVoices + 1;
+        const int  numInst = numVoices + 2;
         const bool accSel  = (selectedVoice == accentIndex);
 
         auto selRow = area.removeFromTop (juce::jmax (22, area.getHeight() / 6));
@@ -211,6 +237,9 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
         }
 
         area.removeFromTop (4);
+
+        if (selectedVoice == bassIndex) { mouseBass (e, area); return; }   // tonal piano-roll
+
         auto layerRow = area.removeFromTop (juce::jmax (16, area.getHeight() / 7));
         if (layerRow.contains (e.getPosition()))
         {
@@ -245,6 +274,106 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
         }
     }
 
+    repaint();
+}
+
+//== Melodic BD BASS: tonal piano-roll =========================================
+void StepSequencerView::paintBass (juce::Graphics& g, juce::Rectangle<int> area)
+{
+    const int pat = seq.getCurrentPattern();
+    const int len = juce::jlimit (1, Sequencer::maxSteps, seq.getLength (pat, editVar));
+    const int playStep = seq.getDisplayStep();
+
+    // control strip: SCALE | ROOT | LEN (click to cycle)
+    auto ctl = area.removeFromTop (juce::jmax (18, area.getHeight() / 8));
+    const juce::String ctlText[3] = {
+        juce::String ("SCALE ") + kScaleNames[juce::jlimit (0, 4, seq.getBassScale())],
+        juce::String ("ROOT ")  + juce::MidiMessage::getMidiNoteName (24 + seq.getBassRoot(), true, false, 3),
+        juce::String ("LEN ")   + kGateNames[gateIndex (seq.getBassGate())]
+    };
+    const float ctlW = ctl.getWidth() / 3.0f;
+    for (int i = 0; i < 3; ++i)
+    {
+        juce::Rectangle<float> r (ctl.getX() + i * ctlW, (float) ctl.getY(), ctlW - 3.0f, (float) ctl.getHeight());
+        g.setColour (Colors::panelLight);
+        g.fillRoundedRectangle (r.reduced (1.0f), 3.0f);
+        g.setColour (Colors::cream);
+        g.setFont (juce::FontOptions (9.5f, juce::Font::bold));
+        g.drawText (ctlText[i], r, juce::Justification::centred);
+    }
+
+    area.removeFromTop (4);
+
+    // piano roll: rows = scale notes (2 octaves), columns = steps
+    const auto notes = bassScaleNotes (seq.getBassRoot(), seq.getBassScale());
+    const int rows = (int) notes.size();
+    if (rows <= 0) return;
+    const int   labelW = 34;
+    auto labels = area.removeFromLeft (labelW);
+    const float cw = area.getWidth()  / (float) len;
+    const float rh = area.getHeight() / (float) rows;
+
+    for (int r = 0; r < rows; ++r)
+    {
+        const int note = notes[(size_t) (rows - 1 - r)];   // high notes at the top
+        const float y  = area.getY() + r * rh;
+        const bool isRoot = ((note - seq.getBassRoot()) % 12 == 0);
+
+        g.setColour (isRoot ? Colors::cream : Colors::text);
+        g.setFont (juce::FontOptions (8.5f));
+        g.drawText (juce::MidiMessage::getMidiNoteName (note, true, true, 3),
+                    labels.getX(), (int) y, labelW - 3, (int) rh, juce::Justification::centredRight);
+
+        for (int s = 0; s < len; ++s)
+        {
+            juce::Rectangle<float> cr (area.getX() + s * cw, y, cw, rh);
+            const bool on = (seq.getBassNote (pat, editVar, s) == note);
+            const bool shade = ((s / groupSize) % 2) == 1;
+            g.setColour (on ? Colors::orange
+                            : (isRoot ? Colors::grayOff.brighter (shade ? 0.30f : 0.12f)
+                                      : (shade ? Colors::grayOff.brighter (0.18f) : Colors::grayOff)));
+            g.fillRoundedRectangle (cr.reduced (0.8f), 2.0f);
+            if (s == playStep) { g.setColour (Colors::white.withAlpha (0.5f)); g.drawRoundedRectangle (cr.reduced (0.8f), 2.0f, 1.0f); }
+        }
+    }
+}
+
+void StepSequencerView::mouseBass (const juce::MouseEvent& e, juce::Rectangle<int> area)
+{
+    const int pat = seq.getCurrentPattern();
+    const int len = juce::jlimit (1, Sequencer::maxSteps, seq.getLength (pat, editVar));
+
+    auto ctl = area.removeFromTop (juce::jmax (18, area.getHeight() / 8));
+    if (ctl.contains (e.getPosition()))
+    {
+        const int third = juce::jlimit (0, 2, (int) ((e.x - ctl.getX()) / (ctl.getWidth() / 3.0f)));
+        if (third == 0)      seq.setBassScale (seq.getBassRoot(), (seq.getBassScale() + 1) % 5);
+        else if (third == 1) seq.setBassScale ((seq.getBassRoot() + 1) % 12, seq.getBassScale());
+        else                 seq.setBassGate (kGateVals[(gateIndex (seq.getBassGate()) + 1) % 4]);
+        repaint();
+        return;
+    }
+
+    area.removeFromTop (4);
+
+    const auto notes = bassScaleNotes (seq.getBassRoot(), seq.getBassScale());
+    const int rows = (int) notes.size();
+    if (rows <= 0) return;
+    area.removeFromLeft (34);
+    const float cw = area.getWidth()  / (float) len;
+    const float rh = area.getHeight() / (float) rows;
+    const int s = (int) ((e.x - area.getX()) / cw);
+    const int r = (int) ((e.y - area.getY()) / rh);
+    if (s < 0 || s >= len || r < 0 || r >= rows) return;
+
+    const int note = notes[(size_t) (rows - 1 - r)];
+    if (seq.getBassNote (pat, editVar, s) == note)
+        seq.setBassNote (pat, editVar, s, -1);              // toggle off
+    else
+    {
+        seq.setBassNote (pat, editVar, s, note);
+        if (onPreviewBass) onPreviewBass (note);            // audition the note
+    }
     repaint();
 }
 }

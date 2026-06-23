@@ -171,6 +171,34 @@ static void testStateRoundTrip()
     check (! s2.getStep (2, 1, SD, 6), "unset step stays off");
 }
 
+static void testBassTrack()
+{
+    std::cout << "Melodic BD bass track\n";
+    Sequencer s; s.prepare (kSr);
+    s.setBassNote (0, 0, 0, 36);                 // C2 on step 0
+    s.setBassScale (3, 2);                       // root D#, minor
+    s.setBassGate (0.72f);
+
+    Sequencer::TransportInfo t; t.hostPlaying = true; t.bpm = 120.0; t.ppqPosition = 0.0; t.sampleRate = kSr; t.numSamples = 4096;
+    std::vector<TriggerEvent> ev; s.process (t, ev);
+
+    const auto* be = firstOf (ev, VoiceManager::bassVoiceIndex);
+    check (be != nullptr, "bass note emits an event on step 0");
+    if (be != nullptr)
+    {
+        const float want = 440.0f * std::pow (2.0f, (36 - 69) / 12.0f);   // ~65.4 Hz
+        check (std::abs (be->freqHz - want) < 0.5f, "bass event carries the right frequency",
+               "got=" + std::to_string (be->freqHz) + " want=" + std::to_string (want));
+    }
+
+    // state round-trip
+    const auto vt = s.toValueTree();
+    Sequencer s2; s2.prepare (kSr); s2.fromValueTree (vt);
+    check (s2.getBassNote (0, 0, 0) == 36, "bass note restored from state");
+    check (s2.getBassRoot() == 3 && s2.getBassScale() == 2, "bass scale/root restored");
+    check (std::abs (s2.getBassGate() - 0.72f) < 1.0e-4f, "bass gate restored");
+}
+
 int main()
 {
     std::cout << "=== TR-808 sequencer tests (sr=" << kSr << ") ===\n";
@@ -181,6 +209,7 @@ int main()
     testMuteSolo();
     testSwing();
     testStateRoundTrip();
+    testBassTrack();
 
     std::cout << "\n" << (g_total - g_failed) << "/" << g_total << " checks passed.\n";
     if (g_failed > 0) { std::cout << "*** " << g_failed << " FAILED ***\n"; return 1; }

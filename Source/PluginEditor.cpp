@@ -74,8 +74,30 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
         const bool auth = gridButton.getToggleState();
         stepView.setMode (auth ? StepSequencerView::Mode::authentic : StepSequencerView::Mode::grid);
         gridButton.setButtonText (auth ? "AUTH" : "GRID");
+        if (! auth && bassButton.getToggleState())   // leaving auth cancels bass view
+            bassButton.setToggleState (false, juce::sendNotification);
     };
     addAndMakeVisible (gridButton);
+
+    // BD BASS: open the melodic tonal grid (authentic view, BASS instrument).
+    bassButton.setClickingTogglesState (true);
+    bassButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);
+    bassButton.onClick = [this]
+    {
+        if (bassButton.getToggleState())
+        {
+            gridButton.setToggleState (true, juce::dontSendNotification);
+            gridButton.setButtonText ("AUTH");
+            stepView.setMode (StepSequencerView::Mode::authentic);
+            stepView.setSelectedVoice (StepSequencerView::bassIndex);
+        }
+        else
+        {
+            stepView.setSelectedVoice (selectedVoice >= 0 && selectedVoice < numVoices ? selectedVoice : BD);
+        }
+        stepView.repaint();
+    };
+    addAndMakeVisible (bassButton);
 
     varAButton.setClickingTogglesState (true);
     varBButton.setClickingTogglesState (true);
@@ -159,12 +181,12 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     sigBox.onChange = [this]
     {
         const bool threeFour = (sigBox.getSelectedId() == 2);
-        const int beats = threeFour ? 3 : 4;
-        const int L = beats * 4;                       // 16th-note steps per bar
+        const int group = threeFour ? 3 : 4;           // shade group size
+        const int L = threeFour ? 12 : 16;             // steps per bar
         const int pat = proc.getSequencer().getCurrentPattern();
         proc.getSequencer().setLength (pat, 0, L);
         proc.getSequencer().setLength (pat, 1, L);
-        stepView.setBeatsPerBar (beats);
+        stepView.setGrouping (group);
         stepView.repaint();
     };
     sigLabel.setFont (juce::FontOptions (10.0f));
@@ -231,9 +253,11 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     stepView.onSelect = [this] (int v)
     {
         selectedVoice = v;
-        if (v >= 0 && v < numVoices) buildEditFor (v);   // accent (== numVoices) has no edit panel
+        bassButton.setToggleState (v == StepSequencerView::bassIndex, juce::dontSendNotification);
+        if (v >= 0 && v < numVoices) buildEditFor (v);   // accent / bass have no deep-edit panel
     };
     stepView.onPreview = [this] (int v) { proc.previewVoice (v); };
+    stepView.onPreviewBass = [this] (int note) { proc.previewBass (note); };
 
     syncTransport();
     showEdit (false);
@@ -467,9 +491,10 @@ void TR808AudioProcessorEditor::resized()
     tripButton.setBounds (row2.removeFromLeft (48).reduced (2, 8));
     songButton.setBounds (row2.removeFromLeft (46).reduced (2, 8));
     clearButton.setBounds (row2.removeFromLeft (40).reduced (2, 8));
-    chainEditor.setBounds (row2.removeFromLeft (76).reduced (2, 10));
-    viewButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
-    gridButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
+    chainEditor.setBounds (row2.removeFromLeft (64).reduced (2, 10));
+    viewButton.setBounds (row2.removeFromRight (54).reduced (2, 8));
+    gridButton.setBounds (row2.removeFromRight (54).reduced (2, 8));
+    bassButton.setBounds (row2.removeFromRight (62).reduced (2, 8));
     varBButton.setBounds (row2.removeFromRight (26).reduced (2, 8));
     varAButton.setBounds (row2.removeFromRight (26).reduced (2, 8));
     varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));

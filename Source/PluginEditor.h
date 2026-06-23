@@ -57,6 +57,7 @@ private:
     juce::TextButton playButton  { "PLAY" };
     juce::TextButton viewButton  { "EDIT" };
     juce::TextButton gridButton  { "GRID" };
+    juce::TextButton bassButton  { "BD BASS" };
     juce::TextButton varAButton  { "A" }, varBButton { "B" };
     juce::ComboBox   abModeBox;
     juce::ComboBox   kitBox, patternBox, lenBox, patBox, sigBox;

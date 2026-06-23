@@ -121,6 +121,15 @@ void Sequencer::process (const TransportInfo& t, std::vector<TriggerEvent>& out)
                 }
             }
         }
+
+        // melodic bass note on this step
+        const int bn = v.bassNote[(size_t) stepInLoop];
+        if (bn >= 0 && mainInBlock)
+        {
+            const int off = juce::jlimit (0, t.numSamples - 1, (int) ((mainPpq - ppqStart) / ppqPerSample));
+            const float hz = 440.0f * std::pow (2.0f, (float) (bn - 69) / 12.0f);
+            out.push_back ({ off, VoiceManager::bassVoiceIndex, 0.85f, v.accent[(size_t) stepInLoop], hz });
+        }
     }
 
     if (! t.hostPlaying)
@@ -185,7 +194,21 @@ void Sequencer::clearPattern (int pat)
         for (auto& row : v.flam)  row.fill (false);
         for (auto& row : v.prob)  row.fill (1.0f);
         v.accent.fill (false);
+        v.bassNote.fill (-1);
     }
+}
+
+void Sequencer::setBassNote (int pat, int var, int step, int midiNote)
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+        patterns[(size_t) pat].var[var].bassNote[(size_t) step] = (midiNote < 0 ? -1 : midiNote);
+}
+
+int Sequencer::getBassNote (int pat, int var, int step) const
+{
+    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+        return patterns[(size_t) pat].var[var].bassNote[(size_t) step];
+    return -1;
 }
 
 void Sequencer::setStepDiv (int pat, int var, float div)
@@ -246,6 +269,9 @@ juce::ValueTree Sequencer::toValueTree() const
     state.setProperty ("swing", swing, nullptr);
     state.setProperty ("running", running, nullptr);
     state.setProperty ("probEnabled", probEnabled, nullptr);
+    state.setProperty ("bassRoot", bassRoot, nullptr);
+    state.setProperty ("bassScale", bassScale, nullptr);
+    state.setProperty ("bassGate", bassGate, nullptr);
 
     juce::String chainStr, muteStr, soloStr;
     for (int c : chain)        chainStr += juce::String (c) + ",";
@@ -277,6 +303,9 @@ juce::ValueTree Sequencer::toValueTree() const
                     pr += (juce::juce_wchar) ('0' + juce::jlimit (0, 3, (int) std::lround ((1.0f - p) / 0.25f)));
                 vt.setProperty ("prob" + juce::String (vo), pr, nullptr);
             }
+            juce::String bassStr;
+            for (int n : v.bassNote) bassStr += juce::String (n) + ",";
+            vt.setProperty ("bass", bassStr, nullptr);
             pt.addChild (vt, -1, nullptr);
         }
         state.addChild (pt, -1, nullptr);
@@ -296,6 +325,9 @@ void Sequencer::fromValueTree (const juce::ValueTree& state)
     swing          = (float) (double) state.getProperty ("swing", 0.0);
     running        = (bool) state.getProperty ("running", false);
     probEnabled    = (bool) state.getProperty ("probEnabled", false);
+    bassRoot       = juce::jlimit (0, 11, (int) state.getProperty ("bassRoot", 0));
+    bassScale      = juce::jlimit (0, 4,  (int) state.getProperty ("bassScale", 0));
+    bassGate       = (float) (double) state.getProperty ("bassGate", 0.5);
 
     chain.clear();
     auto tokens = juce::StringArray::fromTokens (state.getProperty ("chain").toString(), ",", "");
@@ -332,6 +364,11 @@ void Sequencer::fromValueTree (const juce::ValueTree& state)
                 for (int s = 0; s < maxSteps && s < pr.length(); ++s)
                     v.prob[(size_t) vo][(size_t) s] = 1.0f - (float) juce::jlimit (0, 3, (int) pr[s] - (int) '0') * 0.25f;
             }
+            v.bassNote.fill (-1);
+            const auto bt = juce::StringArray::fromTokens (vt.getProperty ("bass").toString(), ",", "");
+            for (int s = 0; s < maxSteps && s < bt.size(); ++s)
+                if (bt[s].isNotEmpty())
+                    v.bassNote[(size_t) s] = juce::jlimit (-1, 127, bt[s].getIntValue());
         }
     }
 }

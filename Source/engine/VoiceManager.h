@@ -9,6 +9,7 @@
 #include "VoiceDefs.h"
 #include "Mixer.h"
 #include "../voices/Voice.h"
+#include "../voices/BassDrumVoice.h"
 
 namespace tr808
 {
@@ -17,9 +18,10 @@ namespace tr808
 struct TriggerEvent
 {
     int   samplePos;
-    int   voiceIndex;
+    int   voiceIndex;       // 0..numVoices-1, or VoiceManager::bassVoiceIndex
     float velocity;
     bool  accent;
+    float freqHz = 0.0f;    // melodic bass note frequency (0 = n/a)
 };
 
 //==============================================================================
@@ -52,6 +54,13 @@ public:
     void noteOn (int voiceIndex, float velocity, bool accent);
     bool isVoiceActive (int voiceIndex) const;
 
+    // Melodic "808 bass": a dedicated pitched BassDrumVoice, separate from the 16
+    // drum voices. Triggered by events whose voiceIndex == bassVoiceIndex.
+    static constexpr int bassVoiceIndex = numVoices;
+    void  noteOnBass (float velocity, float freqHz, bool accent);
+    void  setBassGate (float g) noexcept { bassGate = juce::jlimit (0.0f, 1.0f, g); }
+    bool  isBassActive() const { return bassVoice != nullptr && bassVoice->isActive(); }
+
     void setAccentAmount (float a) noexcept { accentAmount = juce::jmax (1.0f, a); }
 
     voices::Voice* voice (int voiceIndex) noexcept
@@ -69,6 +78,10 @@ private:
     void renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& mixer, float* const* auxChannels, int start, int len);
 
     std::array<std::unique_ptr<voices::Voice>, numVoices> voiceArray;
+    std::unique_ptr<voices::BassDrumVoice> bassVoice;   // melodic 808 bass
+    voices::VoiceMacros bassMacros;
+    float bassGate = 0.5f;                              // note length -> ring (0..1)
+    float bassGain = 0.9f;
     std::vector<float> monoBuf;
     int   maxBlock = 0;
     float accentAmount = 1.5f;
