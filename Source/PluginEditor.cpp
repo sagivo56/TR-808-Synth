@@ -634,12 +634,19 @@ void TR808AudioProcessorEditor::resized()
     editViewport.setBounds (editArea);
     {
         const int cw = 94, ch = 98;
-        const int cols = juce::jmax (1, editViewport.getMaximumVisibleWidth() / cw);
+        const int panelW = juce::jmax (cw, editViewport.getMaximumVisibleWidth());
+        const int cols = juce::jmax (1, panelW / cw);
         const int n = editControls.size();
         const int rows = (n + cols - 1) / juce::jmax (1, cols);
-        editPanel.setSize (juce::jmax (cw, editViewport.getMaximumVisibleWidth()), juce::jmax (ch, rows * ch));
+        editPanel.setSize (panelW, juce::jmax (ch, rows * ch));
+        // Centre each row (including a partial last row) rather than left-aligning.
         for (int i = 0; i < n; ++i)
-            editControls[i]->setBounds ((i % cols) * cw, (i / cols) * ch, cw - 4, ch - 4);
+        {
+            const int row = i / cols;
+            const int colsInRow = juce::jmin (cols, n - row * cols);
+            const int x0 = (panelW - colsInRow * cw) / 2;
+            editControls[i]->setBounds (x0 + (i % cols) * cw, row * ch, cw - 4, ch - 4);
+        }
     }
 
     // FX panel (reverb + delay): a simple grid of knobs over the mid area.
