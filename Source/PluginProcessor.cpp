@@ -54,7 +54,23 @@ void TR808AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
         decayP[(size_t) i]  = s.decay  ? apvts.getRawParameterValue (juce::String (tr808::macroId (i, "decay")))  : nullptr;
         snappyP[(size_t) i] = s.snappy ? apvts.getRawParameterValue (juce::String (tr808::macroId (i, "snappy"))) : nullptr;
         tuneP[(size_t) i]   = s.tune   ? apvts.getRawParameterValue (juce::String (tr808::macroId (i, "tune")))   : nullptr;
+        revSendP[(size_t) i] = apvts.getRawParameterValue (juce::String (tr808::macroId (i, "revsend")));
+        dlySendP[(size_t) i] = apvts.getRawParameterValue (juce::String (tr808::macroId (i, "dlysend")));
     }
+
+    bassRevSendP = apvts.getRawParameterValue (ParamIDs::bassRevSend);
+    bassDlySendP = apvts.getRawParameterValue (ParamIDs::bassDlySend);
+    revPredelayP = apvts.getRawParameterValue (ParamIDs::revPredelay);
+    revDecayP    = apvts.getRawParameterValue (ParamIDs::revDecay);
+    revBassP     = apvts.getRawParameterValue (ParamIDs::revBass);
+    revCrossP    = apvts.getRawParameterValue (ParamIDs::revCrossover);
+    revDampP     = apvts.getRawParameterValue (ParamIDs::revDamp);
+    revDepthP    = apvts.getRawParameterValue (ParamIDs::revDepth);
+    revReturnP   = apvts.getRawParameterValue (ParamIDs::revReturn);
+    dlyTimeP     = apvts.getRawParameterValue (ParamIDs::dlyTime);
+    dlyFbP       = apvts.getRawParameterValue (ParamIDs::dlyFeedback);
+    dlyToneP     = apvts.getRawParameterValue (ParamIDs::dlyTone);
+    dlyReturnP   = apvts.getRawParameterValue (ParamIDs::dlyReturn);
 
     // Pair every voice's Deep param with its APVTS atomic (built once here).
     deepWiring.clear();
@@ -90,6 +106,34 @@ void TR808AudioProcessor::updateMixerFromApvts()
     mixer.setMasterDrive (masterDriveParam != nullptr ? masterDriveParam->load() : 1.0f);
     voiceManager.setAccentAmount (accentLevelParam != nullptr ? accentLevelParam->load() : 1.5f);
     voiceManager.setBassGate (sequencer.getBassGate());
+}
+
+void TR808AudioProcessor::updateFxFromApvts()
+{
+    auto get = [] (std::atomic<float>* p, float d) { return p != nullptr ? p->load() : d; };
+
+    for (int i = 0; i < tr808::numVoices; ++i)
+    {
+        voiceManager.setReverbSend (i, get (revSendP[(size_t) i], 0.0f));
+        voiceManager.setDelaySend  (i, get (dlySendP[(size_t) i], 0.0f));
+    }
+    voiceManager.setReverbSend (tr808::VoiceManager::bassVoiceIndex, get (bassRevSendP, 0.0f));
+    voiceManager.setDelaySend  (tr808::VoiceManager::bassVoiceIndex, get (bassDlySendP, 0.0f));
+
+    auto& rev = voiceManager.reverb();
+    rev.setPredelay  (get (revPredelayP, 15.0f));
+    rev.setDecay     (get (revDecayP, 2.2f));
+    rev.setBassMult  (get (revBassP, 1.4f));
+    rev.setCrossover (get (revCrossP, 500.0f));
+    rev.setDamping   (get (revDampP, 0.35f));
+    rev.setDepth     (get (revDepthP, 0.30f));
+    voiceManager.setReverbReturn (get (revReturnP, 0.9f));
+
+    auto& dly = voiceManager.delay();
+    dly.setTime     (get (dlyTimeP, 350.0f));
+    dly.setFeedback (get (dlyFbP, 0.35f));
+    dly.setTone     (get (dlyToneP, 0.6f));
+    voiceManager.setDelayReturn (get (dlyReturnP, 0.9f));
 }
 
 void TR808AudioProcessor::updateMacrosFromApvts()
@@ -139,6 +183,7 @@ void TR808AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     updateMacrosFromApvts();
     updateDeepFromApvts();
     updateMixerFromApvts();
+    updateFxFromApvts();
 
     // Transport from the host (falls back to the sequencer's internal clock).
     tr808::Sequencer::TransportInfo transport;

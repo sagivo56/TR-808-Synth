@@ -13,4 +13,19 @@ namespace ParamIDs
     inline constexpr auto masterDrive = "master_drive";
     inline constexpr auto multiOut    = "multi_out";
     inline constexpr auto accentLevel = "accent_level";
+
+    // Parallel FX (global). Per-voice sends use macroId(v, "revsend"/"dlysend").
+    inline constexpr auto bassRevSend  = "bdbass_revsend";
+    inline constexpr auto bassDlySend  = "bdbass_dlysend";
+    inline constexpr auto revPredelay  = "rev_predelay";
+    inline constexpr auto revDecay     = "rev_decay";
+    inline constexpr auto revBass      = "rev_bass";
+    inline constexpr auto revCrossover = "rev_crossover";
+    inline constexpr auto revDamp      = "rev_damp";
+    inline constexpr auto revDepth     = "rev_depth";
+    inline constexpr auto revReturn    = "rev_return";
+    inline constexpr auto dlyTime      = "dly_time";
+    inline constexpr auto dlyFeedback  = "dly_feedback";
+    inline constexpr auto dlyTone      = "dly_tone";
+    inline constexpr auto dlyReturn    = "dly_return";
 }

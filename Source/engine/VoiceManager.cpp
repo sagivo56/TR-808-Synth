@@ -68,6 +68,23 @@ void VoiceManager::prepare (double sampleRate, int maxBlockSize)
     for (auto& v : voiceArray)
         v->prepare (sampleRate, maxBlock);
     if (bassVoice) bassVoice->prepare (sampleRate, maxBlock);
+
+    reverbFx.prepare (sampleRate);
+    delayFx.prepare (sampleRate);
+    revBuf.assign ((size_t) maxBlock, 0.0f);
+    dlyBuf.assign ((size_t) maxBlock, 0.0f);
+    wetL.assign  ((size_t) maxBlock, 0.0f);
+    wetR.assign  ((size_t) maxBlock, 0.0f);
+}
+
+void VoiceManager::setReverbSend (int v, float a) noexcept
+{
+    if (v >= 0 && v <= numVoices) revSend[(size_t) v] = juce::jlimit (0.0f, 1.0f, a);
+}
+
+void VoiceManager::setDelaySend (int v, float a) noexcept
+{
+    if (v >= 0 && v <= numVoices) dlySend[(size_t) v] = juce::jlimit (0.0f, 1.0f, a);
 }
 
 void VoiceManager::reset()
@@ -75,6 +92,8 @@ void VoiceManager::reset()
     for (auto& v : voiceArray)
         v->reset();
     if (bassVoice) bassVoice->reset();
+    reverbFx.reset();
+    delayFx.reset();
 }
 
 void VoiceManager::noteOnBass (float velocity, float freqHz, bool accent)
@@ -149,19 +168,27 @@ void VoiceManager::renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& m
             for (int i = 0; i < len; ++i)
                 a[i] += scratch[i];
         }
+
+        // Parallel FX sends (pre-pan mono).
+        const float rs = revSend[(size_t) v], ds = dlySend[(size_t) v];
+        if (rs > 0.0f) { auto* b = revBuf.data() + start; for (int i = 0; i < len; ++i) b[i] += scratch[i] * rs; }
+        if (ds > 0.0f) { auto* b = dlyBuf.data() + start; for (int i = 0; i < len; ++i) b[i] += scratch[i] * ds; }
     }
 
-    // Melodic 808 bass: centre-panned, master only.
+    // Melodic 808 bass: centre-panned, master only (+ its own FX sends).
     if (bassVoice != nullptr && bassVoice->isActive())
     {
         std::fill (scratch, scratch + len, 0.0f);
         bassVoice->renderAdd (scratch, len);
+        const float brs = revSend[(size_t) numVoices], bds = dlySend[(size_t) numVoices];
         for (int i = 0; i < len; ++i)
         {
             const float s = scratch[i] * bassGain;
             L[start + i] += s;
             R[start + i] += s;
         }
+        if (brs > 0.0f) { auto* b = revBuf.data() + start; for (int i = 0; i < len; ++i) b[i] += scratch[i] * brs; }
+        if (bds > 0.0f) { auto* b = dlyBuf.data() + start; for (int i = 0; i < len; ++i) b[i] += scratch[i] * bds; }
     }
 }
 
@@ -177,6 +204,10 @@ void VoiceManager::renderEvents (juce::AudioBuffer<float>& mainBuffer,
             if (auxChannels[v] != nullptr)
                 juce::FloatVectorOperations::clear (auxChannels[v], numSamples);
 
+    const int ns = juce::jmin (numSamples, maxBlock);
+    std::fill (revBuf.begin(), revBuf.begin() + ns, 0.0f);
+    std::fill (dlyBuf.begin(), dlyBuf.begin() + ns, 0.0f);
+
     int pos = 0;
     for (const auto& e : events)
     {
@@ -188,6 +219,17 @@ void VoiceManager::renderEvents (juce::AudioBuffer<float>& mainBuffer,
     }
 
     renderSegment (mainBuffer, mixer, auxChannels, pos, numSamples - pos);
+
+    // Parallel FX returns: process the send buses (always, so tails ring out)
+    // and add the stereo wet to the master.
+    auto* L = mainBuffer.getWritePointer (0);
+    auto* R = mainBuffer.getNumChannels() > 1 ? mainBuffer.getWritePointer (1) : L;
+
+    reverbFx.process (revBuf.data(), wetL.data(), wetR.data(), ns);
+    for (int i = 0; i < ns; ++i) { L[i] += wetL[(size_t) i] * reverbReturn; R[i] += wetR[(size_t) i] * reverbReturn; }
+
+    delayFx.process (dlyBuf.data(), wetL.data(), wetR.data(), ns);
+    for (int i = 0; i < ns; ++i) { L[i] += wetL[(size_t) i] * delayReturn; R[i] += wetR[(size_t) i] * delayReturn; }
 }
 
 void VoiceManager::process (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)

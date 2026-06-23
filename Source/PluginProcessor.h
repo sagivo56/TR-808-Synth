@@ -68,6 +68,7 @@ private:
     void updateMacrosFromApvts();
     void updateDeepFromApvts();
     void updateMixerFromApvts();
+    void updateFxFromApvts();
 
     tr808::VoiceManager voiceManager;
     tr808::Sequencer    sequencer;
@@ -96,6 +97,17 @@ private:
     std::atomic<float>* multiOutParam = nullptr;
     std::atomic<float>* accentLevelParam = nullptr;
     std::array<float*, tr808::numVoices> auxPtr {};   // per-block aux channel pointers
+
+    // Parallel FX: per-voice sends + global reverb/delay params.
+    std::array<std::atomic<float>*, tr808::numVoices> revSendP {}, dlySendP {};
+    std::atomic<float>* bassRevSendP = nullptr;
+    std::atomic<float>* bassDlySendP = nullptr;
+    std::atomic<float>* revPredelayP = nullptr; std::atomic<float>* revDecayP = nullptr;
+    std::atomic<float>* revBassP = nullptr;     std::atomic<float>* revCrossP = nullptr;
+    std::atomic<float>* revDampP = nullptr;     std::atomic<float>* revDepthP = nullptr;
+    std::atomic<float>* revReturnP = nullptr;
+    std::atomic<float>* dlyTimeP = nullptr;     std::atomic<float>* dlyFbP = nullptr;
+    std::atomic<float>* dlyToneP = nullptr;     std::atomic<float>* dlyReturnP = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TR808AudioProcessor)
 };

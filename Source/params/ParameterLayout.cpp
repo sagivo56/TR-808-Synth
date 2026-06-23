@@ -53,6 +53,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         if (s.decay)  addMacro (layout, i, "decay",  n + " Decay",  0.5f);
         if (s.snappy) addMacro (layout, i, "snappy", n + " Snappy", 0.5f);
         if (s.tune)   addMacro (layout, i, "tune",   n + " Tune",   0.5f);
+        addMacro (layout, i, "revsend", n + " Reverb Send", 0.0f);
+        addMacro (layout, i, "dlysend", n + " Delay Send",  0.0f);
     }
 
     // Deep-edit params (per-stage synthesis controls, real units).
@@ -83,6 +85,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { ParamIDs::accentLevel, 1 }, "Accent",
         juce::NormalisableRange<float> (1.0f, 3.0f, 0.01f), 1.5f));
+
+    // Parallel FX: melodic-bass sends + the reverb and delay parameters.
+    auto addF = [&] (const char* id, const juce::String& name, float lo, float hi, float def, const char* unit = "")
+    {
+        layout.add (std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID { id, 1 }, name,
+            juce::NormalisableRange<float> (lo, hi), def,
+            juce::AudioParameterFloatAttributes().withLabel (unit)));
+    };
+    addF (ParamIDs::bassRevSend,  "BD Bass Reverb Send", 0.0f, 1.0f, 0.0f);
+    addF (ParamIDs::bassDlySend,  "BD Bass Delay Send",  0.0f, 1.0f, 0.0f);
+    addF (ParamIDs::revPredelay,  "Reverb Predelay", 0.0f, 120.0f, 15.0f, "ms");
+    addF (ParamIDs::revDecay,     "Reverb Decay",    0.2f, 12.0f,  2.2f,  "s");
+    addF (ParamIDs::revBass,      "Reverb Bass",     0.25f, 2.5f,  1.4f);
+    addF (ParamIDs::revCrossover, "Reverb Crossover",150.0f, 2000.0f, 500.0f, "Hz");
+    addF (ParamIDs::revDamp,      "Reverb Damping",  0.0f, 1.0f, 0.35f);
+    addF (ParamIDs::revDepth,     "Reverb Depth",    0.0f, 1.0f, 0.30f);
+    addF (ParamIDs::revReturn,    "Reverb Return",   0.0f, 1.5f, 0.9f);
+    addF (ParamIDs::dlyTime,      "Delay Time",      1.0f, 1000.0f, 350.0f, "ms");
+    addF (ParamIDs::dlyFeedback,  "Delay Feedback",  0.0f, 0.95f, 0.35f);
+    addF (ParamIDs::dlyTone,      "Delay Tone",      0.0f, 1.0f, 0.6f);
+    addF (ParamIDs::dlyReturn,    "Delay Return",    0.0f, 1.5f, 0.9f);
 
     return layout;
 }

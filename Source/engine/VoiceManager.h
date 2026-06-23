@@ -10,6 +10,8 @@
 #include "Mixer.h"
 #include "../voices/Voice.h"
 #include "../voices/BassDrumVoice.h"
+#include "../dsp/ReverbLexicon.h"
+#include "../dsp/StereoDelay.h"
 
 namespace tr808
 {
@@ -63,6 +65,14 @@ public:
 
     void setAccentAmount (float a) noexcept { accentAmount = juce::jmax (1.0f, a); }
 
+    // Parallel FX sends (0..1). bassVoiceIndex routes the melodic bass.
+    void setReverbSend (int v, float a) noexcept;
+    void setDelaySend  (int v, float a) noexcept;
+    void setReverbReturn (float a) noexcept { reverbReturn = juce::jlimit (0.0f, 1.5f, a); }
+    void setDelayReturn  (float a) noexcept { delayReturn  = juce::jlimit (0.0f, 1.5f, a); }
+    dsp::ReverbLexicon& reverb() noexcept { return reverbFx; }
+    dsp::StereoDelay&   delay()  noexcept { return delayFx; }
+
     voices::Voice* voice (int voiceIndex) noexcept
     {
         return (voiceIndex >= 0 && voiceIndex < numVoices) ? voiceArray[(size_t) voiceIndex].get() : nullptr;
@@ -85,5 +95,13 @@ private:
     std::vector<float> monoBuf;
     int   maxBlock = 0;
     float accentAmount = 1.5f;
+
+    // Parallel FX: send buffers (mono) + a reverb and a ping-pong delay.
+    dsp::ReverbLexicon reverbFx;
+    dsp::StereoDelay   delayFx;
+    std::array<float, numVoices + 1> revSend {};        // [numVoices] = bass send
+    std::array<float, numVoices + 1> dlySend {};
+    std::vector<float> revBuf, dlyBuf, wetL, wetR;
+    float reverbReturn = 1.0f, delayReturn = 1.0f;
 };
 }
