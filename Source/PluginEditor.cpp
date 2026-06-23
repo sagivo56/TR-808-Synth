@@ -112,11 +112,12 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     addAndMakeVisible (fxButton);
 
     gridButton.setClickingTogglesState (true);
+    gridButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);   // stay readable when active
     gridButton.onClick = [this]
     {
         const bool auth = gridButton.getToggleState();
         stepView.setMode (auth ? StepSequencerView::Mode::authentic : StepSequencerView::Mode::grid);
-        gridButton.setButtonText (auth ? "AUTH" : "GRID");
+        gridButton.setButtonText (auth ? "808" : "GRID");
         if (! auth && bassButton.getToggleState())   // leaving auth cancels bass view
             bassButton.setToggleState (false, juce::sendNotification);
     };
@@ -130,7 +131,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
         if (bassButton.getToggleState())
         {
             gridButton.setToggleState (true, juce::dontSendNotification);
-            gridButton.setButtonText ("AUTH");
+            gridButton.setButtonText ("808");
             stepView.setMode (StepSequencerView::Mode::authentic);
             stepView.setSelectedVoice (StepSequencerView::bassIndex);
             selectedVoice = StepSequencerView::bassIndex;
