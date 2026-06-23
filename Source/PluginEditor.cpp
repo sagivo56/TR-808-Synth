@@ -123,14 +123,11 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     };
     addAndMakeVisible (abModeBox);
 
-    setupPresetBox (kitBox, PresetManager::kitNames());
+    setupPresetBox (kitBox, PresetManager::kitNames(), "KIT");
     kitBox.onChange = [this] { handleKitBox(); };
-    setupPresetBox (patternBox, PresetManager::patternNames());
+    setupPresetBox (patternBox, PresetManager::patternNames(), "PATTERN");
     patternBox.onChange = [this] { handlePatternBox(); };
-    kitLabel.setFont (juce::FontOptions (10.0f));
-    patternLabel.setFont (juce::FontOptions (10.0f));
-    addAndMakeVisible (kitBox); addAndMakeVisible (patternBox);
-    addAndMakeVisible (kitLabel); addAndMakeVisible (patternLabel);
+    addAndMakeVisible (kitBox); addAndMakeVisible (patternBox);   // boxes are self-labelled via placeholder
 
     tempoSlider.setSliderStyle (juce::Slider::LinearHorizontal);
     tempoSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 44, 16);
@@ -264,7 +261,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     showEdit (false);
 
     setResizable (true, true);
-    setResizeLimits (900, 560, 2400, 1500);
+    setResizeLimits (1000, 560, 2400, 1500);   // header is control-dense; keep it from overlapping
     setSize (1180, 720);
 }
 
@@ -343,7 +340,8 @@ void TR808AudioProcessorEditor::showEdit (bool edit)
     resized();
 }
 
-void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce::StringArray& factory)
+void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce::StringArray& factory,
+                                                const juce::String& placeholder)
 {
     box.clear (juce::dontSendNotification);
     int id = 1;
@@ -352,7 +350,7 @@ void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce:
     box.addItem ("Random", 102);
     box.addItem ("Save...", 100);
     box.addItem ("Load...", 101);
-    box.setTextWhenNothingSelected ("...");
+    box.setTextWhenNothingSelected (placeholder);   // shows e.g. "KIT" / "PATTERN" until a preset is picked
 }
 
 void TR808AudioProcessorEditor::handleKitBox()
@@ -480,35 +478,34 @@ void TR808AudioProcessorEditor::resized()
     auto scol = row1.removeFromLeft (150);
     swingLabel.setBounds (scol.removeFromTop (13));
     swingSlider.setBounds (scol);
-    abModeBox.setBounds (row1.removeFromLeft (56).reduced (2, 12));
-    patLabel.setBounds (row1.removeFromLeft (24));
-    patBox.setBounds (row1.removeFromLeft (44).reduced (2, 12));
+    abModeBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
+    patLabel.setBounds (row1.removeFromLeft (26));
+    patBox.setBounds (row1.removeFromLeft (48).reduced (2, 12));
     if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
     if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
     if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
     if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (52).reduced (2, 12));
 
     // row 2: presets + length/triplet + view/grid/variation
-    kitLabel.setBounds (row2.removeFromLeft (26));
-    kitBox.setBounds (row2.removeFromLeft (108).reduced (2, 8));
-    patternLabel.setBounds (row2.removeFromLeft (50));
-    patternBox.setBounds (row2.removeFromLeft (108).reduced (2, 8));
-    lenLabel.setBounds (row2.removeFromLeft (22));
-    lenBox.setBounds (row2.removeFromLeft (42).reduced (2, 8));
-    sigLabel.setBounds (row2.removeFromLeft (22));
-    sigBox.setBounds (row2.removeFromLeft (46).reduced (2, 8));
-    tripButton.setBounds (row2.removeFromLeft (48).reduced (2, 8));
-    songButton.setBounds (row2.removeFromLeft (46).reduced (2, 8));
-    clearButton.setBounds (row2.removeFromLeft (40).reduced (2, 8));
-    chainEditor.setBounds (row2.removeFromLeft (56).reduced (2, 10));
-    viewButton.setBounds (row2.removeFromRight (50).reduced (2, 8));
-    gridButton.setBounds (row2.removeFromRight (50).reduced (2, 8));
-    bassButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
-    varDButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
-    varCButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
-    varBButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
-    varAButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
-    varLabel.setBounds (row2.removeFromRight (28).reduced (0, 8));
+    // (KIT / PATTERN combos are self-labelled via their placeholder text)
+    kitBox.setBounds (row2.removeFromLeft (118).reduced (2, 8));
+    patternBox.setBounds (row2.removeFromLeft (134).reduced (2, 8));
+    lenLabel.setBounds (row2.removeFromLeft (24));
+    lenBox.setBounds (row2.removeFromLeft (46).reduced (2, 8));
+    sigLabel.setBounds (row2.removeFromLeft (24));
+    sigBox.setBounds (row2.removeFromLeft (56).reduced (2, 8));
+    tripButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
+    songButton.setBounds (row2.removeFromLeft (58).reduced (2, 8));
+    clearButton.setBounds (row2.removeFromLeft (44).reduced (2, 8));
+    chainEditor.setBounds (row2.removeFromLeft (72).reduced (2, 10));
+    viewButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
+    gridButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
+    bassButton.setBounds (row2.removeFromRight (64).reduced (2, 8));
+    varDButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+    varCButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+    varBButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+    varAButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+    varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));
 
     // --- step grid at the bottom ---
     auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * 40 / 100));

@@ -47,7 +47,7 @@ private:
     void selectEditVar (int v);   // choose which variation (0..3 = A..D) the grid edits
     void showEdit (bool edit);
     void syncTransport();
-    void setupPresetBox (juce::ComboBox&, const juce::StringArray& factory);
+    void setupPresetBox (juce::ComboBox&, const juce::StringArray& factory, const juce::String& placeholder);
     void handleKitBox();
     void handlePatternBox();
 
