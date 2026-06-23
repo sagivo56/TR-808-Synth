@@ -39,10 +39,13 @@ void TR808AudioProcessorEditor::VoiceColumn::paint (juce::Graphics& g)
 void TR808AudioProcessorEditor::ShadedPanel::paint (juce::Graphics& g)
 {
     auto b = getLocalBounds();
-    const int s = juce::jlimit (0, b.getHeight(), splitY);
-    g.setColour (juce::Colour (0xff2a2f3a));   // cool tint = REVERB
-    g.fillRoundedRectangle (b.removeFromTop (s).toFloat().reduced (2.0f), 5.0f);
-    g.setColour (juce::Colour (0xff3a2e26));   // warm tint = DELAY
+    const int s1 = juce::jlimit (0, b.getHeight(), split1);
+    const int s2 = juce::jlimit (s1, b.getHeight(), split2);
+    g.setColour (juce::Colour (0xff2a2f3a));   // cool  = REVERB
+    g.fillRoundedRectangle (b.removeFromTop (s1).toFloat().reduced (2.0f), 5.0f);
+    g.setColour (juce::Colour (0xff3a2e26));   // warm  = DELAY
+    g.fillRoundedRectangle (b.removeFromTop (s2 - s1).toFloat().reduced (2.0f), 5.0f);
+    g.setColour (juce::Colour (0xff263a2c));   // green = DRIVE
     g.fillRoundedRectangle (b.toFloat().reduced (2.0f), 5.0f);
 }
 
@@ -208,6 +211,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     addAndMakeVisible (*accentKnob); addAndMakeVisible (*multiOutToggle);
 
     lenBox.addItem ("16", 1); lenBox.addItem ("32", 2); lenBox.addItem ("8", 3);
+    lenBox.setTextWhenNothingSelected ("LEN");
     lenBox.onChange = [this]
     {
         const int id = lenBox.getSelectedId();
@@ -231,6 +235,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
 
     // Time signature: sets the visible beat grouping (4/4 or 3/4) and the bar length.
     sigBox.addItem ("4/4", 1); sigBox.addItem ("3/4", 2);
+    sigBox.setTextWhenNothingSelected ("SIG");
     sigBox.setSelectedId (1, juce::dontSendNotification);
     sigBox.onChange = [this]
     {
@@ -442,6 +447,9 @@ void TR808AudioProcessorEditor::buildFx()
     add (ParamIDs::dlyFeedback,  "FEEDBACK");
     add (ParamIDs::dlyTone,      "DLY TONE");
     add (ParamIDs::dlyReturn,    "DLY RET");
+    fxDriveStart = fxControls.size();
+    add (ParamIDs::masterDrive,  "DRIVE");
+    add (ParamIDs::masterGain,   "OUTPUT");
 
     auto styleLabel = [] (juce::Label& l)
     {
@@ -449,9 +457,10 @@ void TR808AudioProcessorEditor::buildFx()
         l.setColour (juce::Label::textColourId, Colors::orange);
         l.setJustificationType (juce::Justification::centredLeft);
     };
-    styleLabel (fxRevLabel); styleLabel (fxDlyLabel);
+    styleLabel (fxRevLabel); styleLabel (fxDlyLabel); styleLabel (fxDrvLabel);
     fxPanel.addAndMakeVisible (fxRevLabel);
     fxPanel.addAndMakeVisible (fxDlyLabel);
+    fxPanel.addAndMakeVisible (fxDrvLabel);
 }
 
 void TR808AudioProcessorEditor::showEdit (bool edit)
@@ -649,13 +658,13 @@ void TR808AudioProcessorEditor::resized()
     kitBox.setBounds (row2.removeFromLeft (118).reduced (2, 8));
     patternBox.setBounds (row2.removeFromLeft (134).reduced (2, 8));
     lenLabel.setBounds (row2.removeFromLeft (24));
-    lenBox.setBounds (row2.removeFromLeft (46).reduced (2, 8));
+    lenBox.setBounds (row2.removeFromLeft (60).reduced (2, 8));
     sigLabel.setBounds (row2.removeFromLeft (24));
-    sigBox.setBounds (row2.removeFromLeft (56).reduced (2, 8));
+    sigBox.setBounds (row2.removeFromLeft (66).reduced (2, 8));
     tripButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
-    songButton.setBounds (row2.removeFromLeft (58).reduced (2, 8));
-    clearButton.setBounds (row2.removeFromLeft (44).reduced (2, 8));
-    chainEditor.setBounds (row2.removeFromLeft (72).reduced (2, 10));
+    songButton.setBounds (row2.removeFromLeft (54).reduced (2, 8));
+    clearButton.setBounds (row2.removeFromLeft (42).reduced (2, 8));
+    chainEditor.setBounds (row2.removeFromLeft (58).reduced (2, 10));
     viewButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
     gridButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
     bassButton.setBounds (row2.removeFromRight (64).reduced (2, 8));
@@ -708,9 +717,11 @@ void TR808AudioProcessorEditor::resized()
         auto fxArea = mid;
         fxTitle.setBounds (fxArea.removeFromTop (20));
         fxPanel.setBounds (fxArea);
-        const int cw = 92, ch = 96, labelH = 18;
+        const int cw = 92, ch = 90, labelH = 18;
+        const int bandH = labelH + ch;
         const int panelW = fxArea.getWidth();
-        fxPanel.splitY = labelH + ch;            // boundary between the reverb and delay bands
+        fxPanel.split1 = bandH;                  // reverb / delay boundary
+        fxPanel.split2 = 2 * bandH;              // delay / drive boundary
         auto rowCentred = [&] (int from, int to, int y)
         {
             const int count = to - from;
@@ -721,7 +732,9 @@ void TR808AudioProcessorEditor::resized()
         const int n = fxControls.size();
         fxRevLabel.setBounds (8, 0, panelW - 16, labelH);
         rowCentred (0, fxDelayStart, labelH);
-        fxDlyLabel.setBounds (8, labelH + ch, panelW - 16, labelH);
-        rowCentred (fxDelayStart, n, labelH + ch + labelH);
+        fxDlyLabel.setBounds (8, bandH, panelW - 16, labelH);
+        rowCentred (fxDelayStart, fxDriveStart, bandH + labelH);
+        fxDrvLabel.setBounds (8, 2 * bandH, panelW - 16, labelH);
+        rowCentred (fxDriveStart, n, 2 * bandH + labelH);
     }
 }

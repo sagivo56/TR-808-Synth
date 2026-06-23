@@ -44,10 +44,11 @@ private:
         std::unique_ptr<tr808::ui::ParamToggle> mute, solo;
     };
 
-    // FX panel background: a cool-tinted REVERB band over a warm-tinted DELAY band.
+    // FX panel background: three tinted bands - REVERB (cool), DELAY (warm),
+    // DRIVE (green) - separated at split1 and split2.
     struct ShadedPanel : juce::Component
     {
-        int splitY = 114;
+        int split1 = 114, split2 = 228;
         void paint (juce::Graphics&) override;
     };
 
@@ -101,8 +102,9 @@ private:
     ShadedPanel      fxPanel;
     juce::OwnedArray<tr808::ui::ParamKnob> fxControls;
     juce::Label      fxTitle { {}, "FX  -  REVERB (Lexicon-style) + PING-PONG DELAY" };
-    juce::Label      fxRevLabel { {}, "REVERB" }, fxDlyLabel { {}, "DELAY" };
+    juce::Label      fxRevLabel { {}, "REVERB" }, fxDlyLabel { {}, "DELAY" }, fxDrvLabel { {}, "DRIVE" };
     int              fxDelayStart = 0;   // index in fxControls where delay knobs begin
+    int              fxDriveStart = 0;   // index where drive knobs begin
     bool             fxMode = false;
 
     tr808::ui::StepSequencerView stepView;
