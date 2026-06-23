@@ -16,6 +16,8 @@
 #include "dsp/Saturator.h"
 #include "dsp/MetalCluster.h"
 #include "dsp/SchmittOsc.h"
+#include "dsp/ReverbLexicon.h"
+#include "dsp/StereoDelay.h"
 
 #include <iostream>
 #include <vector>
@@ -402,6 +404,55 @@ static void testSchmittOsc()
     check (std::abs (dominantBin (magSpectrum (sig)) - cycles) <= 6, "schmitt osc runs at the set frequency");
 }
 
+static void testReverb()
+{
+    std::cout << "ReverbLexicon (FDN)\n";
+    ReverbLexicon rev; rev.prepare (kSampleRate);
+    rev.setDecay (2.0f); rev.setPredelay (15.0f); rev.setBassMult (1.4f);
+    rev.setCrossover (500.0f); rev.setDamping (0.35f); rev.setDepth (0.3f);
+
+    const int N = (int) kSampleRate;             // 1 second
+    std::vector<float> in (N, 0.0f), oL (N, 0.0f), oR (N, 0.0f);
+    in[0] = 1.0f;
+    rev.process (in.data(), oL.data(), oR.data(), N);
+
+    auto rms = [] (const std::vector<float>& v, int a, int b)
+    { double s = 0; int n = 0; for (int i = a; i < b && i < (int) v.size(); ++i) { s += (double) v[(size_t) i] * v[(size_t) i]; ++n; } return n ? std::sqrt (s / n) : 0.0; };
+
+    bool finite = true; for (float x : oL) if (! std::isfinite (x) || std::abs (x) > 8.0f) finite = false;
+    for (float x : oR) if (! std::isfinite (x) || std::abs (x) > 8.0f) finite = false;
+
+    const double early = rms (oL, 0, (int) (0.15 * kSampleRate));
+    const double late  = rms (oL, (int) (0.85 * kSampleRate), N);
+    double diff = 0; for (int i = 0; i < N; ++i) diff += std::abs (oL[(size_t) i] - oR[(size_t) i]);
+
+    check (finite, "reverb output finite & bounded");
+    check (early > 1.0e-4, "reverb produces a tail", "early=" + std::to_string (early));
+    check (late < early * 0.7, "reverb tail decays", "early=" + std::to_string (early) + " late=" + std::to_string (late));
+    check (diff > 1.0, "reverb output is stereo (L != R)", "diff=" + std::to_string (diff));
+}
+
+static void testDelay()
+{
+    std::cout << "StereoDelay (ping-pong)\n";
+    StereoDelay dly; dly.prepare (kSampleRate);
+    dly.setTime (100.0f); dly.setFeedback (0.5f); dly.setTone (0.9f);
+
+    const int N = (int) (0.5 * kSampleRate);
+    std::vector<float> in (N, 0.0f), oL (N, 0.0f), oR (N, 0.0f);
+    in[0] = 1.0f;
+    dly.process (in.data(), oL.data(), oR.data(), N);
+
+    const int t = (int) (0.1 * kSampleRate);     // 100 ms
+    auto peak = [] (const std::vector<float>& v, int a, int b)
+    { float m = 0; for (int i = a; i < b && i < (int) v.size(); ++i) m = std::max (m, std::abs (v[(size_t) i])); return m; };
+
+    bool finite = true; for (float x : oL) if (! std::isfinite (x)) finite = false;
+    check (finite, "delay output finite");
+    check (peak (oL, t - 40, t + 40) > 0.3f, "first repeat lands on L at the delay time");
+    check (peak (oR, 2 * t - 40, 2 * t + 40) > 0.1f, "second repeat bounces to R");
+}
+
 //==============================================================================
 int main()
 {
@@ -416,6 +467,8 @@ int main()
     testResonatorBT();
     testSaturator();
     testMetalCluster();
+    testReverb();
+    testDelay();
 
     std::cout << "\n" << (g_total - g_failed) << "/" << g_total << " checks passed.\n";
     if (g_failed > 0) { std::cout << "*** " << g_failed << " FAILED ***\n"; return 1; }
