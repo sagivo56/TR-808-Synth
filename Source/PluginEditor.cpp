@@ -71,13 +71,18 @@ void TR808AudioProcessorEditor::VoiceColumn::resized()
     solo->setBounds (ms.reduced (1));
 
     // Two knobs per row (side by side) so the extra send knobs fit without a
-    // very tall column.
+    // very tall column. A lone knob on the last row (odd count) is centred.
     const int n = knobs.size();
     const int rows = (n + 1) / 2;
     const int kh = rows > 0 ? r.getHeight() / rows : r.getHeight();
     const int colW = r.getWidth() / 2;
     for (int i = 0; i < n; ++i)
-        knobs[i]->setBounds (r.getX() + (i % 2) * colW, r.getY() + (i / 2) * kh, colW, kh);
+    {
+        const bool lastAlone = (i == n - 1) && (n % 2 == 1);   // odd -> last knob alone in its row
+        const int x = lastAlone ? r.getX() + (r.getWidth() - colW) / 2
+                                : r.getX() + (i % 2) * colW;
+        knobs[i]->setBounds (x, r.getY() + (i / 2) * kh, colW, kh);
+    }
 }
 
 //==============================================================================
