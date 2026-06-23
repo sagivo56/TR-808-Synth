@@ -230,6 +230,15 @@ static void testVariations()
     const auto vt = s2.toValueTree();
     Sequencer s3; s3.prepare (kSr); s3.fromValueTree (vt);
     check (s3.getStep (0, 2, MT, 0) && s3.getStep (0, 3, MA, 0), "variation C/D steps restored from state");
+
+    // copy a variation onto another (A -> C)
+    Sequencer s4; s4.prepare (kSr);
+    s4.setStep (0, 0, CB, 5, true);
+    s4.setBassNote (0, 0, 2, 40);
+    s4.copyVariation (0, 0, 2);
+    check (s4.getStep (0, 2, CB, 5), "copyVariation duplicates steps (A->C)");
+    check (s4.getBassNote (0, 2, 2) == 40, "copyVariation duplicates the bass line");
+    check (! s4.getStep (0, 1, CB, 5), "copyVariation leaves other variations untouched");
 }
 
 int main()

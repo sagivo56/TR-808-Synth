@@ -64,6 +64,7 @@ private:
     juce::TextButton bassButton  { "BD BASS" };
     juce::TextButton varAButton  { "A" }, varBButton { "B" }, varCButton { "C" }, varDButton { "D" };
     juce::ComboBox   abModeBox;
+    juce::ComboBox   copyBox;     // copy the edited variation onto A/B/C/D
     juce::ComboBox   kitBox, patternBox, lenBox, patBox, sigBox;
     juce::TextButton tripButton { "1/16" };
     juce::TextButton songButton { "SONG" };

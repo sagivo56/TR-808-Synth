@@ -200,6 +200,13 @@ void Sequencer::clearPattern (int pat)
     }
 }
 
+void Sequencer::copyVariation (int pat, int from, int to)
+{
+    if (pat < 0 || pat >= numPatterns || ! validVar (from) || ! validVar (to) || from == to)
+        return;
+    patterns[(size_t) pat].var[to] = patterns[(size_t) pat].var[from];   // whole variation (steps/flam/prob/accent/bass/len)
+}
+
 void Sequencer::setBassNote (int pat, int var, int step, int midiNote)
 {
     if (pat >= 0 && pat < numPatterns && validVar (var) && step >= 0 && step < maxSteps)

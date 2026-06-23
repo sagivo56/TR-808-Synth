@@ -140,6 +140,22 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     };
     addAndMakeVisible (abModeBox);
 
+    // Copy the currently-edited variation onto another (A->B etc.).
+    copyBox.setTextWhenNothingSelected ("COPY");
+    copyBox.addItem ("to A", 1); copyBox.addItem ("to B", 2);
+    copyBox.addItem ("to C", 3); copyBox.addItem ("to D", 4);
+    copyBox.onChange = [this]
+    {
+        const int dst = copyBox.getSelectedId() - 1;
+        if (dst >= 0 && dst != editVariation)
+        {
+            proc.getSequencer().copyVariation (proc.getSequencer().getCurrentPattern(), editVariation, dst);
+            stepView.repaint();
+        }
+        copyBox.setSelectedId (0, juce::dontSendNotification);
+    };
+    addAndMakeVisible (copyBox);
+
     setupPresetBox (kitBox, PresetManager::kitNames(), "KIT");
     kitBox.onChange = [this] { handleKitBox(); };
     setupPresetBox (patternBox, PresetManager::patternNames(), "PATTERN");
@@ -599,6 +615,7 @@ void TR808AudioProcessorEditor::resized()
     patLabel.setBounds (row1.removeFromLeft (26));
     patBox.setBounds (row1.removeFromLeft (48).reduced (2, 12));
     fxButton.setBounds (row1.removeFromLeft (46).reduced (2, 12));
+    copyBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
     if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
     if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
     if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));

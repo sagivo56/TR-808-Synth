@@ -61,6 +61,7 @@ public:
     void setProbability (int pat, int var, int voice, int step, float p);
     void setLength      (int pat, int var, int length);
     void clearPattern   (int pat);   // wipe both variations' steps/flam/prob/accent + bass (keeps length/div)
+    void copyVariation  (int pat, int from, int to);   // duplicate one variation onto another (A->B etc.)
 
     //== Melodic 808 bass track =================================================
     void setBassNote (int pat, int var, int step, int midiNote);   // -1 = off
