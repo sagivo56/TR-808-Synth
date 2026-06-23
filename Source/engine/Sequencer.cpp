@@ -89,7 +89,9 @@ void Sequencer::process (const TransportInfo& t, std::vector<TriggerEvent>& out)
         const Pattern& pat = patterns[(size_t) patIdx];
         const int varIdx = (playMode == PlayMode::a) ? 0
                          : (playMode == PlayMode::b) ? 1
-                                                     : (int) (loopIndex & 1LL);     // AB
+                         : (playMode == PlayMode::c) ? 2
+                         : (playMode == PlayMode::d) ? 3
+                         : (int) (((loopIndex % numVars) + numVars) % numVars);     // cycle A->B->C->D
         const Variation& v = pat.var[varIdx];
         if (stepInLoop >= juce::jmax (1, v.length))
             continue;
@@ -142,44 +144,44 @@ void Sequencer::process (const TransportInfo& t, std::vector<TriggerEvent>& out)
 //== Editing ===================================================================
 void Sequencer::setStep (int pat, int var, int voice, int step, bool on)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && validVoice (voice) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && validVoice (voice) && step >= 0 && step < maxSteps)
         patterns[(size_t) pat].var[var].steps[(size_t) voice][(size_t) step] = on;
 }
 
 bool Sequencer::getStep (int pat, int var, int voice, int step) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && validVoice (voice) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && validVoice (voice) && step >= 0 && step < maxSteps)
         return patterns[(size_t) pat].var[var].steps[(size_t) voice][(size_t) step];
     return false;
 }
 
 void Sequencer::setAccent (int pat, int var, int step, bool on)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && step >= 0 && step < maxSteps)
         patterns[(size_t) pat].var[var].accent[(size_t) step] = on;
 }
 
 void Sequencer::setFlam (int pat, int var, int voice, int step, bool on)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && validVoice (voice) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && validVoice (voice) && step >= 0 && step < maxSteps)
         patterns[(size_t) pat].var[var].flam[(size_t) voice][(size_t) step] = on;
 }
 
 void Sequencer::setProbability (int pat, int var, int voice, int step, float p)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && validVoice (voice) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && validVoice (voice) && step >= 0 && step < maxSteps)
         patterns[(size_t) pat].var[var].prob[(size_t) voice][(size_t) step] = juce::jlimit (0.0f, 1.0f, p);
 }
 
 void Sequencer::setLength (int pat, int var, int length)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+    if (pat >= 0 && pat < numPatterns && validVar (var))
         patterns[(size_t) pat].var[var].length = juce::jlimit (1, maxSteps, length);
 }
 
 int Sequencer::getLength (int pat, int var) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+    if (pat >= 0 && pat < numPatterns && validVar (var))
         return patterns[(size_t) pat].var[var].length;
     return maxSteps;
 }
@@ -187,7 +189,7 @@ int Sequencer::getLength (int pat, int var) const
 void Sequencer::clearPattern (int pat)
 {
     if (pat < 0 || pat >= numPatterns) return;
-    for (int var = 0; var < 2; ++var)
+    for (int var = 0; var < numVars; ++var)
     {
         auto& v = patterns[(size_t) pat].var[var];
         for (auto& row : v.steps) row.fill (false);
@@ -200,47 +202,47 @@ void Sequencer::clearPattern (int pat)
 
 void Sequencer::setBassNote (int pat, int var, int step, int midiNote)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && step >= 0 && step < maxSteps)
         patterns[(size_t) pat].var[var].bassNote[(size_t) step] = (midiNote < 0 ? -1 : midiNote);
 }
 
 int Sequencer::getBassNote (int pat, int var, int step) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && step >= 0 && step < maxSteps)
         return patterns[(size_t) pat].var[var].bassNote[(size_t) step];
     return -1;
 }
 
 void Sequencer::setStepDiv (int pat, int var, float div)
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+    if (pat >= 0 && pat < numPatterns && validVar (var))
         patterns[(size_t) pat].var[var].stepDiv = juce::jlimit (0.05f, 1.0f, div);
 }
 
 float Sequencer::getStepDiv (int pat, int var) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1))
+    if (pat >= 0 && pat < numPatterns && validVar (var))
         return patterns[(size_t) pat].var[var].stepDiv;
     return 0.25f;
 }
 
 bool Sequencer::getAccent (int pat, int var, int step) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && step >= 0 && step < maxSteps)
         return patterns[(size_t) pat].var[var].accent[(size_t) step];
     return false;
 }
 
 bool Sequencer::getFlam (int pat, int var, int voice, int step) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && voice >= 0 && voice < numVoices && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && voice >= 0 && voice < numVoices && step >= 0 && step < maxSteps)
         return patterns[(size_t) pat].var[var].flam[(size_t) voice][(size_t) step];
     return false;
 }
 
 float Sequencer::getProbability (int pat, int var, int voice, int step) const
 {
-    if (pat >= 0 && pat < numPatterns && (var == 0 || var == 1) && voice >= 0 && voice < numVoices && step >= 0 && step < maxSteps)
+    if (pat >= 0 && pat < numPatterns && validVar (var) && voice >= 0 && voice < numVoices && step >= 0 && step < maxSteps)
         return patterns[(size_t) pat].var[var].prob[(size_t) voice][(size_t) step];
     return 1.0f;
 }
@@ -285,7 +287,7 @@ juce::ValueTree Sequencer::toValueTree() const
     {
         juce::ValueTree pt ("PATTERN");
         pt.setProperty ("index", p, nullptr);
-        for (int var = 0; var < 2; ++var)
+        for (int var = 0; var < numVars; ++var)
         {
             const auto& v = patterns[(size_t) p].var[var];
             juce::ValueTree vt ("VAR");
@@ -351,7 +353,7 @@ void Sequencer::fromValueTree (const juce::ValueTree& state)
             const auto vt = pt.getChild (ci);
             if (! vt.hasType ("VAR")) continue;
             const int var = (int) vt.getProperty ("v", 0);
-            if (var != 0 && var != 1) continue;
+            if (! validVar (var)) continue;
             auto& v = patterns[(size_t) p].var[var];
             v.length  = juce::jlimit (1, maxSteps, (int) vt.getProperty ("length", 16));
             v.stepDiv = juce::jlimit (0.05f, 1.0f, (float) (double) vt.getProperty ("stepdiv", 0.25));

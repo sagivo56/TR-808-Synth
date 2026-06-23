@@ -99,23 +99,27 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     };
     addAndMakeVisible (bassButton);
 
-    varAButton.setClickingTogglesState (true);
-    varBButton.setClickingTogglesState (true);
+    juce::TextButton* varButtons[4] = { &varAButton, &varBButton, &varCButton, &varDButton };
+    for (int i = 0; i < 4; ++i)
+    {
+        auto* b = varButtons[i];
+        b->setClickingTogglesState (true);
+        b->setColour (juce::TextButton::buttonOnColourId, Colors::orange);
+        b->onClick = [this, i] { selectEditVar (i); };
+        addAndMakeVisible (*b);
+    }
     varAButton.setToggleState (true, juce::dontSendNotification);
-    varAButton.onClick = [this] { editVariation = 0; varAButton.setToggleState (true, juce::dontSendNotification);
-                                  varBButton.setToggleState (false, juce::dontSendNotification); stepView.setEditVariation (0); };
-    varBButton.onClick = [this] { editVariation = 1; varBButton.setToggleState (true, juce::dontSendNotification);
-                                  varAButton.setToggleState (false, juce::dontSendNotification); stepView.setEditVariation (1); };
     varLabel.setFont (juce::FontOptions (10.0f));
-    addAndMakeVisible (varLabel); addAndMakeVisible (varAButton); addAndMakeVisible (varBButton);
+    addAndMakeVisible (varLabel);
 
-    abModeBox.addItem ("A", 1); abModeBox.addItem ("B", 2); abModeBox.addItem ("AB", 3);
+    abModeBox.addItem ("A", 1); abModeBox.addItem ("B", 2); abModeBox.addItem ("C", 3);
+    abModeBox.addItem ("D", 4); abModeBox.addItem ("CYCLE", 5);
     abModeBox.onChange = [this]
     {
-        const int m = abModeBox.getSelectedId();
-        proc.getSequencer().setPlayMode (m == 1 ? Sequencer::PlayMode::a
-                                       : m == 2 ? Sequencer::PlayMode::b
-                                                : Sequencer::PlayMode::ab);
+        const Sequencer::PlayMode modes[5] = { Sequencer::PlayMode::a, Sequencer::PlayMode::b,
+                                               Sequencer::PlayMode::c, Sequencer::PlayMode::d,
+                                               Sequencer::PlayMode::cycle };
+        proc.getSequencer().setPlayMode (modes[juce::jlimit (0, 4, abModeBox.getSelectedId() - 1)]);
     };
     addAndMakeVisible (abModeBox);
 
@@ -157,8 +161,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
         const int id = lenBox.getSelectedId();
         const int L = (id == 2 ? 32 : id == 3 ? 8 : 16);
         const int pat = proc.getSequencer().getCurrentPattern();
-        proc.getSequencer().setLength (pat, 0, L);
-        proc.getSequencer().setLength (pat, 1, L);
+        for (int v = 0; v < Sequencer::numVars; ++v) proc.getSequencer().setLength (pat, v, L);
         stepView.repaint();
     };
     lenLabel.setFont (juce::FontOptions (10.0f));
@@ -169,8 +172,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     {
         const bool trip = tripButton.getToggleState();
         const int pat = proc.getSequencer().getCurrentPattern();
-        proc.getSequencer().setStepDiv (pat, 0, trip ? (1.0f / 6.0f) : 0.25f);
-        proc.getSequencer().setStepDiv (pat, 1, trip ? (1.0f / 6.0f) : 0.25f);
+        for (int v = 0; v < Sequencer::numVars; ++v) proc.getSequencer().setStepDiv (pat, v, trip ? (1.0f / 6.0f) : 0.25f);
         tripButton.setButtonText (trip ? "1/16T" : "1/16");
     };
     addAndMakeVisible (tripButton);
@@ -184,8 +186,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
         const int group = threeFour ? 3 : 4;           // shade group size
         const int L = threeFour ? 12 : 16;             // steps per bar
         const int pat = proc.getSequencer().getCurrentPattern();
-        proc.getSequencer().setLength (pat, 0, L);
-        proc.getSequencer().setLength (pat, 1, L);
+        for (int v = 0; v < Sequencer::numVars; ++v) proc.getSequencer().setLength (pat, v, L);
         stepView.setGrouping (group);
         stepView.repaint();
     };
@@ -270,6 +271,15 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
 TR808AudioProcessorEditor::~TR808AudioProcessorEditor()
 {
     setLookAndFeel (nullptr);
+}
+
+void TR808AudioProcessorEditor::selectEditVar (int v)
+{
+    editVariation = juce::jlimit (0, Sequencer::numVars - 1, v);
+    juce::TextButton* vb[4] = { &varAButton, &varBButton, &varCButton, &varDButton };
+    for (int i = 0; i < 4; ++i)
+        vb[i]->setToggleState (i == editVariation, juce::dontSendNotification);
+    stepView.setEditVariation (editVariation);
 }
 
 void TR808AudioProcessorEditor::buildPerform()
@@ -411,8 +421,7 @@ void TR808AudioProcessorEditor::syncTransport()
     tempoSlider.setValue (seq.getTempo(), juce::dontSendNotification);
     swingSlider.setValue (seq.getSwing(), juce::dontSendNotification);
     const auto pm = seq.getPlayMode();
-    abModeBox.setSelectedId (pm == Sequencer::PlayMode::a ? 1 : pm == Sequencer::PlayMode::b ? 2 : 3,
-                             juce::dontSendNotification);
+    abModeBox.setSelectedId ((int) pm + 1, juce::dontSendNotification);   // a..d=1..4, cycle=5
 
     const int L = seq.getLength (seq.getCurrentPattern(), 0);
     lenBox.setSelectedId (L == 32 ? 2 : L == 8 ? 3 : 1, juce::dontSendNotification);
@@ -491,13 +500,15 @@ void TR808AudioProcessorEditor::resized()
     tripButton.setBounds (row2.removeFromLeft (48).reduced (2, 8));
     songButton.setBounds (row2.removeFromLeft (46).reduced (2, 8));
     clearButton.setBounds (row2.removeFromLeft (40).reduced (2, 8));
-    chainEditor.setBounds (row2.removeFromLeft (64).reduced (2, 10));
-    viewButton.setBounds (row2.removeFromRight (54).reduced (2, 8));
-    gridButton.setBounds (row2.removeFromRight (54).reduced (2, 8));
-    bassButton.setBounds (row2.removeFromRight (62).reduced (2, 8));
-    varBButton.setBounds (row2.removeFromRight (26).reduced (2, 8));
-    varAButton.setBounds (row2.removeFromRight (26).reduced (2, 8));
-    varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));
+    chainEditor.setBounds (row2.removeFromLeft (56).reduced (2, 10));
+    viewButton.setBounds (row2.removeFromRight (50).reduced (2, 8));
+    gridButton.setBounds (row2.removeFromRight (50).reduced (2, 8));
+    bassButton.setBounds (row2.removeFromRight (58).reduced (2, 8));
+    varDButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
+    varCButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
+    varBButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
+    varAButton.setBounds (row2.removeFromRight (22).reduced (2, 8));
+    varLabel.setBounds (row2.removeFromRight (28).reduced (0, 8));
 
     // --- step grid at the bottom ---
     auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * 40 / 100));

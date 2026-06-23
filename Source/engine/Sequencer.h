@@ -32,8 +32,9 @@ class Sequencer
 public:
     static constexpr int maxSteps    = 32;   // up to a double bar
     static constexpr int numPatterns = 8;
+    static constexpr int numVars     = 4;    // variations A, B, C, D
 
-    enum class PlayMode { a, b, ab };
+    enum class PlayMode { a, b, c, d, cycle };   // single var, or cycle A->B->C->D
 
     struct TransportInfo
     {
@@ -116,9 +117,10 @@ private:
         Variation() { for (auto& row : prob) row.fill (1.0f); bassNote.fill (-1); }
     };
 
-    struct Pattern { Variation var[2]; };   // [0] = A, [1] = B
+    struct Pattern { Variation var[numVars]; };   // A, B, C, D
 
     static bool validVoice (int v) { return v >= 0 && v < numVoices; }
+    static bool validVar   (int v) { return v >= 0 && v < numVars; }
     bool voicePlayable (int voice) const;
     static float hashUnit (long long step, int voice);
 

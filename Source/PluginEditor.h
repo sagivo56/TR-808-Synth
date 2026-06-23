@@ -44,6 +44,7 @@ private:
 
     void buildPerform();
     void buildEditFor (int voice);
+    void selectEditVar (int v);   // choose which variation (0..3 = A..D) the grid edits
     void showEdit (bool edit);
     void syncTransport();
     void setupPresetBox (juce::ComboBox&, const juce::StringArray& factory);
@@ -58,7 +59,7 @@ private:
     juce::TextButton viewButton  { "EDIT" };
     juce::TextButton gridButton  { "GRID" };
     juce::TextButton bassButton  { "BD BASS" };
-    juce::TextButton varAButton  { "A" }, varBButton { "B" };
+    juce::TextButton varAButton  { "A" }, varBButton { "B" }, varCButton { "C" }, varDButton { "D" };
     juce::ComboBox   abModeBox;
     juce::ComboBox   kitBox, patternBox, lenBox, patBox, sigBox;
     juce::TextButton tripButton { "1/16" };

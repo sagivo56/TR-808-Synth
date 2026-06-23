@@ -199,6 +199,39 @@ static void testBassTrack()
     check (std::abs (s2.getBassGate() - 0.72f) < 1.0e-4f, "bass gate restored");
 }
 
+static void testVariations()
+{
+    std::cout << "Variations A-D\n";
+    auto barAt = [] (Sequencer& s, double ppq)
+    {
+        Sequencer::TransportInfo t; t.hostPlaying = true; t.bpm = 120.0; t.ppqPosition = ppq; t.sampleRate = kSr; t.numSamples = 512;
+        std::vector<TriggerEvent> ev; s.process (t, ev); return ev;
+    };
+
+    // mode C plays variation C's steps
+    Sequencer s; s.prepare (kSr);
+    s.setStep (0, 2, LT, 0, true);                 // variation C: low tom on step 0
+    s.setPlayMode (Sequencer::PlayMode::c);
+    check (countVoice (barAt (s, 0.0), LT) == 1, "PlayMode C plays variation C");
+    check (countVoice (barAt (s, 0.0), BD) == 0, "PlayMode C ignores variation A's default beat");
+
+    // cycle: bar 0 -> A, bar 1 -> B, bar 2 -> C, bar 3 -> D
+    Sequencer s2; s2.prepare (kSr);
+    s2.setStep (0, 1, HT, 0, true);                // B: hi tom
+    s2.setStep (0, 2, MT, 0, true);                // C: mid tom
+    s2.setStep (0, 3, MA, 0, true);                // D: maracas
+    s2.setPlayMode (Sequencer::PlayMode::cycle);
+    check (countVoice (barAt (s2, 0.0), BD) == 1, "cycle bar 0 = A (default BD)");
+    check (countVoice (barAt (s2, 4.0), HT) == 1, "cycle bar 1 = B");
+    check (countVoice (barAt (s2, 8.0), MT) == 1, "cycle bar 2 = C");
+    check (countVoice (barAt (s2, 12.0), MA) == 1, "cycle bar 3 = D");
+
+    // state round-trip of a C/D step
+    const auto vt = s2.toValueTree();
+    Sequencer s3; s3.prepare (kSr); s3.fromValueTree (vt);
+    check (s3.getStep (0, 2, MT, 0) && s3.getStep (0, 3, MA, 0), "variation C/D steps restored from state");
+}
+
 int main()
 {
     std::cout << "=== TR-808 sequencer tests (sr=" << kSr << ") ===\n";
@@ -210,6 +243,7 @@ int main()
     testSwing();
     testStateRoundTrip();
     testBassTrack();
+    testVariations();
 
     std::cout << "\n" << (g_total - g_failed) << "/" << g_total << " checks passed.\n";
     if (g_failed > 0) { std::cout << "*** " << g_failed << " FAILED ***\n"; return 1; }
