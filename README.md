@@ -1,176 +1,81 @@
 # TR-808 Synth
 
 A TR-808-style drum-machine plugin where **every sound is synthesised in real time
-(no samples)**. Built with JUCE + CMake (C++17). Targets **VST3** and **Standalone**
-on Windows, plus **AU** when built on macOS.
+(no samples)** — circuit-behavioural emulation of the original 808 voices. JUCE 8 /
+CMake / C++17. Builds as **VST3 + Standalone** on Windows (plus **AU** on macOS).
 
 > Project lives at `C:\dev\808-app` (kept outside OneDrive so the build tree and the
 > fetched JUCE source aren't synced to the cloud).
 
-**✅ All milestones (M0–M7) complete** — builds VST3 + Standalone, passes `pluginval`
-strictness 10, with the full voice engine, host-synced sequencer, mixer/multi-out,
-UI and preset banks. Offline tests: dsp 36/36, voice 87/87, seq 18/18.
+**v1.0 — feature complete.** Passes `pluginval` strictness 10. Offline tests:
+dsp 46/46, voice 87/87, seq 33/33.
 
----
-
-## Status
-
-| Milestone | Description | State |
-|-----------|-------------|-------|
-| **M0** | Scaffold: CMake+JUCE, VST3/AU/Standalone targets, APVTS skeleton, silent output | ✅ **done** — builds (VST3+Standalone), passes `pluginval` strictness 10 |
-| **M1** | DSP building blocks | ✅ **done** — 8 blocks in `Source/dsp`, 36/36 offline checks pass |
-| **M2** | Voice engine (16 voices) | ✅ **done** — GM trigger, Macro params, hat choke; voice_tests 77/77, pluginval 10 |
-| **M3** | Deep-edit params | ✅ **done** — all per-stage params in APVTS (automatable), macros = modifiers; pluginval 10 |
-| **M4** | Sequencer | ✅ **done** — 16-step, host-synced sample-accurate, accent/flam/swing/AB/mute-solo; seq_tests 18/18, pluginval 10 |
-| **M5** | Mixer & routing | ✅ **done** — per-voice pan/mute/solo, master drive+limiter, stereo ⇄ 16 multi-out + fallback; pluginval 10 |
-| **M6** | UI | ✅ **done** — PERFORM panel + EDIT deep view + step grid (Grid/Authentic), 808 colors, resizable, APVTS-bound; pluginval 10 (editor + no desync) |
-| **M7** | Presets & polish | ✅ **done** — Kit + Pattern factory banks + user save/load; oversampled master; strict pluginval 10 |
-
----
+### Features
+- 16 circuit-modelled 808 voices + a melodic **BD Bass** (tonal piano-roll, scale/
+  root/length; can duck the regular BD).
+- Sequencer: 16/32 steps, 4/4 & 3/4, triplets, **A–D variations** + cycle, flam,
+  probability, song chain, per-step accent; copy a variation onto another.
+- Parallel **Reverb (Lexicon-flavoured FDN) + ping-pong Delay** with per-voice sends.
+- Mixer: per-voice level/tone/decay/tune/pan, mute/solo, master drive, stereo ⇄ 16
+  multi-out.
+- PERFORM / EDIT / FX views, factory + user presets, `SPACE` = transport.
 
 ## Prerequisites (Windows)
 
-Installed and verified on this machine:
-
-- **CMake 4.4.0**
-- **Visual Studio Community 2026** (v18) with the **“Desktop development with C++”** workload
-  (MSVC 14.51). CMake auto-detects the **“Visual Studio 18 2026”** generator.
-- **git**
-
-To set the toolchain up from scratch on another machine: install CMake (`winget install
---id Kitware.CMake -e`) and Visual Studio (or Build Tools) **with the C++ workload**
-(`--add Microsoft.VisualStudio.Workload.VCTools`). Open a new terminal afterwards so
-`cmake` is on `PATH`.
-
----
+- **CMake** and **Visual Studio** (MSVC) with the *Desktop development with C++* workload.
+- **git**. JUCE 8.0.13 is fetched automatically on first configure (into `build/_deps`).
 
 ## Build
 
-From the project root (`C:\dev\808-app`):
-
 ```powershell
-# Configure — let CMake auto-detect the VS generator (here: "Visual Studio 18 2026")
-cmake -B build -A x64
-
-# Build Release
+cmake -B build
 cmake --build build --config Release --parallel
 ```
 
-First configure downloads JUCE 8.0.13 (via FetchContent) into `build/_deps` and builds
-`juceaide` — a few minutes. **Keep the machine awake during the first configure/build:**
-if it sleeps, the detached build process is killed and `build/` is left half-written
-(delete `build/` and re-run if that happens).
-
-### Artefacts
+Keep the machine awake during the first configure (it downloads + builds JUCE). Artefacts:
 
 ```
 build\TR808Synth_artefacts\Release\VST3\TR-808 Synth.vst3
 build\TR808Synth_artefacts\Release\Standalone\TR-808 Synth.exe
 ```
 
-`COPY_PLUGIN_AFTER_BUILD` is **off** (so the build never needs admin). To test the VST3
-in a DAW, copy the `.vst3` to your VST3 folder (typically
-`C:\Program Files\Common Files\VST3`, needs admin) or point your DAW's scan path at the
-build folder.
+## Run / test
 
----
+- **Standalone:** run the `.exe` (choose an audio device in Options); `SPACE` plays/stops.
+- **Tests:** build + run the `dsp_tests`, `voice_tests`, `seq_tests` console apps
+  (each exits non-zero on failure).
 
-## Validate (pluginval)
+### pluginval
 
-`pluginval.exe` lives at `C:\dev\tools\pluginval\pluginval.exe`. It's a **GUI-subsystem**
-exe, so a bare `& pluginval ...` call returns immediately without waiting and the path
-(which contains a space) gets split. Run it like this so PowerShell waits and the path is
-quoted as a single argument:
+`pluginval.exe` is a GUI-subsystem exe and its path contains a space — run it so
+PowerShell waits and the path is one quoted argument:
 
 ```powershell
-$pv   = "C:\dev\tools\pluginval\pluginval.exe"
+$pv   = (Get-ChildItem C:\dev -Recurse -Filter pluginval.exe | Select -First 1).FullName
 $vst3 = "C:\dev\808-app\build\TR808Synth_artefacts\Release\VST3\TR-808 Synth.vst3"
-$proc = Start-Process $pv -NoNewWindow -Wait -PassThru `
-  -ArgumentList "--validate-in-process --strictness-level 10 --validate `"$vst3`"" `
-  -RedirectStandardOutput pv.log -RedirectStandardError pv_err.log
-"exit=$($proc.ExitCode)"   # 0 = pass
+Start-Process $pv -NoNewWindow -Wait -ArgumentList "--strictness-level 10 --validate `"$vst3`""
 ```
 
-M0 result: **strictness 10 → SUCCESS** (all tests pass).
-
----
-
-## DSP tests (M1)
-
-The `/dsp` blocks have an offline harness (`tests/DspTests.cpp`) built as the
-`dsp_tests` console app. It renders each block and checks it numerically and
-spectrally (FFT) — including that the PolyBLEP square is band-limited. Run:
+## Package & install
 
 ```powershell
-cmake --build build --config Release --target dsp_tests
-& "build\dsp_tests_artefacts\Release\dsp_tests.exe"   # exits non-zero on any failure
+powershell -ExecutionPolicy Bypass -File package.ps1          # -> dist\TR-808-Synth-Windows.zip
+powershell -ExecutionPolicy Bypass -File build-installer.ps1  # -> dist\TR-808-Synth-Setup.exe (needs Inno Setup 6)
 ```
 
-M1 result: **36/36 checks pass**.
-
-The voice engine (M2) has its own harness (`tests/VoiceTests.cpp` → `voice_tests`):
-it triggers all 16 voices and checks output/decay, the GM note map, sample-accurate
-triggering and the hi-hat choke.
-
-```powershell
-cmake --build build --config Release --target voice_tests
-& "build\voice_tests_artefacts\Release\voice_tests.exe"
-```
-
-M2 result: **77/77 checks pass**; pluginval strictness 10 → SUCCESS on the
-synthesizing plugin.
-
-The sequencer (M4) has `tests/SeqTests.cpp` → `seq_tests`: PPQ step timing
-(sample-accuracy), no double-fire across blocks, internal transport, mute/solo,
-swing and a state round-trip.
-
-```powershell
-cmake --build build --config Release --target seq_tests
-& "build\seq_tests_artefacts\Release\seq_tests.exe"
-```
-
-M4 result: **seq_tests 18/18**; pluginval strictness 10 → SUCCESS with the
-sequencer integrated.
-
----
-
-## Presets (M7)
-
-- **Kit** = the synthesis sound (macro + deep params + master drive). **Pattern** =
-  the sequencer. They're independent.
-- Header **KIT** / **PATTERN** combo boxes: pick a factory entry (Classic/Punchy/
-  Deep/Bright kits; Four-on-Floor/Hip-Hop/Electro/Clave patterns), or **Save…/Load…**
-  user presets (XML in `%APPDATA%/TR-808 Synth/Presets`).
-
-## Notes / future polish
-
-- Master drive/limiter is an oversampled (2×) tanh; oscillators are PolyBLEP
-  band-limited. The light per-voice drive is not separately oversampled.
-- Sequencer pattern edits happen on the message thread while the audio thread reads
-  them (simple bool/int writes). Fine in practice; a lock-free swap would make it
-  formally race-free.
-- Voice tunings/defaults are a faithful starting point — fine-tune by ear via the
-  EDIT view's deep params.
-
----
-
-## M0 acceptance checklist
-
-- [x] Configures and builds cleanly (VST3 + Standalone).
-- [x] `pluginval --strictness-level 10` passes (editor, audio, state, automation, buses).
-- [x] Output is silence (`processBlock` clears the buffer; pluginval audio tests clean).
-- [ ] VST3 loads in a DAW — *manual check (optional); pluginval covers load/process/state/automation*.
-
----
+Both link the MSVC runtime statically, so the result runs on any Windows machine with
+**no** VC++ redistributable. To install by hand: copy `TR-808 Synth.vst3` to
+`C:\Program Files\Common Files\VST3\` and rescan plugins in your DAW (it appears as an
+**instrument / VSTi**).
 
 ## Layout
 
 ```
-CMakeLists.txt
-Source/
-  PluginProcessor.{h,cpp}   AudioProcessor + APVTS, MIDI in, stereo out, silent (M0)
-  PluginEditor.{h,cpp}      Minimal resizable window (replaced by full UI in M6)
-  params/
-    ParameterIDs.h          Stable string IDs for every parameter
-    ParameterLayout.{h,cpp} Builds the APVTS layout (UI-independent, testable)
+Source/dsp/     DSP blocks (oscillators, resonators, reverb, delay, …)
+Source/voices/  the 16 drum voices + melodic bass
+Source/engine/  VoiceManager, Sequencer, Mixer, presets, parameter tables
+Source/ui/      look & feel, knobs, step-sequencer view
+Source/         PluginProcessor / PluginEditor
+tests/          offline DSP / voice / sequencer harnesses
+package.ps1, build-installer.ps1, installer/   distribution
 ```

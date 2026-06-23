@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(TR808Synth VERSION 0.1.0 LANGUAGES C CXX)
+project(TR808Synth VERSION 1.0.0 LANGUAGES C CXX)
 
 # ---------------------------------------------------------------------------
 # Standards / build settings
