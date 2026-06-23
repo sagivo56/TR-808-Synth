@@ -44,8 +44,10 @@ private:
 
     void buildPerform();
     void buildEditFor (int voice);
+    void buildFx();
     void selectEditVar (int v);   // choose which variation (0..3 = A..D) the grid edits
     void showEdit (bool edit);
+    void showFx (bool fx);
     void syncTransport();
     void setupPresetBox (juce::ComboBox&, const juce::StringArray& factory, const juce::String& placeholder);
     void handleKitBox();
@@ -82,6 +84,12 @@ private:
     juce::Component editPanel;
     juce::OwnedArray<juce::Component> editControls;
     juce::Label     editTitle;
+
+    juce::TextButton fxButton { "FX" };
+    juce::Component  fxPanel;
+    juce::OwnedArray<tr808::ui::ParamKnob> fxControls;
+    juce::Label      fxTitle { {}, "FX  -  REVERB (Lexicon-style) + PING-PONG DELAY" };
+    bool             fxMode = false;
 
     tr808::ui::StepSequencerView stepView;
 

@@ -68,6 +68,11 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     viewButton.onClick = [this] { showEdit (! editMode); };
     addAndMakeVisible (viewButton);
 
+    fxButton.setClickingTogglesState (true);
+    fxButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);
+    fxButton.onClick = [this] { showFx (fxButton.getToggleState()); };
+    addAndMakeVisible (fxButton);
+
     gridButton.setClickingTogglesState (true);
     gridButton.onClick = [this]
     {
@@ -246,6 +251,12 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     addChildComponent (editTitle);
     buildEditFor (selectedVoice);
 
+    addChildComponent (fxPanel);
+    fxTitle.setFont (juce::FontOptions (15.0f, juce::Font::bold));
+    fxTitle.setColour (juce::Label::textColourId, Colors::orange);
+    addChildComponent (fxTitle);
+    buildFx();
+
     addAndMakeVisible (stepView);
     stepView.setSelectedVoice (selectedVoice);
     stepView.onSelect = [this] (int v)
@@ -321,6 +332,9 @@ void TR808AudioProcessorEditor::buildEditFor (int voice)
         if (d.voice == voice)
             addKnob (macroId (voice, d.suffix), d.label);
 
+    addKnob (macroId (voice, "revsend"), "RVB SEND");
+    addKnob (macroId (voice, "dlysend"), "DLY SEND");
+
     auto* mt = new ParamToggle (proc.apvts, macroId (voice, "mute"), "MUTE", Colors::red);
     auto* st = new ParamToggle (proc.apvts, macroId (voice, "solo"), "SOLO", Colors::yellow);
     editControls.add (mt); editControls.add (st);
@@ -330,13 +344,56 @@ void TR808AudioProcessorEditor::buildEditFor (int voice)
     resized();
 }
 
+void TR808AudioProcessorEditor::buildFx()
+{
+    fxControls.clear();
+    auto add = [&] (const char* id, const juce::String& label)
+    {
+        auto* k = new tr808::ui::ParamKnob (proc.apvts, id, label);
+        fxControls.add (k);
+        fxPanel.addAndMakeVisible (k);
+    };
+    // Reverb (Lexicon-style) then ping-pong delay, then the melodic-bass sends.
+    add (ParamIDs::revPredelay,  "PREDELAY");
+    add (ParamIDs::revDecay,     "DECAY");
+    add (ParamIDs::revBass,      "BASS");
+    add (ParamIDs::revCrossover, "CROSS");
+    add (ParamIDs::revDamp,      "DAMP");
+    add (ParamIDs::revDepth,     "DEPTH");
+    add (ParamIDs::revReturn,    "RVB RET");
+    add (ParamIDs::dlyTime,      "DLY TIME");
+    add (ParamIDs::dlyFeedback,  "FEEDBACK");
+    add (ParamIDs::dlyTone,      "DLY TONE");
+    add (ParamIDs::dlyReturn,    "DLY RET");
+    add (ParamIDs::bassRevSend,  "BASS RVB");
+    add (ParamIDs::bassDlySend,  "BASS DLY");
+}
+
 void TR808AudioProcessorEditor::showEdit (bool edit)
 {
     editMode = edit;
+    fxMode = false;
     performViewport.setVisible (! edit);
     editViewport.setVisible (edit);
     editTitle.setVisible (edit);
+    fxPanel.setVisible (false);
+    fxTitle.setVisible (false);
+    fxButton.setToggleState (false, juce::dontSendNotification);
     viewButton.setButtonText (edit ? "PERF" : "EDIT");
+    resized();
+}
+
+void TR808AudioProcessorEditor::showFx (bool fx)
+{
+    fxMode = fx;
+    if (fx) editMode = false;
+    performViewport.setVisible (! fx && ! editMode);
+    editViewport.setVisible (! fx && editMode);
+    editTitle.setVisible (! fx && editMode);
+    fxPanel.setVisible (fx);
+    fxTitle.setVisible (fx);
+    fxButton.setToggleState (fx, juce::dontSendNotification);
+    viewButton.setButtonText (editMode ? "PERF" : "EDIT");
     resized();
 }
 
@@ -481,6 +538,7 @@ void TR808AudioProcessorEditor::resized()
     abModeBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
     patLabel.setBounds (row1.removeFromLeft (26));
     patBox.setBounds (row1.removeFromLeft (48).reduced (2, 12));
+    fxButton.setBounds (row1.removeFromLeft (46).reduced (2, 12));
     if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
     if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
     if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
@@ -535,5 +593,16 @@ void TR808AudioProcessorEditor::resized()
         editPanel.setSize (juce::jmax (cw, editViewport.getMaximumVisibleWidth()), juce::jmax (ch, rows * ch));
         for (int i = 0; i < n; ++i)
             editControls[i]->setBounds ((i % cols) * cw, (i / cols) * ch, cw - 4, ch - 4);
+    }
+
+    // FX panel (reverb + delay): a simple grid of knobs over the mid area.
+    {
+        auto fxArea = mid;
+        fxTitle.setBounds (fxArea.removeFromTop (20));
+        fxPanel.setBounds (fxArea);
+        const int cw = 92, ch = 96;
+        const int cols = juce::jmax (1, fxArea.getWidth() / cw);
+        for (int i = 0; i < fxControls.size(); ++i)
+            fxControls[i]->setBounds ((i % cols) * cw + 4, (i / cols) * ch + 2, cw - 8, ch - 8);
     }
 }
