@@ -41,13 +41,24 @@ FetchContent_MakeAvailable(JUCE)
 #   AU is only produced on macOS; JUCE silently skips it elsewhere, so listing
 #   it here keeps the same CMakeLists building on Windows (VST3 + Standalone)
 #   and on a Mac later (AU + VST3 + Standalone).
+# Plugin formats per platform: Windows = VST3 + Standalone; macOS adds AU;
+# iOS = Standalone + AUv3 (works inside GarageBand / AUM / Cubasis). Build for
+# iOS on a Mac with:  cmake -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS  (see BUILD-MOBILE.md)
+if(IOS)
+    set(TR808_FORMATS Standalone AUv3)
+else()
+    set(TR808_FORMATS VST3 Standalone)
+    if(APPLE)
+        list(APPEND TR808_FORMATS AU)
+    endif()
+endif()
 # ---------------------------------------------------------------------------
 juce_add_plugin(TR808Synth
     COMPANY_NAME                "Sagiv"
     BUNDLE_ID                   "com.sagiv.tr808synth"
     PLUGIN_MANUFACTURER_CODE    Sgv8
     PLUGIN_CODE                 T808
-    FORMATS                     AU VST3 Standalone
+    FORMATS                     ${TR808_FORMATS}
     PRODUCT_NAME                "TR-808 Synth"
     IS_SYNTH                    TRUE
     NEEDS_MIDI_INPUT            TRUE
@@ -58,6 +69,11 @@ juce_add_plugin(TR808Synth
     COPY_PLUGIN_AFTER_BUILD     FALSE   # avoids needing admin to write to the system VST3 dir
     VST3_CATEGORIES             "Instrument" "Drum"
     AU_MAIN_TYPE                "kAudioUnitType_MusicDevice"
+    # iOS / mobile (ignored on Windows): orientations + full-screen + background audio
+    REQUIRES_FULL_SCREEN        TRUE
+    IPHONE_SCREEN_ORIENTATIONS  UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+    IPAD_SCREEN_ORIENTATIONS    UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+    BACKGROUND_AUDIO_ENABLED    TRUE
 )
 
 # Reusable DSP building blocks (M1). Compiled into both the plugin and the
