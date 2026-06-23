@@ -13,7 +13,8 @@ Write-Host "== Staging artefacts (package.ps1) =="
 # Locate the Inno Setup compiler (ISCC.exe).
 $iscc = @(
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
-    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source }
 
