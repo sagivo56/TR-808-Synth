@@ -27,6 +27,8 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool keyPressed (const juce::KeyPress&) override;   // SPACE toggles transport
+    void mouseDown (const juce::MouseEvent&) override { grabKeyboardFocus(); }
 
 private:
     // One PERFORM column for a voice: a select button, macro + pan knobs, M/S.
@@ -40,6 +42,13 @@ private:
         juce::TextButton selectButton;
         juce::OwnedArray<tr808::ui::ParamKnob> knobs;
         std::unique_ptr<tr808::ui::ParamToggle> mute, solo;
+    };
+
+    // FX panel background: a cool-tinted REVERB band over a warm-tinted DELAY band.
+    struct ShadedPanel : juce::Component
+    {
+        int splitY = 114;
+        void paint (juce::Graphics&) override;
     };
 
     void buildPerform();
@@ -89,7 +98,7 @@ private:
     juce::Label     editTitle;
 
     juce::TextButton fxButton { "FX" };
-    juce::Component  fxPanel;
+    ShadedPanel      fxPanel;
     juce::OwnedArray<tr808::ui::ParamKnob> fxControls;
     juce::Label      fxTitle { {}, "FX  -  REVERB (Lexicon-style) + PING-PONG DELAY" };
     juce::Label      fxRevLabel { {}, "REVERB" }, fxDlyLabel { {}, "DELAY" };

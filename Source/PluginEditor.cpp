@@ -36,6 +36,28 @@ void TR808AudioProcessorEditor::VoiceColumn::paint (juce::Graphics& g)
     g.fillRoundedRectangle (getLocalBounds().toFloat().reduced (1.0f), 3.0f);
 }
 
+void TR808AudioProcessorEditor::ShadedPanel::paint (juce::Graphics& g)
+{
+    auto b = getLocalBounds();
+    const int s = juce::jlimit (0, b.getHeight(), splitY);
+    g.setColour (juce::Colour (0xff2a2f3a));   // cool tint = REVERB
+    g.fillRoundedRectangle (b.removeFromTop (s).toFloat().reduced (2.0f), 5.0f);
+    g.setColour (juce::Colour (0xff3a2e26));   // warm tint = DELAY
+    g.fillRoundedRectangle (b.toFloat().reduced (2.0f), 5.0f);
+}
+
+bool TR808AudioProcessorEditor::keyPressed (const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress::spaceKey)
+    {
+        const bool play = ! proc.getSequencer().isRunning();
+        proc.getSequencer().setRunning (play);
+        playButton.setToggleState (play, juce::dontSendNotification);
+        return true;
+    }
+    return false;
+}
+
 void TR808AudioProcessorEditor::VoiceColumn::resized()
 {
     auto r = getLocalBounds().reduced (2);
@@ -301,6 +323,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     showEdit (false);
 
     setResizable (true, true);
+    setWantsKeyboardFocus (true);               // so SPACE toggles transport
     setResizeLimits (1000, 560, 2400, 1500);   // header is control-dense; keep it from overlapping
     setSize (1180, 720);
 }
@@ -687,6 +710,7 @@ void TR808AudioProcessorEditor::resized()
         fxPanel.setBounds (fxArea);
         const int cw = 92, ch = 96, labelH = 18;
         const int panelW = fxArea.getWidth();
+        fxPanel.splitY = labelH + ch;            // boundary between the reverb and delay bands
         auto rowCentred = [&] (int from, int to, int y)
         {
             const int count = to - from;
