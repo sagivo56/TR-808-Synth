@@ -109,6 +109,7 @@ private:
 
     tr808::ui::StepSequencerView stepView;
 
+    int  headerH = 112;        // header band height (taller in compact/mobile mode)
     bool editMode = false;
     int  selectedVoice = tr808::BD;
     int  editVariation = 0;

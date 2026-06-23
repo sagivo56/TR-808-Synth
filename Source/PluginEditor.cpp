@@ -337,7 +337,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
 
     setResizable (true, true);
     setWantsKeyboardFocus (true);               // so SPACE toggles transport
-    setResizeLimits (1000, 560, 2400, 1500);   // header is control-dense; keep it from overlapping
+    setResizeLimits (380, 480, 2400, 1500);   // small min => compact/mobile layout kicks in under 860px
     setSize (1180, 720);
 }
 
@@ -618,9 +618,9 @@ void TR808AudioProcessorEditor::paint (juce::Graphics& g)
 
     // header band + the signature TR-808 orange/cream stripe beneath it
     g.setColour (juce::Colour (0xff202020));
-    g.fillRect (0, 0, getWidth(), 112);
-    g.setColour (Colors::orange); g.fillRect (0, 108, getWidth(), 3);
-    g.setColour (Colors::cream);  g.fillRect (0, 111, getWidth(), 1);
+    g.fillRect (0, 0, getWidth(), headerH);
+    g.setColour (Colors::orange); g.fillRect (0, headerH - 4, getWidth(), 3);
+    g.setColour (Colors::cream);  g.fillRect (0, headerH - 1, getWidth(), 1);
 
     // frame the rhythm (step) section like the 808 panel
     if (! stepBounds.isEmpty())
@@ -636,63 +636,93 @@ void TR808AudioProcessorEditor::paint (juce::Graphics& g)
 void TR808AudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
+    const bool compact = area.getWidth() < 860;   // tablet-portrait / phone-landscape
 
-    // --- header (two rows) ---
-    auto headerFull = area.removeFromTop (112);
-    auto row1 = headerFull.removeFromTop (58).reduced (6, 4);
-    auto row2 = headerFull.reduced (6, 4);
+    // Controls that only appear in the wide desktop header.
+    juce::Component* desktopOnly[] = { &titleLabel, &tempoLabel, &swingLabel, &lenLabel, &sigLabel, &patLabel,
+                                       &varLabel, &chainEditor, masterGainKnob.get(), masterDriveKnob.get(),
+                                       accentKnob.get(), multiOutToggle.get() };
+    for (auto* c : desktopOnly) if (c) c->setVisible (! compact);
 
-    // row 1: transport + master
-    titleLabel.setBounds (row1.removeFromLeft (78));
-    playButton.setBounds (row1.removeFromLeft (56).reduced (2, 8));
-    auto tcol = row1.removeFromLeft (150);
-    tempoLabel.setBounds (tcol.removeFromTop (13));
-    tempoSlider.setBounds (tcol);
-    auto scol = row1.removeFromLeft (150);
-    swingLabel.setBounds (scol.removeFromTop (13));
-    swingSlider.setBounds (scol);
-    abModeBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
-    patLabel.setBounds (row1.removeFromLeft (26));
-    patBox.setBounds (row1.removeFromLeft (48).reduced (2, 12));
-    fxButton.setBounds (row1.removeFromLeft (46).reduced (2, 12));
-    copyBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
-    if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
-    if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
-    if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
-    if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (52).reduced (2, 12));
+    if (! compact)
+    {
+        headerH = 112;
+        auto headerFull = area.removeFromTop (headerH);
+        auto row1 = headerFull.removeFromTop (58).reduced (6, 4);
+        auto row2 = headerFull.reduced (6, 4);
 
-    // row 2: presets + length/triplet + view/grid/variation
-    // (KIT / PATTERN combos are self-labelled via their placeholder text)
-    kitBox.setBounds (row2.removeFromLeft (118).reduced (2, 8));
-    patternBox.setBounds (row2.removeFromLeft (134).reduced (2, 8));
-    lenLabel.setBounds (row2.removeFromLeft (24));
-    lenBox.setBounds (row2.removeFromLeft (60).reduced (2, 8));
-    sigLabel.setBounds (row2.removeFromLeft (24));
-    sigBox.setBounds (row2.removeFromLeft (66).reduced (2, 8));
-    tripButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
-    songButton.setBounds (row2.removeFromLeft (54).reduced (2, 8));
-    clearButton.setBounds (row2.removeFromLeft (42).reduced (2, 8));
-    chainEditor.setBounds (row2.removeFromLeft (58).reduced (2, 10));
-    viewButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
-    gridButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
-    bassButton.setBounds (row2.removeFromRight (64).reduced (2, 8));
-    varDButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-    varCButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-    varBButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-    varAButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-    varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));
+        titleLabel.setBounds (row1.removeFromLeft (78));
+        playButton.setBounds (row1.removeFromLeft (56).reduced (2, 8));
+        auto tcol = row1.removeFromLeft (150);
+        tempoLabel.setBounds (tcol.removeFromTop (13));
+        tempoSlider.setBounds (tcol);
+        auto scol = row1.removeFromLeft (150);
+        swingLabel.setBounds (scol.removeFromTop (13));
+        swingSlider.setBounds (scol);
+        abModeBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
+        patLabel.setBounds (row1.removeFromLeft (26));
+        patBox.setBounds (row1.removeFromLeft (48).reduced (2, 12));
+        fxButton.setBounds (row1.removeFromLeft (46).reduced (2, 12));
+        copyBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
+        if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
+        if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
+        if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
+        if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (52).reduced (2, 12));
 
-    // --- step grid at the bottom ---
-    auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * 40 / 100));
+        kitBox.setBounds (row2.removeFromLeft (118).reduced (2, 8));
+        patternBox.setBounds (row2.removeFromLeft (134).reduced (2, 8));
+        lenLabel.setBounds (row2.removeFromLeft (24));
+        lenBox.setBounds (row2.removeFromLeft (60).reduced (2, 8));
+        sigLabel.setBounds (row2.removeFromLeft (24));
+        sigBox.setBounds (row2.removeFromLeft (66).reduced (2, 8));
+        tripButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
+        songButton.setBounds (row2.removeFromLeft (54).reduced (2, 8));
+        clearButton.setBounds (row2.removeFromLeft (42).reduced (2, 8));
+        chainEditor.setBounds (row2.removeFromLeft (58).reduced (2, 10));
+        viewButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
+        gridButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
+        bassButton.setBounds (row2.removeFromRight (64).reduced (2, 8));
+        varDButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+        varCButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+        varBButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+        varAButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
+        varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));
+    }
+    else
+    {
+        // Compact / touch: flow the controls into as many rows as the width needs.
+        struct FI { juce::Component* c; int w; };
+        std::vector<FI> items = {
+            { &playButton, 64 }, { &tempoSlider, 132 }, { &swingSlider, 132 },
+            { &viewButton, 56 }, { &gridButton, 56 }, { &fxButton, 46 }, { &bassButton, 70 },
+            { &varAButton, 34 }, { &varBButton, 34 }, { &varCButton, 34 }, { &varDButton, 34 },
+            { &copyBox, 78 }, { &abModeBox, 74 }, { &kitBox, 112 }, { &patternBox, 124 },
+            { &lenBox, 60 }, { &sigBox, 66 }, { &tripButton, 50 }, { &songButton, 56 }, { &clearButton, 46 }, { &patBox, 50 }
+        };
+        const int pad = 6, gap = 5, rowH = 34, rowGap = 6;
+        const int avail = area.getWidth() - pad * 2;
+        int x = pad, y = pad;
+        for (auto& it : items)
+        {
+            if (x > pad && x + it.w > pad + avail) { x = pad; y += rowH + rowGap; }
+            it.c->setBounds (x, y, it.w, rowH);
+            x += it.w + gap;
+        }
+        headerH = y + rowH + pad + 6;
+        area.removeFromTop (headerH);
+    }
+
+    // --- step grid + middle panel split ---
+    const int stepFrac = compact ? 52 : 40;
+    auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * stepFrac / 100));
     stepBounds = stepArea.reduced (6);
     stepView.setBounds (stepBounds);
 
-    // --- middle: PERFORM or EDIT ---
     auto mid = area.reduced (6);
 
     performViewport.setBounds (mid);
     {
-        const int colW = 120;
+        const int colW = compact ? 150 : 120;
         const int ph = juce::jmax (120, performViewport.getMaximumVisibleHeight());
         performPanel.setSize (numVoices * colW, ph);
         for (int v = 0; v < voiceColumns.size(); ++v)
