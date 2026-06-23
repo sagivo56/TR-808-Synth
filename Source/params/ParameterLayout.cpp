@@ -99,6 +99,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     addF (ParamIDs::bassDecay,    "BD Bass Decay",  50.0f, 1500.0f, 650.0f, "ms");
     addF (ParamIDs::bassPunch,    "BD Bass Punch",  1.0f, 3.0f, 2.0f);
     addF (ParamIDs::bassDrive,    "BD Bass Drive",  1.0f, 10.0f, 1.0f);
+    layout.add (std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID { ParamIDs::bassDuckBd, 1 }, "BD Bass Ducks BD", true));
     addF (ParamIDs::bassRevSend,  "BD Bass Reverb Send", 0.0f, 1.0f, 0.0f);
     addF (ParamIDs::bassDlySend,  "BD Bass Delay Send",  0.0f, 1.0f, 0.0f);
     addF (ParamIDs::revPredelay,  "Reverb Predelay", 0.0f, 120.0f, 15.0f, "ms");

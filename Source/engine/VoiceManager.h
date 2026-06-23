@@ -66,6 +66,7 @@ public:
     void  setBassDecay (float ms) noexcept { bassDecayMs = ms; }
     void  setBassPunch (float v) noexcept { bassPunch = v; }
     void  setBassDrive (float v) noexcept { bassDrive = v; }
+    void  setBassDuckBd (bool on) noexcept { bassDuckEnabled = on; }
     bool  isBassActive() const { return bassVoice != nullptr && bassVoice->isActive(); }
 
     void setAccentAmount (float a) noexcept { accentAmount = juce::jmax (1.0f, a); }
@@ -101,6 +102,12 @@ private:
     float* bassDeepDecay = nullptr;                     // cached deepRef pointers
     float* bassDeepPunch = nullptr;
     float* bassDeepDrive = nullptr;
+
+    // Ducking: a bass note dips the regular BD (sidechain feel), recovering smoothly.
+    bool  bassDuckEnabled = true;
+    float bdDuckGain = 1.0f;
+    float duckAmount = 0.6f;        // ducked level when a bass note hits
+    float duckRelease = 0.0003f;    // per-sample recovery toward 1.0 (set in prepare)
     std::vector<float> monoBuf;
     int   maxBlock = 0;
     float accentAmount = 1.5f;

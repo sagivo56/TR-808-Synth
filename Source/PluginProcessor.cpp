@@ -65,6 +65,7 @@ void TR808AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     bassDecayP   = apvts.getRawParameterValue (ParamIDs::bassDecay);
     bassPunchP   = apvts.getRawParameterValue (ParamIDs::bassPunch);
     bassDriveP   = apvts.getRawParameterValue (ParamIDs::bassDrive);
+    bassDuckP    = apvts.getRawParameterValue (ParamIDs::bassDuckBd);
     revPredelayP = apvts.getRawParameterValue (ParamIDs::revPredelay);
     revDecayP    = apvts.getRawParameterValue (ParamIDs::revDecay);
     revBassP     = apvts.getRawParameterValue (ParamIDs::revBass);
@@ -130,6 +131,7 @@ void TR808AudioProcessor::updateFxFromApvts()
     voiceManager.setBassDecay (get (bassDecayP, 650.0f));
     voiceManager.setBassPunch (get (bassPunchP, 2.0f));
     voiceManager.setBassDrive (get (bassDriveP, 1.0f));
+    voiceManager.setBassDuckBd (get (bassDuckP, 1.0f) > 0.5f);
 
     auto& rev = voiceManager.reverb();
     rev.setPredelay  (get (revPredelayP, 15.0f));

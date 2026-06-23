@@ -20,6 +20,7 @@ namespace ParamIDs
     inline constexpr auto bassDecay    = "bdbass_decay";
     inline constexpr auto bassPunch    = "bdbass_punch";
     inline constexpr auto bassDrive    = "bdbass_drive";
+    inline constexpr auto bassDuckBd   = "bdbass_duck_bd";   // bass ducks the regular BD
 
     // Parallel FX (global). Per-voice sends use macroId(v, "revsend"/"dlysend").
     inline constexpr auto bassRevSend  = "bdbass_revsend";

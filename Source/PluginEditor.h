@@ -91,6 +91,8 @@ private:
     juce::Component  fxPanel;
     juce::OwnedArray<tr808::ui::ParamKnob> fxControls;
     juce::Label      fxTitle { {}, "FX  -  REVERB (Lexicon-style) + PING-PONG DELAY" };
+    juce::Label      fxRevLabel { {}, "REVERB" }, fxDlyLabel { {}, "DELAY" };
+    int              fxDelayStart = 0;   // index in fxControls where delay knobs begin
     bool             fxMode = false;
 
     tr808::ui::StepSequencerView stepView;

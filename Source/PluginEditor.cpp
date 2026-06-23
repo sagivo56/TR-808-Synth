@@ -374,6 +374,10 @@ void TR808AudioProcessorEditor::buildBassEdit()
     add (ParamIDs::bassDrive,   "DRIVE");
     add (ParamIDs::bassRevSend, "RVB SEND");
     add (ParamIDs::bassDlySend, "DLY SEND");
+
+    auto* duck = new tr808::ui::ParamToggle (proc.apvts, ParamIDs::bassDuckBd, "DUCK BD", Colors::orange);
+    editControls.add (duck);
+    editPanel.addAndMakeVisible (duck);
     resized();
 }
 
@@ -386,7 +390,7 @@ void TR808AudioProcessorEditor::buildFx()
         fxControls.add (k);
         fxPanel.addAndMakeVisible (k);
     };
-    // Reverb (Lexicon-style) then ping-pong delay, then the melodic-bass sends.
+    // Reverb group, then delay group (visually separated in resized()).
     add (ParamIDs::revPredelay,  "PREDELAY");
     add (ParamIDs::revDecay,     "DECAY");
     add (ParamIDs::revBass,      "BASS");
@@ -394,12 +398,21 @@ void TR808AudioProcessorEditor::buildFx()
     add (ParamIDs::revDamp,      "DAMP");
     add (ParamIDs::revDepth,     "DEPTH");
     add (ParamIDs::revReturn,    "RVB RET");
+    fxDelayStart = fxControls.size();
     add (ParamIDs::dlyTime,      "DLY TIME");
     add (ParamIDs::dlyFeedback,  "FEEDBACK");
     add (ParamIDs::dlyTone,      "DLY TONE");
     add (ParamIDs::dlyReturn,    "DLY RET");
-    add (ParamIDs::bassRevSend,  "BASS RVB");
-    add (ParamIDs::bassDlySend,  "BASS DLY");
+
+    auto styleLabel = [] (juce::Label& l)
+    {
+        l.setFont (juce::FontOptions (12.0f, juce::Font::bold));
+        l.setColour (juce::Label::textColourId, Colors::orange);
+        l.setJustificationType (juce::Justification::centredLeft);
+    };
+    styleLabel (fxRevLabel); styleLabel (fxDlyLabel);
+    fxPanel.addAndMakeVisible (fxRevLabel);
+    fxPanel.addAndMakeVisible (fxDlyLabel);
 }
 
 void TR808AudioProcessorEditor::showEdit (bool edit)
@@ -649,14 +662,25 @@ void TR808AudioProcessorEditor::resized()
         }
     }
 
-    // FX panel (reverb + delay): a simple grid of knobs over the mid area.
+    // FX panel: reverb knobs in a labelled band, then delay knobs in a second
+    // labelled band (so the two effects are clearly separated).
     {
         auto fxArea = mid;
         fxTitle.setBounds (fxArea.removeFromTop (20));
         fxPanel.setBounds (fxArea);
-        const int cw = 92, ch = 96;
-        const int cols = juce::jmax (1, fxArea.getWidth() / cw);
-        for (int i = 0; i < fxControls.size(); ++i)
-            fxControls[i]->setBounds ((i % cols) * cw + 4, (i / cols) * ch + 2, cw - 8, ch - 8);
+        const int cw = 92, ch = 96, labelH = 18;
+        const int panelW = fxArea.getWidth();
+        auto rowCentred = [&] (int from, int to, int y)
+        {
+            const int count = to - from;
+            const int x0 = juce::jmax (0, (panelW - count * cw) / 2);
+            for (int i = from; i < to; ++i)
+                fxControls[i]->setBounds (x0 + (i - from) * cw + 4, y + 2, cw - 8, ch - 8);
+        };
+        const int n = fxControls.size();
+        fxRevLabel.setBounds (8, 0, panelW - 16, labelH);
+        rowCentred (0, fxDelayStart, labelH);
+        fxDlyLabel.setBounds (8, labelH + ch, panelW - 16, labelH);
+        rowCentred (fxDelayStart, n, labelH + ch + labelH);
     }
 }

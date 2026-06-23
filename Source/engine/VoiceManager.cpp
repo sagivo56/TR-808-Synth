@@ -77,6 +77,9 @@ void VoiceManager::prepare (double sampleRate, int maxBlockSize)
             else if (r.suffix == "drive") bassDeepDrive = r.ptr;
         }
 
+    duckRelease = (float) (1.0 / (0.06 * sampleRate));   // ~60 ms recovery
+    bdDuckGain = 1.0f;
+
     reverbFx.prepare (sampleRate);
     delayFx.prepare (sampleRate);
     revBuf.assign ((size_t) maxBlock, 0.0f);
@@ -115,6 +118,7 @@ void VoiceManager::noteOnBass (float velocity, float freqHz, bool accent)
     if (bassDeepDecay) *bassDeepDecay = bassDecayMs;          // base ring
     if (bassDeepPunch) *bassDeepPunch = bassPunch;
     if (bassDeepDrive) *bassDeepDrive = bassDrive;
+    if (bassDuckEnabled) bdDuckGain = duckAmount;            // dip the regular BD
     bassVoice->setMacros (bassMacros);
     bassVoice->setPlayFrequency (freqHz);
     bassVoice->trigger (accent ? velocity * accentAmount : velocity, accent);
@@ -150,6 +154,8 @@ void VoiceManager::renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& m
     auto* R = mainBuffer.getNumChannels() > 1 ? mainBuffer.getWritePointer (1) : L;
     auto* scratch = monoBuf.data();
 
+    const float duckStart = bdDuckGain;   // BD ducking ramp for this segment
+
     for (int v = 0; v < numVoices; ++v)
     {
         if (! voiceArray[(size_t) v]->isActive())
@@ -157,6 +163,13 @@ void VoiceManager::renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& m
 
         std::fill (scratch, scratch + len, 0.0f);
         voiceArray[(size_t) v]->renderAdd (scratch, len);
+
+        // BD ducking: dip the regular BD while a bass note rings, recovering.
+        if (v == BD && bassDuckEnabled)
+        {
+            float dg = duckStart;
+            for (int i = 0; i < len; ++i) { scratch[i] *= dg; dg += (1.0f - dg) * duckRelease; }
+        }
 
         // Master: panned + mute/solo gated.
         const auto g = mixer.gainsFor (v);
@@ -201,6 +214,9 @@ void VoiceManager::renderSegment (juce::AudioBuffer<float>& mainBuffer, Mixer& m
         if (brs > 0.0f) { auto* b = revBuf.data() + start; for (int i = 0; i < len; ++i) b[i] += scratch[i] * brs; }
         if (bds > 0.0f) { auto* b = dlyBuf.data() + start; for (int i = 0; i < len; ++i) b[i] += scratch[i] * bds; }
     }
+
+    // Advance the BD-duck recovery for this segment (even if BD was silent).
+    for (int i = 0; i < len; ++i) bdDuckGain += (1.0f - bdDuckGain) * duckRelease;
 }
 
 void VoiceManager::renderEvents (juce::AudioBuffer<float>& mainBuffer,
