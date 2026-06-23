@@ -46,12 +46,14 @@ public:
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
+    void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 
 private:
     void timerCallback() override;
     juce::Rectangle<int> gridArea() const;
     void paintBass (juce::Graphics&, juce::Rectangle<int> area);
     void mouseBass (const juce::MouseEvent&, juce::Rectangle<int> area);
+    void applyFill (int voice, int n);    // auto-fill a row every n steps (toggle)
 
     Sequencer& seq;
     Mode  mode = Mode::grid;
@@ -60,7 +62,12 @@ private:
     int  editVar = 0;
     int  lastDisplay = -2;
     int  groupSize = 4;                    // shade alternates every this many steps (4=4/4, 3=3/4)
+    int  bassScroll = 100000;              // first visible piano-roll row (clamped per paint)
+    int  bassRowsTotal = 0;                // total scale rows (set in paintBass)
 
-    static constexpr int kLabelW = 58;
+    static constexpr int kLabelW    = 96;  // wider: instrument name + 4 fill pads
+    static constexpr int kNameW     = 38;  // name sub-column inside the label area
+    static constexpr int kBassRowH  = 18;  // fixed piano-roll row height (scrollable)
+    static constexpr int kFillPads  = 4;   // auto-fill pads 1..4
 };
 }

@@ -85,13 +85,29 @@ void StepSequencerView::paint (juce::Graphics& g)
         const float cw = area.getWidth() / (float) len;
         const float rh = area.getHeight() / (float) rows;
 
+        const float padW = (kLabelW - kNameW) / (float) kFillPads;
         for (int v = 0; v < numVoices; ++v)
         {
+            const int rowY = (int) (area.getY() + v * rh);
+
             g.setColour (Colors::text);
-            g.setFont (juce::FontOptions (10.0f));
+            g.setFont (juce::FontOptions (9.5f));
             g.drawText (juce::String (voiceSpecs()[(size_t) v].prefix).toUpperCase(),
-                        labels.getX(), (int) (area.getY() + v * rh), kLabelW - 4, (int) rh,
-                        juce::Justification::centredRight);
+                        labels.getX(), rowY, kNameW - 2, (int) rh, juce::Justification::centredRight);
+
+            // auto-fill pads 1..4 (fill every n steps)
+            const float ph = juce::jmin ((float) rh - 3.0f, 13.0f);
+            const float py = rowY + ((float) rh - ph) * 0.5f;
+            for (int n = 1; n <= kFillPads; ++n)
+            {
+                juce::Rectangle<float> pr (labels.getX() + kNameW + (n - 1) * padW, py, padW - 2.0f, ph);
+                g.setColour (Colors::panelLight.brighter (0.05f));
+                g.fillRoundedRectangle (pr, 2.0f);
+                g.setColour (Colors::cream.withAlpha (0.85f));
+                g.setFont (juce::FontOptions (8.0f, juce::Font::bold));
+                g.drawText (juce::String (n), pr, juce::Justification::centred);
+            }
+
             for (int s = 0; s < len; ++s)
                 cell ({ area.getX() + s * cw, area.getY() + v * rh, cw, rh },
                       seq.getStep (pat, editVar, v, s), seq.getAccent (pat, editVar, s), s == playStep, s);
@@ -200,10 +216,23 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
         auto labels = area.removeFromLeft (kLabelW);
         const int   rowsAll = numVoices + 1;
         const float rhAll   = area.getHeight() / (float) rowsAll;
-        if (labels.contains (e.getPosition()))            // click an instrument name -> preview
+        if (labels.contains (e.getPosition()))            // label area: name -> preview, pads -> auto-fill
         {
             const int row = (int) ((e.y - area.getY()) / rhAll);
-            if (row >= 0 && row < numVoices && onPreview) onPreview (row);
+            if (row >= 0 && row < numVoices)
+            {
+                if (e.x < labels.getX() + kNameW)
+                {
+                    if (onPreview) onPreview (row);
+                }
+                else
+                {
+                    const float padW = (kLabelW - kNameW) / (float) kFillPads;
+                    const int n = (int) ((e.x - (labels.getX() + kNameW)) / padW) + 1;
+                    if (n >= 1 && n <= kFillPads) applyFill (row, n);
+                }
+            }
+            repaint();
             return;
         }
         if (! area.contains (e.getPosition())) return;
@@ -304,29 +333,36 @@ void StepSequencerView::paintBass (juce::Graphics& g, juce::Rectangle<int> area)
 
     area.removeFromTop (4);
 
-    // piano roll: rows = scale notes (2 octaves), columns = steps
+    // piano roll: rows = scale notes (2 octaves) at a fixed height, scrollable.
     const auto notes = bassScaleNotes (seq.getBassRoot(), seq.getBassScale());
     const int rows = (int) notes.size();
+    bassRowsTotal = rows;
     if (rows <= 0) return;
-    const int   labelW = 34;
-    auto labels = area.removeFromLeft (labelW);
-    const float cw = area.getWidth()  / (float) len;
-    const float rh = area.getHeight() / (float) rows;
 
-    for (int r = 0; r < rows; ++r)
+    const int sbW = 9;
+    auto sb     = area.removeFromRight (sbW);          // scrollbar gutter
+    auto labels = area.removeFromLeft (34);
+    const float cw   = area.getWidth() / (float) len;
+    const int   rowH = kBassRowH;
+    const int   visN = juce::jmax (1, area.getHeight() / rowH);
+    const int   maxScroll = juce::jmax (0, rows - visN);
+    bassScroll = juce::jlimit (0, maxScroll, bassScroll);
+
+    for (int i = 0; i < visN && (bassScroll + i) < rows; ++i)
     {
-        const int note = notes[(size_t) (rows - 1 - r)];   // high notes at the top
-        const float y  = area.getY() + r * rh;
-        const bool isRoot = ((note - seq.getBassRoot()) % 12 == 0);
+        const int   dispIdx = bassScroll + i;
+        const int   note = notes[(size_t) (rows - 1 - dispIdx)];   // high notes at the top
+        const float y  = (float) (area.getY() + i * rowH);
+        const bool  isRoot = ((note - seq.getBassRoot()) % 12 == 0);
 
         g.setColour (isRoot ? Colors::cream : Colors::text);
-        g.setFont (juce::FontOptions (8.5f));
+        g.setFont (juce::FontOptions (9.0f));
         g.drawText (juce::MidiMessage::getMidiNoteName (note, true, true, 3),
-                    labels.getX(), (int) y, labelW - 3, (int) rh, juce::Justification::centredRight);
+                    labels.getX(), (int) y, 34 - 3, rowH, juce::Justification::centredRight);
 
         for (int s = 0; s < len; ++s)
         {
-            juce::Rectangle<float> cr (area.getX() + s * cw, y, cw, rh);
+            juce::Rectangle<float> cr (area.getX() + s * cw, y, cw, (float) rowH);
             const bool on = (seq.getBassNote (pat, editVar, s) == note);
             const bool shade = ((s / groupSize) % 2) == 1;
             g.setColour (on ? Colors::orange
@@ -335,6 +371,17 @@ void StepSequencerView::paintBass (juce::Graphics& g, juce::Rectangle<int> area)
             g.fillRoundedRectangle (cr.reduced (0.8f), 2.0f);
             if (s == playStep) { g.setColour (Colors::white.withAlpha (0.5f)); g.drawRoundedRectangle (cr.reduced (0.8f), 2.0f, 1.0f); }
         }
+    }
+
+    // scrollbar
+    if (maxScroll > 0)
+    {
+        g.setColour (Colors::background);
+        g.fillRoundedRectangle (sb.toFloat().reduced (1.5f, 0.0f), 3.0f);
+        const float thumbH = juce::jmax (18.0f, sb.getHeight() * (float) visN / (float) rows);
+        const float ty = sb.getY() + (sb.getHeight() - thumbH) * (float) bassScroll / (float) maxScroll;
+        g.setColour (Colors::cream.withAlpha (0.65f));
+        g.fillRoundedRectangle (sb.getX() + 1.5f, ty, sb.getWidth() - 3.0f, thumbH, 3.0f);
     }
 }
 
@@ -359,14 +406,32 @@ void StepSequencerView::mouseBass (const juce::MouseEvent& e, juce::Rectangle<in
     const auto notes = bassScaleNotes (seq.getBassRoot(), seq.getBassScale());
     const int rows = (int) notes.size();
     if (rows <= 0) return;
-    area.removeFromLeft (34);
-    const float cw = area.getWidth()  / (float) len;
-    const float rh = area.getHeight() / (float) rows;
-    const int s = (int) ((e.x - area.getX()) / cw);
-    const int r = (int) ((e.y - area.getY()) / rh);
-    if (s < 0 || s >= len || r < 0 || r >= rows) return;
 
-    const int note = notes[(size_t) (rows - 1 - r)];
+    const int sbW = 9;
+    auto sb     = area.removeFromRight (sbW);
+    area.removeFromLeft (34);
+    const float cw   = area.getWidth() / (float) len;
+    const int   rowH = kBassRowH;
+    const int   visN = juce::jmax (1, area.getHeight() / rowH);
+    const int   maxScroll = juce::jmax (0, rows - visN);
+    bassScroll = juce::jlimit (0, maxScroll, bassScroll);
+
+    if (sb.contains (e.getPosition()))                      // click the scrollbar track to jump
+    {
+        if (maxScroll > 0)
+            bassScroll = juce::jlimit (0, maxScroll,
+                (int) std::lround ((double) (e.y - sb.getY()) / (double) sb.getHeight() * maxScroll));
+        repaint();
+        return;
+    }
+
+    const int s = (int) ((e.x - area.getX()) / cw);
+    const int i = (int) ((e.y - area.getY()) / rowH);
+    if (s < 0 || s >= len || i < 0 || i >= visN) return;
+    const int dispIdx = bassScroll + i;
+    if (dispIdx >= rows) return;
+
+    const int note = notes[(size_t) (rows - 1 - dispIdx)];
     if (seq.getBassNote (pat, editVar, s) == note)
         seq.setBassNote (pat, editVar, s, -1);              // toggle off
     else
@@ -374,6 +439,29 @@ void StepSequencerView::mouseBass (const juce::MouseEvent& e, juce::Rectangle<in
         seq.setBassNote (pat, editVar, s, note);
         if (onPreviewBass) onPreviewBass (note);            // audition the note
     }
+    repaint();
+}
+
+void StepSequencerView::applyFill (int voice, int n)
+{
+    if (voice < 0 || voice >= numVoices || n < 1) return;
+    const int pat = seq.getCurrentPattern();
+    const int len = juce::jlimit (1, Sequencer::maxSteps, seq.getLength (pat, editVar));
+
+    // Toggle: if the row already equals the every-n pattern, clear it instead.
+    bool matches = true;
+    for (int s = 0; s < len; ++s)
+        if (seq.getStep (pat, editVar, voice, s) != (s % n == 0)) { matches = false; break; }
+    for (int s = 0; s < len; ++s)
+        seq.setStep (pat, editVar, voice, s, matches ? false : (s % n == 0));
+}
+
+void StepSequencerView::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& w)
+{
+    if (selectedVoice != bassIndex) return;
+    const int delta = (int) std::lround (w.deltaY * 3.0);
+    if (delta == 0) return;
+    bassScroll = juce::jlimit (0, juce::jmax (0, bassRowsTotal - 1), bassScroll - delta);
     repaint();
 }
 }
