@@ -45,6 +45,10 @@ public:
         slider.setBounds (r);
     }
 
+    // Disable the slider's mouse wheel so it bubbles up (e.g. to scroll a
+    // horizontally-scrolling panel) instead of changing the value.
+    void setWheelEnabled (bool e) { slider.setScrollWheelEnabled (e); }
+
 private:
     juce::Slider slider;
     juce::Label  name;

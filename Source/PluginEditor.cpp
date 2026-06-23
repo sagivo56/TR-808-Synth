@@ -22,7 +22,9 @@ TR808AudioProcessorEditor::VoiceColumn::VoiceColumn (juce::AudioProcessorValueTr
     knobs.add (new ParamKnob (apvts, macroId (v, "pan"), "PAN"));
     knobs.add (new ParamKnob (apvts, macroId (v, "revsend"), "RVB"));
     knobs.add (new ParamKnob (apvts, macroId (v, "dlysend"), "DLY"));
-    for (auto* k : knobs) addAndMakeVisible (k);
+    // Let the mouse wheel scroll the (horizontally-scrolling) PERFORM panel
+    // rather than adjust a knob under the cursor.
+    for (auto* k : knobs) { k->setWheelEnabled (false); addAndMakeVisible (k); }
 
     mute = std::make_unique<ParamToggle> (apvts, macroId (v, "mute"), "M", Colors::red);
     solo = std::make_unique<ParamToggle> (apvts, macroId (v, "solo"), "S", Colors::yellow);
