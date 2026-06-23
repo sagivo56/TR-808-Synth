@@ -9,6 +9,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# For distribution builds, statically link the MSVC runtime so the VST3 /
+# Standalone run on any Windows machine without the VC++ redistributable.
+# OFF by default (dev builds stay fast); the packaging script turns it ON.
+option(TR808_STATIC_RUNTIME "Statically link the MSVC runtime (for distribution)" OFF)
+if(MSVC AND TR808_STATIC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # Default to a Release build for single-config generators (Ninja, Makefiles).
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
