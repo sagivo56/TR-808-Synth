@@ -21,6 +21,21 @@ public:
         addAndMakeVisible (name);
 
         attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (apvts, paramId, slider);
+
+        // Show every value as a 0..100 integer (percentage of its range) rather
+        // than a raw float, and accept 0..100 typed back.
+        slider.textFromValueFunction = [this] (double v)
+        {
+            const auto r = slider.getRange();
+            const double pct = r.getLength() > 0.0 ? (v - r.getStart()) / r.getLength() * 100.0 : 0.0;
+            return juce::String (juce::roundToInt (pct));
+        };
+        slider.valueFromTextFunction = [this] (const juce::String& t)
+        {
+            const auto r = slider.getRange();
+            return r.getStart() + juce::jlimit (0.0, 100.0, t.getDoubleValue()) / 100.0 * r.getLength();
+        };
+        slider.updateText();
     }
 
     void resized() override
