@@ -25,6 +25,8 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
 WizardStyle=modern
+SetupIconFile=icon.ico
+UninstallDisplayIcon={app}\TR-808 Synth.exe
 
 [Components]
 Name: "vst3"; Description: "VST3 plugin (for your DAW)"; Types: full custom
