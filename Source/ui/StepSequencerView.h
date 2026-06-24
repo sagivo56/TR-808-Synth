@@ -35,6 +35,9 @@ public:
     // Beat grouping: alternate cell shading every 'n' steps (4 = 4/4, 3 = 3/4).
     void setGrouping (int n)         { groupSize = juce::jlimit (1, 8, n); repaint(); }
 
+    // Hide the built-in instrument selector when the editor provides its own toolbar.
+    void setShowSelector (bool b)    { showSelector = b; repaint(); }
+
     // Called when the authentic-view instrument selector picks an instrument
     // (0..numVoices, where numVoices == ACCENT).
     std::function<void (int)> onSelect;
@@ -62,6 +65,7 @@ private:
     int  editVar = 0;
     int  lastDisplay = -2;
     int  groupSize = 4;                    // shade alternates every this many steps (4=4/4, 3=3/4)
+    bool showSelector = true;              // draw the built-in instrument selector row
     int  bassScroll = 100000;              // first visible piano-roll row (clamped per paint)
     int  bassRowsTotal = 0;                // total scale rows (set in paintBass)
 

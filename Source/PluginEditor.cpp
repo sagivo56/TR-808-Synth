@@ -103,51 +103,34 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     playButton.onClick = [this] { proc.getSequencer().setRunning (playButton.getToggleState()); };
     addAndMakeVisible (playButton);
 
-    viewButton.onClick = [this] { showEdit (! editMode); };
-    addAndMakeVisible (viewButton);
-
+    // --- mode tabs: FX / BD BASS / MAIN (global sections above the instruments) ---
     fxButton.setClickingTogglesState (true);
     fxButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);
-    fxButton.onClick = [this] { showFx (fxButton.getToggleState()); };
+    fxButton.onClick = [this] { setEditorMode (Mode::fx); };
     addAndMakeVisible (fxButton);
 
-    gridButton.setClickingTogglesState (true);
-    gridButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);   // stay readable when active
-    gridButton.onClick = [this]
-    {
-        const bool auth = gridButton.getToggleState();
-        stepView.setMode (auth ? StepSequencerView::Mode::authentic : StepSequencerView::Mode::grid);
-        gridButton.setButtonText (auth ? "808" : "GRID");
-        if (! auth && bassButton.getToggleState())   // leaving auth cancels bass view
-            bassButton.setToggleState (false, juce::sendNotification);
-    };
-    addAndMakeVisible (gridButton);
-
-    // BD BASS: open the melodic tonal grid (authentic view, BASS instrument).
     bassButton.setClickingTogglesState (true);
     bassButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);
-    bassButton.onClick = [this]
-    {
-        if (bassButton.getToggleState())
-        {
-            gridButton.setToggleState (true, juce::dontSendNotification);
-            gridButton.setButtonText ("808");
-            stepView.setMode (StepSequencerView::Mode::authentic);
-            stepView.setSelectedVoice (StepSequencerView::bassIndex);
-            selectedVoice = StepSequencerView::bassIndex;
-            buildBassEdit();
-            showEdit (true);                         // open the bass controls too
-        }
-        else
-        {
-            selectedVoice = BD;
-            stepView.setSelectedVoice (BD);
-            buildEditFor (BD);
-            showEdit (false);
-        }
-        stepView.repaint();
-    };
+    bassButton.onClick = [this] { setEditorMode (Mode::bass); };
     addAndMakeVisible (bassButton);
+
+    mainButton.setClickingTogglesState (true);
+    mainButton.setColour (juce::TextButton::buttonOnColourId, Colors::orange);
+    mainButton.onClick = [this] { setEditorMode (Mode::main); };
+    addAndMakeVisible (mainButton);
+
+    // --- instrument toolbar: pick one drum -> its params + its pads ---
+    for (int v = 0; v < numVoices; ++v)
+    {
+        auto* b = new juce::TextButton (juce::String (voiceSpecs()[(size_t) v].prefix).toUpperCase());
+        b->setClickingTogglesState (true);
+        b->setColour (juce::TextButton::buttonOnColourId, Colors::orange);
+        b->onClick = [this, v] { selectDrum (v); };
+        instButtons.add (b);
+        addAndMakeVisible (b);
+    }
+    stepView.setShowSelector (false);   // the toolbar above replaces the built-in selector
+    stepView.setMode (StepSequencerView::Mode::authentic);
 
     juce::TextButton* varButtons[4] = { &varAButton, &varBButton, &varCButton, &varDButton };
     for (int i = 0; i < 4; ++i)
@@ -301,18 +284,12 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     chainEditor.onFocusLost = applyChain;
     addAndMakeVisible (chainEditor);
 
-    performViewport.setViewedComponent (&performPanel, false);
-    performViewport.setScrollBarsShown (false, true);
-    addAndMakeVisible (performViewport);
-    buildPerform();
-
     editViewport.setViewedComponent (&editPanel, false);
     editViewport.setScrollBarsShown (true, false);
     addChildComponent (editViewport);
     editTitle.setFont (juce::FontOptions (15.0f, juce::Font::bold));
     editTitle.setColour (juce::Label::textColourId, Colors::orange);
     addChildComponent (editTitle);
-    buildEditFor (selectedVoice);
 
     addChildComponent (fxPanel);
     fxTitle.setFont (juce::FontOptions (15.0f, juce::Font::bold));
@@ -320,20 +297,17 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
     addChildComponent (fxTitle);
     buildFx();
 
+    addChildComponent (mainPanel);
+    mainTitle.setFont (juce::FontOptions (15.0f, juce::Font::bold));
+    mainTitle.setColour (juce::Label::textColourId, Colors::orange);
+    addChildComponent (mainTitle);
+    buildMain();
+
     addAndMakeVisible (stepView);
-    stepView.setSelectedVoice (selectedVoice);
-    stepView.onSelect = [this] (int v)
-    {
-        selectedVoice = v;
-        bassButton.setToggleState (v == StepSequencerView::bassIndex, juce::dontSendNotification);
-        if (v >= 0 && v < numVoices)              { buildEditFor (v); }
-        else if (v == StepSequencerView::bassIndex) { buildBassEdit(); showEdit (true); }
-    };
-    stepView.onPreview = [this] (int v) { proc.previewVoice (v); };
     stepView.onPreviewBass = [this] (int note) { proc.previewBass (note); };
 
     syncTransport();
-    showEdit (false);
+    selectDrum (tr808::BD);                 // start on the BD instrument view
 
     setResizable (true, true);
     setWantsKeyboardFocus (true);               // so SPACE toggles transport
@@ -355,22 +329,45 @@ void TR808AudioProcessorEditor::selectEditVar (int v)
     stepView.setEditVariation (editVariation);
 }
 
-void TR808AudioProcessorEditor::buildPerform()
+void TR808AudioProcessorEditor::buildPerform() {}   // PERFORM all-columns view retired (one-instrument focus now)
+
+void TR808AudioProcessorEditor::selectDrum (int voice)
 {
-    voiceColumns.clear();
-    for (int v = 0; v < numVoices; ++v)
-    {
-        auto* col = new VoiceColumn (proc.apvts, v, [this] (int vi)
-        {
-            selectedVoice = vi;
-            stepView.setSelectedVoice (vi);
-            buildEditFor (vi);
-            showEdit (true);
-            proc.previewVoice (vi);   // audition the instrument when selected
-        });
-        voiceColumns.add (col);
-        performPanel.addAndMakeVisible (col);
-    }
+    if (voice < 0 || voice >= numVoices) return;
+    selectedDrum = voice;
+    mode = Mode::drum;
+    buildEditFor (voice);
+    stepView.setSelectedVoice (voice);
+    proc.previewVoice (voice);          // audition it
+    refreshModeUI();
+}
+
+void TR808AudioProcessorEditor::setEditorMode (Mode m)
+{
+    mode = m;
+    if (m == Mode::bass) { buildBassEdit(); stepView.setSelectedVoice (StepSequencerView::bassIndex); }
+    else                 { stepView.setSelectedVoice (selectedDrum); }
+    if (m == Mode::drum) buildEditFor (selectedDrum);
+    refreshModeUI();
+}
+
+void TR808AudioProcessorEditor::refreshModeUI()
+{
+    const bool drum = (mode == Mode::drum), fx = (mode == Mode::fx),
+               bass = (mode == Mode::bass), main = (mode == Mode::main);
+
+    editViewport.setVisible (drum || bass);   // editPanel holds instrument or bass params
+    editTitle.setVisible   (drum || bass);
+    fxPanel.setVisible (fx);   fxTitle.setVisible (fx);
+    mainPanel.setVisible (main); mainTitle.setVisible (main);
+
+    fxButton.setToggleState   (fx,   juce::dontSendNotification);
+    bassButton.setToggleState (bass, juce::dontSendNotification);
+    mainButton.setToggleState (main, juce::dontSendNotification);
+    for (int i = 0; i < instButtons.size(); ++i)
+        instButtons[i]->setToggleState (drum && i == selectedDrum, juce::dontSendNotification);
+
+    resized();
 }
 
 void TR808AudioProcessorEditor::buildEditFor (int voice)
@@ -471,32 +468,13 @@ void TR808AudioProcessorEditor::buildFx()
     fxPanel.addAndMakeVisible (fxDrvLabel);
 }
 
-void TR808AudioProcessorEditor::showEdit (bool edit)
+void TR808AudioProcessorEditor::buildMain()
 {
-    editMode = edit;
-    fxMode = false;
-    performViewport.setVisible (! edit);
-    editViewport.setVisible (edit);
-    editTitle.setVisible (edit);
-    fxPanel.setVisible (false);
-    fxTitle.setVisible (false);
-    fxButton.setToggleState (false, juce::dontSendNotification);
-    viewButton.setButtonText (edit ? "PERF" : "EDIT");
-    resized();
-}
-
-void TR808AudioProcessorEditor::showFx (bool fx)
-{
-    fxMode = fx;
-    if (fx) editMode = false;
-    performViewport.setVisible (! fx && ! editMode);
-    editViewport.setVisible (! fx && editMode);
-    editTitle.setVisible (! fx && editMode);
-    fxPanel.setVisible (fx);
-    fxTitle.setVisible (fx);
-    fxButton.setToggleState (fx, juce::dontSendNotification);
-    viewButton.setButtonText (editMode ? "PERF" : "EDIT");
-    resized();
+    // Re-home the master controls (created in the ctor) into the MAIN tab panel.
+    if (masterGainKnob)  mainPanel.addAndMakeVisible (*masterGainKnob);
+    if (masterDriveKnob) mainPanel.addAndMakeVisible (*masterDriveKnob);
+    if (accentKnob)      mainPanel.addAndMakeVisible (*accentKnob);
+    if (multiOutToggle)  mainPanel.addAndMakeVisible (*multiOutToggle);
 }
 
 void TR808AudioProcessorEditor::setupPresetBox (juce::ComboBox& box, const juce::StringArray& factory,
@@ -636,110 +614,74 @@ void TR808AudioProcessorEditor::paint (juce::Graphics& g)
 void TR808AudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
-    const bool compact = area.getWidth() < 860;   // tablet-portrait / phone-landscape
+    titleLabel.setVisible (false);   // brand lives in the OS title bar now
 
-    // Controls that only appear in the wide desktop header.
-    juce::Component* desktopOnly[] = { &titleLabel, &tempoLabel, &swingLabel, &lenLabel, &sigLabel, &patLabel,
-                                       &varLabel, &chainEditor, masterGainKnob.get(), masterDriveKnob.get(),
-                                       accentKnob.get(), multiOutToggle.get() };
-    for (auto* c : desktopOnly) if (c) c->setVisible (! compact);
+    // ---- header: transport+presets / sequencer / instrument toolbar ----
+    const int hpad = 6, r1h = 34, r2h = 32, r3h = 36;
+    headerH = hpad + r1h + 2 + r2h + 2 + r3h + hpad;
+    auto header = area.removeFromTop (headerH).reduced (hpad, hpad);
+    auto row1 = header.removeFromTop (r1h);
+    header.removeFromTop (2);
+    auto row2 = header.removeFromTop (r2h);
+    header.removeFromTop (2);
+    auto row3 = header;   // instrument toolbar
 
-    if (! compact)
+    // row 1: transport + presets, with the 3 tabs on the right
+    playButton.setBounds (row1.removeFromLeft (56).reduced (1, 2));
+    { auto t = row1.removeFromLeft (152); tempoLabel.setBounds (t.removeFromLeft (46)); tempoSlider.setBounds (t.reduced (0, 4)); }
+    { auto s = row1.removeFromLeft (152); swingLabel.setBounds (s.removeFromLeft (48)); swingSlider.setBounds (s.reduced (0, 4)); }
+    kitBox.setBounds (row1.removeFromLeft (116).reduced (2, 1));
+    patternBox.setBounds (row1.removeFromLeft (128).reduced (2, 1));
+    mainButton.setBounds (row1.removeFromRight (56).reduced (2, 1));
+    bassButton.setBounds (row1.removeFromRight (72).reduced (2, 1));
+    fxButton.setBounds   (row1.removeFromRight (50).reduced (2, 1));
+
+    // row 2: sequencer controls
+    patLabel.setBounds (row2.removeFromLeft (26));
+    patBox.setBounds (row2.removeFromLeft (46).reduced (2, 1));
+    abModeBox.setBounds (row2.removeFromLeft (72).reduced (2, 1));
+    varLabel.setBounds (row2.removeFromLeft (34));
+    varAButton.setBounds (row2.removeFromLeft (28).reduced (1, 1));
+    varBButton.setBounds (row2.removeFromLeft (28).reduced (1, 1));
+    varCButton.setBounds (row2.removeFromLeft (28).reduced (1, 1));
+    varDButton.setBounds (row2.removeFromLeft (28).reduced (1, 1));
+    copyBox.setBounds (row2.removeFromLeft (74).reduced (2, 1));
+    lenLabel.setBounds (row2.removeFromLeft (24));
+    lenBox.setBounds (row2.removeFromLeft (58).reduced (2, 1));
+    sigLabel.setBounds (row2.removeFromLeft (24));
+    sigBox.setBounds (row2.removeFromLeft (62).reduced (2, 1));
+    tripButton.setBounds (row2.removeFromLeft (50).reduced (2, 1));
+    songButton.setBounds (row2.removeFromLeft (54).reduced (2, 1));
+    clearButton.setBounds (row2.removeFromLeft (42).reduced (2, 1));
+    chainEditor.setBounds (row2.removeFromLeft (60).reduced (2, 2));
+
+    // row 3: instrument toolbar (equal share of the width)
     {
-        headerH = 112;
-        auto headerFull = area.removeFromTop (headerH);
-        auto row1 = headerFull.removeFromTop (58).reduced (6, 4);
-        auto row2 = headerFull.reduced (6, 4);
-
-        titleLabel.setBounds (row1.removeFromLeft (78));
-        playButton.setBounds (row1.removeFromLeft (56).reduced (2, 8));
-        auto tcol = row1.removeFromLeft (150);
-        tempoLabel.setBounds (tcol.removeFromTop (13));
-        tempoSlider.setBounds (tcol);
-        auto scol = row1.removeFromLeft (150);
-        swingLabel.setBounds (scol.removeFromTop (13));
-        swingSlider.setBounds (scol);
-        abModeBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
-        patLabel.setBounds (row1.removeFromLeft (26));
-        patBox.setBounds (row1.removeFromLeft (48).reduced (2, 12));
-        fxButton.setBounds (row1.removeFromLeft (46).reduced (2, 12));
-        copyBox.setBounds (row1.removeFromLeft (74).reduced (2, 12));
-        if (masterGainKnob)  masterGainKnob->setBounds (row1.removeFromRight (54));
-        if (masterDriveKnob) masterDriveKnob->setBounds (row1.removeFromRight (54));
-        if (accentKnob)      accentKnob->setBounds (row1.removeFromRight (54));
-        if (multiOutToggle)  multiOutToggle->setBounds (row1.removeFromRight (52).reduced (2, 12));
-
-        kitBox.setBounds (row2.removeFromLeft (118).reduced (2, 8));
-        patternBox.setBounds (row2.removeFromLeft (134).reduced (2, 8));
-        lenLabel.setBounds (row2.removeFromLeft (24));
-        lenBox.setBounds (row2.removeFromLeft (60).reduced (2, 8));
-        sigLabel.setBounds (row2.removeFromLeft (24));
-        sigBox.setBounds (row2.removeFromLeft (66).reduced (2, 8));
-        tripButton.setBounds (row2.removeFromLeft (50).reduced (2, 8));
-        songButton.setBounds (row2.removeFromLeft (54).reduced (2, 8));
-        clearButton.setBounds (row2.removeFromLeft (42).reduced (2, 8));
-        chainEditor.setBounds (row2.removeFromLeft (58).reduced (2, 10));
-        viewButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
-        gridButton.setBounds (row2.removeFromRight (52).reduced (2, 8));
-        bassButton.setBounds (row2.removeFromRight (64).reduced (2, 8));
-        varDButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-        varCButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-        varBButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-        varAButton.setBounds (row2.removeFromRight (28).reduced (2, 8));
-        varLabel.setBounds (row2.removeFromRight (34).reduced (0, 8));
-    }
-    else
-    {
-        // Compact / touch: flow the controls into as many rows as the width needs.
-        struct FI { juce::Component* c; int w; };
-        std::vector<FI> items = {
-            { &playButton, 64 }, { &tempoSlider, 132 }, { &swingSlider, 132 },
-            { &viewButton, 56 }, { &gridButton, 56 }, { &fxButton, 46 }, { &bassButton, 70 },
-            { &varAButton, 34 }, { &varBButton, 34 }, { &varCButton, 34 }, { &varDButton, 34 },
-            { &copyBox, 78 }, { &abModeBox, 74 }, { &kitBox, 112 }, { &patternBox, 124 },
-            { &lenBox, 60 }, { &sigBox, 66 }, { &tripButton, 50 }, { &songButton, 56 }, { &clearButton, 46 }, { &patBox, 50 }
-        };
-        const int pad = 6, gap = 5, rowH = 34, rowGap = 6;
-        const int avail = area.getWidth() - pad * 2;
-        int x = pad, y = pad;
-        for (auto& it : items)
-        {
-            if (x > pad && x + it.w > pad + avail) { x = pad; y += rowH + rowGap; }
-            it.c->setBounds (x, y, it.w, rowH);
-            x += it.w + gap;
-        }
-        headerH = y + rowH + pad + 6;
-        area.removeFromTop (headerH);
+        const int n = instButtons.size();
+        const float bw = n > 0 ? row3.getWidth() / (float) n : (float) row3.getWidth();
+        for (int i = 0; i < n; ++i)
+            instButtons[i]->setBounds ((int) (row3.getX() + i * bw), row3.getY(),
+                                       (int) bw - 2, row3.getHeight());
     }
 
-    // --- step grid + middle panel split ---
-    const int stepFrac = compact ? 52 : 40;
-    auto stepArea = area.removeFromBottom (juce::jmax (170, area.getHeight() * stepFrac / 100));
+    // ---- body: active params panel (top) + step pads (bottom) ----
+    auto stepArea = area.removeFromBottom (juce::jmax (160, area.getHeight() * 50 / 100));
     stepBounds = stepArea.reduced (6);
     stepView.setBounds (stepBounds);
 
     auto mid = area.reduced (6);
 
-    performViewport.setBounds (mid);
+    // Instrument / BD-Bass params (editPanel inside its scroll viewport)
     {
-        const int colW = compact ? 150 : 120;
-        const int ph = juce::jmax (120, performViewport.getMaximumVisibleHeight());
-        performPanel.setSize (numVoices * colW, ph);
-        for (int v = 0; v < voiceColumns.size(); ++v)
-            voiceColumns[v]->setBounds (v * colW, 0, colW, ph);
-    }
-
-    auto editArea = mid;
-    editTitle.setBounds (editArea.removeFromTop (20));
-    editViewport.setBounds (editArea);
-    {
+        auto editArea = mid;
+        editTitle.setBounds (editArea.removeFromTop (20));
+        editViewport.setBounds (editArea);
         const int cw = 94, ch = 98;
         const int panelW = juce::jmax (cw, editViewport.getMaximumVisibleWidth());
         const int cols = juce::jmax (1, panelW / cw);
         const int n = editControls.size();
         const int rows = (n + cols - 1) / juce::jmax (1, cols);
         editPanel.setSize (panelW, juce::jmax (ch, rows * ch));
-        // Centre each row (including a partial last row) rather than left-aligning.
         for (int i = 0; i < n; ++i)
         {
             const int row = i / cols;
@@ -749,8 +691,21 @@ void TR808AudioProcessorEditor::resized()
         }
     }
 
-    // FX panel: reverb knobs in a labelled band, then delay knobs in a second
-    // labelled band (so the two effects are clearly separated).
+    // MAIN panel: master knobs centred in a row
+    {
+        auto mArea = mid;
+        mainTitle.setBounds (mArea.removeFromTop (20));
+        mainPanel.setBounds (mArea);
+        const int kw = 100, kh = juce::jmin (mArea.getHeight() - 8, 130);
+        const int toggleW = 92;
+        const int total = 3 * kw + toggleW + 16;
+        int x = juce::jmax (8, (mArea.getWidth() - total) / 2), y = 6;
+        juce::Component* mk[] = { masterGainKnob.get(), masterDriveKnob.get(), accentKnob.get() };
+        for (auto* k : mk) if (k) { k->setBounds (x, y, kw - 6, kh); x += kw; }
+        if (multiOutToggle) multiOutToggle->setBounds (x + 8, y + kh / 2 - 16, toggleW, 30);
+    }
+
+    // FX panel: reverb / delay / drive bands.
     {
         auto fxArea = mid;
         fxTitle.setBounds (fxArea.removeFromTop (20));

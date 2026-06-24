@@ -128,7 +128,9 @@ void StepSequencerView::paint (juce::Graphics& g)
         const int  numInst = numVoices + 2;                // 16 voices + ACCENT + BASS
         const bool accSel  = (selectedVoice == accentIndex);
 
-        // instrument selector
+        // instrument selector (optional — the editor can supply its own toolbar)
+        if (showSelector)
+        {
         auto selRow = area.removeFromTop (juce::jmax (22, area.getHeight() / 6));
         const float iw = selRow.getWidth() / (float) numInst;
         for (int i = 0; i < numInst; ++i)
@@ -144,8 +146,8 @@ void StepSequencerView::paint (juce::Graphics& g)
                                   : juce::String (voiceSpecs()[(size_t) i].prefix).toUpperCase();
             g.drawText (nm, r, juce::Justification::centred);
         }
-
         area.removeFromTop (4);
+        }   // showSelector
 
         if (selectedVoice == bassIndex) { paintBass (g, area); return; }   // tonal piano-roll
 
@@ -250,22 +252,24 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
         const int  numInst = numVoices + 2;
         const bool accSel  = (selectedVoice == accentIndex);
 
-        auto selRow = area.removeFromTop (juce::jmax (22, area.getHeight() / 6));
-        if (selRow.contains (e.getPosition()))
+        if (showSelector)
         {
-            const float iw = selRow.getWidth() / (float) numInst;
-            const int i = (int) ((e.x - selRow.getX()) / iw);
-            if (i >= 0 && i < numInst)
+            auto selRow = area.removeFromTop (juce::jmax (22, area.getHeight() / 6));
+            if (selRow.contains (e.getPosition()))
             {
-                selectedVoice = i;
-                if (onSelect) onSelect (i);
-                if (i < numVoices && onPreview) onPreview (i);   // also audition it
+                const float iw = selRow.getWidth() / (float) numInst;
+                const int i = (int) ((e.x - selRow.getX()) / iw);
+                if (i >= 0 && i < numInst)
+                {
+                    selectedVoice = i;
+                    if (onSelect) onSelect (i);
+                    if (i < numVoices && onPreview) onPreview (i);   // also audition it
+                }
+                repaint();
+                return;
             }
-            repaint();
-            return;
+            area.removeFromTop (4);
         }
-
-        area.removeFromTop (4);
 
         if (selectedVoice == bassIndex) { mouseBass (e, area); return; }   // tonal piano-roll
 

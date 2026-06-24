@@ -52,13 +52,17 @@ private:
         void paint (juce::Graphics&) override;
     };
 
+    enum class Mode { drum, fx, bass, main };
+
     void buildPerform();
     void buildEditFor (int voice);
     void buildBassEdit();
     void buildFx();
+    void buildMain();
+    void selectDrum (int voice);     // toolbar: show one instrument's params + pads
+    void setEditorMode (Mode m);     // switch the top area to a tab (fx/bass/main) or drum
+    void refreshModeUI();            // apply visibility + highlights for the current mode
     void selectEditVar (int v);   // choose which variation (0..3 = A..D) the grid edits
-    void showEdit (bool edit);
-    void showFx (bool fx);
     void syncTransport();
     void setupPresetBox (juce::ComboBox&, const juce::StringArray& factory, const juce::String& placeholder);
     void handleKitBox();
@@ -105,7 +109,14 @@ private:
     juce::Label      fxRevLabel { {}, "REVERB" }, fxDlyLabel { {}, "DELAY" }, fxDrvLabel { {}, "DRIVE" };
     int              fxDelayStart = 0;   // index in fxControls where delay knobs begin
     int              fxDriveStart = 0;   // index where drive knobs begin
-    bool             fxMode = false;
+
+    // New focused IA: an instrument toolbar + 3 global tabs (FX / BD BASS / MAIN).
+    juce::OwnedArray<juce::TextButton> instButtons;   // one per drum voice
+    juce::TextButton mainButton { "MAIN" };
+    juce::Component  mainPanel;
+    juce::Label      mainTitle { {}, "MAIN  -  MASTER" };
+    Mode             mode = Mode::drum;
+    int              selectedDrum = tr808::BD;
 
     tr808::ui::StepSequencerView stepView;
 
