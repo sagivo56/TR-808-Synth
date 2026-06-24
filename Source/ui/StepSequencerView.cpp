@@ -169,12 +169,14 @@ void StepSequencerView::paint (juce::Graphics& g)
 
         area.removeFromTop (4);
 
-        // step keys for the selected instrument, per layer
+        // step keys for the selected instrument, per layer — tall pads centred
+        // vertically (no big empty band above/below).
         const float cw = area.getWidth() / (float) len;
-        const float bh = (float) juce::jmin (area.getHeight(), 80);
+        const float bh = (float) juce::jmin (area.getHeight() - 6, 230);
+        const float by = area.getY() + (area.getHeight() - bh) * 0.5f;
         for (int s = 0; s < len; ++s)
         {
-            juce::Rectangle<float> r (area.getX() + s * cw, (float) area.getY(), cw, bh);
+            juce::Rectangle<float> r (area.getX() + s * cw, by, cw, bh);
             const bool shade  = ((s / groupSize) % 2) == 1;
             const bool isDown = (s % groupSize == 0);
             const juce::Colour offCol = shade ? Colors::grayOff.brighter (0.22f) : Colors::grayOff;
@@ -285,9 +287,10 @@ void StepSequencerView::mouseDown (const juce::MouseEvent& e)
 
         area.removeFromTop (4);
         const float cw = area.getWidth() / (float) len;
-        const float bh = (float) juce::jmin (area.getHeight(), 80);
+        const float bh = (float) juce::jmin (area.getHeight() - 6, 230);
+        const float by = area.getY() + (area.getHeight() - bh) * 0.5f;
         const int s = (int) ((e.x - area.getX()) / cw);
-        if (s >= 0 && s < len && e.y <= area.getY() + bh)
+        if (s >= 0 && s < len && e.y >= by && e.y <= by + bh)
         {
             if (accSel || layer == Layer::step)
             {
