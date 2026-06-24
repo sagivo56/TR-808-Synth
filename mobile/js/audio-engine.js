@@ -166,7 +166,23 @@ class AudioEngine {
     this.delayMix = 0;
 
     this.bassParams = { level: 0.7, tone: 0.5, decay: 0.5, punch: 0.5, drive: 1.0 };
+
+    this.voicePan = {};
+    this.voiceRevSend = {};
+    this.voiceDlySend = {};
+    for (const v of VOICES) {
+      this.voicePan[v.id] = 0;
+      this.voiceRevSend[v.id] = 0;
+      this.voiceDlySend[v.id] = 0;
+    }
   }
+
+  setPan(id, val) { this.voicePan[id] = Math.max(-1, Math.min(1, val)); }
+  getPan(id) { return this.voicePan[id] || 0; }
+  setRevSend(id, val) { this.voiceRevSend[id] = Math.max(0, Math.min(1, val)); }
+  getRevSend(id) { return this.voiceRevSend[id] || 0; }
+  setDlySend(id, val) { this.voiceDlySend[id] = Math.max(0, Math.min(1, val)); }
+  getDlySend(id) { return this.voiceDlySend[id] || 0; }
 
   async init() {
     if (this.ctx) return;
@@ -252,20 +268,21 @@ class AudioEngine {
     const t = time || this.ctx.currentTime;
     const vel = accent ? Math.min(1.0, 0.75 * this.accentLevel) : 0.75;
 
-    switch (v.id) {
-      case 'bd': this._bassDrum(t, p, d, vel); break;
-      case 'rs': this._rimShot(t, p, d, vel); break;
-      case 'sd': this._snare(t, p, d, vel); break;
-      case 'cp': this._clap(t, p, d, vel); break;
+    const id = v.id;
+    switch (id) {
+      case 'bd': this._bassDrum(t, p, d, vel, id); break;
+      case 'rs': this._rimShot(t, p, d, vel, id); break;
+      case 'sd': this._snare(t, p, d, vel, id); break;
+      case 'cp': this._clap(t, p, d, vel, id); break;
       case 'lt': case 'mt': case 'ht':
       case 'lc': case 'mc': case 'hc':
-        this._tomConga(t, p, d, vel); break;
-      case 'ma': this._maracas(t, p, d, vel); break;
-      case 'cb': this._cowbell(t, p, d, vel); break;
-      case 'cy': this._cymbal(t, p, d, vel); break;
-      case 'oh': this._hihat(t, p, d, vel, true); break;
-      case 'ch': this._hihat(t, p, d, vel, false); break;
-      case 'cl': this._claves(t, p, d, vel); break;
+        this._tomConga(t, p, d, vel, id); break;
+      case 'ma': this._maracas(t, p, d, vel, id); break;
+      case 'cb': this._cowbell(t, p, d, vel, id); break;
+      case 'cy': this._cymbal(t, p, d, vel, id); break;
+      case 'oh': this._hihat(t, p, d, vel, true, id); break;
+      case 'ch': this._hihat(t, p, d, vel, false, id); break;
+      case 'cl': this._claves(t, p, d, vel, id); break;
     }
   }
 
@@ -319,13 +336,33 @@ class AudioEngine {
     return curve;
   }
 
-  _connectToFx(node) {
-    node.connect(this.masterGain);
-    if (this.reverbSend) node.connect(this.reverbSend);
-    if (this.delaySend) node.connect(this.delaySend);
+  _connectToFx(node, voiceId) {
+    if (voiceId && this.voicePan[voiceId] !== 0) {
+      const pan = this.ctx.createStereoPanner();
+      pan.pan.value = this.voicePan[voiceId];
+      node.connect(pan).connect(this.masterGain);
+    } else {
+      node.connect(this.masterGain);
+    }
+    if (this.reverbSend && voiceId) {
+      const revAmt = this.voiceRevSend[voiceId] || 0;
+      if (revAmt > 0.01) {
+        const revGain = this.ctx.createGain();
+        revGain.gain.value = revAmt;
+        node.connect(revGain).connect(this.reverbSend);
+      }
+    }
+    if (this.delaySend && voiceId) {
+      const dlyAmt = this.voiceDlySend[voiceId] || 0;
+      if (dlyAmt > 0.01) {
+        const dlyGain = this.ctx.createGain();
+        dlyGain.gain.value = dlyAmt;
+        node.connect(dlyGain).connect(this.delaySend);
+      }
+    }
   }
 
-  _bassDrum(t, p, d, vel) {
+  _bassDrum(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const baseFreq = (d.freq || 55) * centeredPitch(p.tune, 12);
     const punchMult = Math.max(1, Math.min(4, d.punch || 2));
@@ -357,7 +394,7 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + bodyDecay);
 
     output.connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
     osc.start(t); osc.stop(t + bodyDecay + 0.05);
 
     if (p.tone > 0.01) {
@@ -373,7 +410,7 @@ class AudioEngine {
     }
   }
 
-  _rimShot(t, p, d, vel) {
+  _rimShot(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const freq = d.freq || 1700;
     const decayTime = (d.decaytime || 60) * 0.001;
@@ -397,12 +434,12 @@ class AudioEngine {
 
     osc1.connect(bp); osc2.connect(bp);
     bp.connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
     osc1.start(t); osc1.stop(t + decayTime + 0.01);
     osc2.start(t); osc2.stop(t + decayTime + 0.01);
   }
 
-  _snare(t, p, d, vel) {
+  _snare(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const o1freq = d.o1freq || 180;
     const o2freq = d.o2freq || 330;
@@ -438,16 +475,16 @@ class AudioEngine {
     hpf.type = 'highpass';
     hpf.frequency.value = d.hpf || 300;
     shellGain.connect(hpf);
-    this._connectToFx(hpf);
+    this._connectToFx(hpf, vid);
 
     osc1.start(t); osc1.stop(t + shellDecay + 0.02);
     osc2.start(t); osc2.stop(t + shellDecay + 0.02);
 
     this._noiseHit(t, p.level * vel * balance * snappyMod * 0.7, noiseDecay,
-                   d.nbpfreq || 1800, d.nbpq || 1.1, d.hpf || 300);
+                   d.nbpfreq || 1800, d.nbpq || 1.1, d.hpf || 300, vid);
   }
 
-  _clap(t, p, d, vel) {
+  _clap(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const bpFreq = d.bpfreq || 1000;
     const bpQ = d.bpq || 1.3;
@@ -457,12 +494,12 @@ class AudioEngine {
     const amp = p.level * vel * 0.5;
 
     for (let i = 0; i < numPulses; i++) {
-      this._filteredNoiseHit(t + i * spacing, amp * 0.6, 0.005, bpFreq, bpQ);
+      this._filteredNoiseHit(t + i * spacing, amp * 0.6, 0.005, bpFreq, bpQ, vid);
     }
-    this._filteredNoiseHit(t + numPulses * spacing, amp, tailDecay, bpFreq, bpQ);
+    this._filteredNoiseHit(t + numPulses * spacing, amp, tailDecay, bpFreq, bpQ, vid);
   }
 
-  _tomConga(t, p, d, vel) {
+  _tomConga(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const baseFreq = (d.freq || 130) * centeredPitch(p.tune, 12);
     const decayTime = (d.decaytime || 500) * 0.001;
@@ -491,21 +528,21 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
 
     output.connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
     osc.start(t); osc.stop(t + decayTime + 0.05);
 
     if (atkNoise > 0.01) {
-      this._noiseHit(t, p.level * vel * atkNoise * 0.3, 0.004, 2000, 1.0, 0);
+      this._noiseHit(t, p.level * vel * atkNoise * 0.3, 0.004, 2000, 1.0, 0, vid);
     }
   }
 
-  _maracas(t, p, d, vel) {
+  _maracas(t, p, d, vel, vid) {
     const hpf = d.hpf || 6000;
     const decayTime = (d.decaytime || 30) * 0.001;
-    this._noiseHit(t, p.level * vel * 0.35, decayTime, hpf, 1.0, hpf);
+    this._noiseHit(t, p.level * vel * 0.35, decayTime, hpf, 1.0, hpf, vid);
   }
 
-  _cowbell(t, p, d, vel) {
+  _cowbell(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const o1freq = d.o1freq || 540;
     const o2freq = d.o2freq || 800;
@@ -536,12 +573,12 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
 
     mix.connect(bp).connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
     osc1.start(t); osc1.stop(t + decayTime + 0.01);
     osc2.start(t); osc2.stop(t + decayTime + 0.01);
   }
 
-  _cymbal(t, p, d, vel) {
+  _cymbal(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const hpfFreq = d.hpf || 5000;
     const bpFreq = d.bpfreq || 3200;
@@ -585,10 +622,10 @@ class AudioEngine {
     merger.connect(hp).connect(hpGain).connect(sum);
     merger.connect(bp).connect(bpGain).connect(sum);
     sum.connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
   }
 
-  _hihat(t, p, d, vel, open) {
+  _hihat(t, p, d, vel, open, vid) {
     const ctx = this.ctx;
     const hpfFreq = d.hpf || 3000;
     const lpfFreq = d.lpf || (open ? 12000 : 11000);
@@ -622,10 +659,10 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
 
     merger.connect(hp).connect(lp).connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
   }
 
-  _claves(t, p, d, vel) {
+  _claves(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const freq = d.freq || 2500;
     const decayTime = (d.decaytime || 50) * 0.001;
@@ -644,11 +681,11 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
 
     osc.connect(bp).connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
     osc.start(t); osc.stop(t + decayTime + 0.02);
   }
 
-  _noiseHit(t, amp, duration, freq, q, hpfFreq) {
+  _noiseHit(t, amp, duration, freq, q, hpfFreq, vid) {
     const ctx = this.ctx;
     const bufferSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -682,12 +719,12 @@ class AudioEngine {
 
     let prev = src;
     for (const node of chain) { prev.connect(node); prev = node; }
-    this._connectToFx(prev);
+    this._connectToFx(prev, vid);
 
     src.start(t); src.stop(t + duration + 0.01);
   }
 
-  _filteredNoiseHit(t, amp, duration, bpFreq, bpQ) {
+  _filteredNoiseHit(t, amp, duration, bpFreq, bpQ, vid) {
     const ctx = this.ctx;
     const bufferSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -707,7 +744,7 @@ class AudioEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
     src.connect(bp).connect(gain);
-    this._connectToFx(gain);
+    this._connectToFx(gain, vid);
     src.start(t); src.stop(t + duration + 0.02);
   }
 }
