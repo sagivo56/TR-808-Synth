@@ -216,7 +216,7 @@ class AudioEngine {
     this.delayFilter.type = 'lowpass';
     this.delayFilter.frequency.value = 4000;
     this.delaySend = ctx.createGain();
-    this.delaySend.gain.value = 0;
+    this.delaySend.gain.value = 1.0;
     this.delayReturn = ctx.createGain();
     this.delayReturn.gain.value = 0.5;
 
@@ -243,7 +243,7 @@ class AudioEngine {
     this.convolver.buffer = buf;
 
     this.reverbSend = ctx.createGain();
-    this.reverbSend.gain.value = 0;
+    this.reverbSend.gain.value = 1.0;
     this.reverbReturn = ctx.createGain();
     this.reverbReturn.gain.value = 0.35;
     this.reverbHpf = ctx.createBiquadFilter();

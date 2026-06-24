@@ -385,10 +385,10 @@ function buildBassPanel(panel) {
 function buildFxPanel(panel) {
   let html = `<div class="params-title">FX</div>`;
   html += `<div class="fx-section"><div class="fx-label">REVERB</div><div class="knobs-row">`;
-  html += makeSlider('reverbMix', 'SEND', engine.reverbMix, 'fx');
+  html += makeSlider('reverbMix', 'RETURN', engine.reverbReturn ? engine.reverbReturn.gain.value : 0.35, 'fx');
   html += `</div></div>`;
   html += `<div class="fx-section"><div class="fx-label">DELAY</div><div class="knobs-row">`;
-  html += makeSlider('delayMix', 'SEND', engine.delayMix, 'fx');
+  html += makeSlider('delayMix', 'RETURN', engine.delayReturn ? engine.delayReturn.gain.value : 0.5, 'fx');
   html += makeSlider('delayTime', 'TIME', engine.delayNode ? engine.delayNode.delayTime.value / 2 : 0.19, 'fx');
   html += makeSlider('delayFeedback', 'FDBK', engine.delayFeedback ? engine.delayFeedback.gain.value : 0.35, 'fx');
   html += `</div></div>`;
@@ -402,8 +402,8 @@ function buildFxPanel(panel) {
     input.addEventListener('input', () => {
       const val = parseInt(input.value) / 100;
       switch (input.dataset.param) {
-        case 'reverbMix': engine.reverbMix = val; if (engine.reverbSend) engine.reverbSend.gain.value = val; break;
-        case 'delayMix': engine.delayMix = val; if (engine.delaySend) engine.delaySend.gain.value = val; break;
+        case 'reverbMix': if (engine.reverbReturn) engine.reverbReturn.gain.value = val; break;
+        case 'delayMix': if (engine.delayReturn) engine.delayReturn.gain.value = val; break;
         case 'delayTime': if (engine.delayNode) engine.delayNode.delayTime.value = val * 2; break;
         case 'delayFeedback': if (engine.delayFeedback) engine.delayFeedback.gain.value = val; break;
         case 'masterLevel': engine.masterLevel = val; if (engine.masterGain) engine.masterGain.gain.value = val; break;
