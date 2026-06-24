@@ -199,6 +199,35 @@ body {
   opacity: 0.7;
 }
 
+/* Tab Bar */
+#tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  height: 30px;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.tab-btn.selected {
+  background: var(--orange);
+  color: #fff;
+}
+
 /* Instrument Bar */
 #instrument-bar {
   display: flex;
@@ -303,6 +332,8 @@ body {
   padding: 8px 6px;
   gap: 6px;
   min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .step-row {
@@ -400,6 +431,69 @@ body {
 
   .step-btn { max-height: 70px; }
   .accent-row .step-btn { max-height: 32px; }
+}
+
+/* FX Panel */
+.fx-section {
+  margin-bottom: 6px;
+}
+
+.fx-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.deep-row {
+  flex-wrap: wrap;
+}
+
+.params-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 8px 0;
+}
+
+/* Bass Grid */
+.bass-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.bass-row {
+  gap: 1px !important;
+}
+
+.bass-row .step-btn {
+  max-height: 20px;
+  min-height: 16px;
+  aspect-ratio: auto;
+  border-radius: 2px;
+}
+
+.bass-note-label {
+  font-size: 8px !important;
+  min-width: 30px !important;
+}
+
+.bass-note-label.sharp {
+  color: var(--orange-dim);
+}
+
+.bass-header {
+  gap: 1px;
+}
+
+.bass-header .step-num {
+  font-size: 8px;
+}
+
+.bass-step.on {
+  background: #4a90d9;
+  box-shadow: 0 0 6px rgba(74,144,217,0.5);
 }
 
 /* Safe areas for notched phones */

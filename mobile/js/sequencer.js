@@ -31,7 +31,8 @@ class Sequencer {
       grid.push(new Array(MAX_STEPS).fill(false));
     }
     const accent = new Array(MAX_STEPS).fill(false);
-    return { grid, accent, length: 16 };
+    const bassNotes = new Array(MAX_STEPS).fill(-1);
+    return { grid, accent, bassNotes, length: 16 };
   }
 
   setStep(voice, step, on) {
@@ -60,6 +61,14 @@ class Sequencer {
     const pat = this.patterns[this.currentPattern];
     pat.accent[step] = !pat.accent[step];
     return pat.accent[step];
+  }
+
+  setBassNote(step, midiNote) {
+    this.patterns[this.currentPattern].bassNotes[step] = midiNote;
+  }
+
+  getBassNote(step) {
+    return this.patterns[this.currentPattern].bassNotes[step];
   }
 
   clearPattern() {
@@ -114,6 +123,11 @@ class Sequencer {
         if (pat.grid[v][this.currentStep]) {
           this.engine.trigger(v, this.nextStepTime, accent);
         }
+      }
+
+      const bassNote = pat.bassNotes[this.currentStep];
+      if (bassNote >= 0) {
+        this.engine.triggerBass(bassNote, this.nextStepTime);
       }
 
       if (this.onStep) {
