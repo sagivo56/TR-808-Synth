@@ -290,36 +290,37 @@ function buildParamsPanel() {
       <button class="ms-btn solo-btn${seq.getSolo(selectedVoice) ? ' active' : ''}" id="solo-btn">S</button>
     </div>
   </div><div class="knobs-row">`;
-  html += makeSlider('level', 'LEVEL', p.level, 'macro');
-  if (v.tone)   html += makeSlider('tone',   'TONE',   p.tone,   'macro');
-  if (v.decay)  html += makeSlider('decay',  'DECAY',  p.decay,  'macro');
-  if (v.snappy) html += makeSlider('snappy', 'SNAPPY', p.snappy, 'macro');
-  if (v.tune)   html += makeSlider('tune',   'TUNE',   p.tune,   'macro');
-  html += makeSlider('pan', 'PAN', (engine.getPan(v.id) + 1) / 2, 'pan');
-  html += makeSlider('revsend', 'RVB', engine.getRevSend(v.id), 'send');
-  html += makeSlider('dlysend', 'DLY', engine.getDlySend(v.id), 'send');
+  html += makeKnob('level', 'LEVEL', p.level, 'macro');
+  if (v.tone)   html += makeKnob('tone',   'TONE',   p.tone,   'macro');
+  if (v.decay)  html += makeKnob('decay',  'DECAY',  p.decay,  'macro');
+  if (v.snappy) html += makeKnob('snappy', 'SNAPPY', p.snappy, 'macro');
+  if (v.tune)   html += makeKnob('tune',   'TUNE',   p.tune,   'macro');
+  html += makeKnob('pan', 'PAN', (engine.getPan(v.id) + 1) / 2, 'pan');
+  html += makeKnob('revsend', 'RVB', engine.getRevSend(v.id), 'send');
+  html += makeKnob('dlysend', 'DLY', engine.getDlySend(v.id), 'send');
   html += '</div>';
   panel.innerHTML = html;
+  initKnobs(panel);
 
-  panel.querySelectorAll('.knob-input[data-type="macro"]').forEach(input => {
-    input.addEventListener('input', () => {
-      engine.params[v.id][input.dataset.param] = parseInt(input.value) / 100;
-      input.parentElement.querySelector('.knob-value').textContent = Math.round(parseInt(input.value));
+  panel.querySelectorAll('.knob-canvas[data-type="macro"]').forEach(k => {
+    k.addEventListener('knobchange', () => {
+      engine.params[v.id][k.dataset.param] = parseInt(k.dataset.value) / 100;
+      k.parentElement.querySelector('.knob-value').textContent = Math.round(parseInt(k.dataset.value));
     });
   });
-  panel.querySelectorAll('.knob-input[data-type="pan"]').forEach(input => {
-    input.addEventListener('input', () => {
-      const val = (parseInt(input.value) / 100) * 2 - 1;
+  panel.querySelectorAll('.knob-canvas[data-type="pan"]').forEach(k => {
+    k.addEventListener('knobchange', () => {
+      const val = (parseInt(k.dataset.value) / 100) * 2 - 1;
       engine.setPan(v.id, val);
-      input.parentElement.querySelector('.knob-value').textContent = val === 0 ? 'C' : (val < 0 ? `L${Math.round(-val*100)}` : `R${Math.round(val*100)}`);
+      k.parentElement.querySelector('.knob-value').textContent = val === 0 ? 'C' : (val < 0 ? `L${Math.round(-val*100)}` : `R${Math.round(val*100)}`);
     });
   });
-  panel.querySelectorAll('.knob-input[data-type="send"]').forEach(input => {
-    input.addEventListener('input', () => {
-      const val = parseInt(input.value) / 100;
-      if (input.dataset.param === 'revsend') engine.setRevSend(v.id, val);
+  panel.querySelectorAll('.knob-canvas[data-type="send"]').forEach(k => {
+    k.addEventListener('knobchange', () => {
+      const val = parseInt(k.dataset.value) / 100;
+      if (k.dataset.param === 'revsend') engine.setRevSend(v.id, val);
       else engine.setDlySend(v.id, val);
-      input.parentElement.querySelector('.knob-value').textContent = Math.round(val * 100);
+      k.parentElement.querySelector('.knob-value').textContent = Math.round(val * 100);
     });
   });
 
@@ -347,16 +348,17 @@ function buildDeepPanel(panel) {
   let html = `<div class="params-title">${v.fullName} - DEEP EDIT</div><div class="knobs-row deep-row">`;
   for (const dp of deepDefs) {
     const norm = (d[dp.id] - dp.min) / (dp.max - dp.min);
-    html += makeSlider(dp.id, dp.label, norm, 'deep', dp.min, dp.max);
+    html += makeKnob(dp.id, dp.label, norm, 'deep', dp.min, dp.max);
   }
   html += '</div>';
   panel.innerHTML = html;
-  panel.querySelectorAll('.knob-input[data-type="deep"]').forEach(input => {
-    input.addEventListener('input', () => {
-      const min = parseFloat(input.dataset.min), max = parseFloat(input.dataset.max);
-      const val = min + (parseInt(input.value) / 100) * (max - min);
-      engine.deep[v.id][input.dataset.param] = val;
-      input.parentElement.querySelector('.knob-value').textContent = val >= 100 ? Math.round(val) : val.toFixed(1);
+  initKnobs(panel);
+  panel.querySelectorAll('.knob-canvas[data-type="deep"]').forEach(k => {
+    k.addEventListener('knobchange', () => {
+      const min = parseFloat(k.dataset.min), max = parseFloat(k.dataset.max);
+      const val = min + (parseInt(k.dataset.value) / 100) * (max - min);
+      engine.deep[v.id][k.dataset.param] = val;
+      k.parentElement.querySelector('.knob-value').textContent = val >= 100 ? Math.round(val) : val.toFixed(1);
     });
   });
 }
@@ -364,20 +366,21 @@ function buildDeepPanel(panel) {
 function buildBassPanel(panel) {
   const p = engine.bassParams;
   let html = `<div class="params-title">BD BASS</div><div class="knobs-row">`;
-  html += makeSlider('level', 'LEVEL', p.level, 'bass');
-  html += makeSlider('tone',  'TONE',  p.tone,  'bass');
-  html += makeSlider('decay', 'DECAY', p.decay, 'bass');
-  html += makeSlider('punch', 'PUNCH', p.punch, 'bass');
-  html += makeSlider('drive', 'DRIVE', (p.drive - 1) / 9, 'bass');
+  html += makeKnob('level', 'LEVEL', p.level, 'bass');
+  html += makeKnob('tone',  'TONE',  p.tone,  'bass');
+  html += makeKnob('decay', 'DECAY', p.decay, 'bass');
+  html += makeKnob('punch', 'PUNCH', p.punch, 'bass');
+  html += makeKnob('drive', 'DRIVE', (p.drive - 1) / 9, 'bass');
   html += '</div>';
   panel.innerHTML = html;
-  panel.querySelectorAll('.knob-input[data-type="bass"]').forEach(input => {
-    input.addEventListener('input', () => {
-      let val = parseInt(input.value) / 100;
-      if (input.dataset.param === 'drive') val = 1 + val * 9;
-      engine.bassParams[input.dataset.param] = val;
-      input.parentElement.querySelector('.knob-value').textContent =
-        input.dataset.param === 'drive' ? val.toFixed(1) : Math.round(val * 100);
+  initKnobs(panel);
+  panel.querySelectorAll('.knob-canvas[data-type="bass"]').forEach(k => {
+    k.addEventListener('knobchange', () => {
+      let val = parseInt(k.dataset.value) / 100;
+      if (k.dataset.param === 'drive') val = 1 + val * 9;
+      engine.bassParams[k.dataset.param] = val;
+      k.parentElement.querySelector('.knob-value').textContent =
+        k.dataset.param === 'drive' ? val.toFixed(1) : Math.round(val * 100);
     });
   });
 }
@@ -385,23 +388,24 @@ function buildBassPanel(panel) {
 function buildFxPanel(panel) {
   let html = `<div class="params-title">FX</div>`;
   html += `<div class="fx-section"><div class="fx-label">REVERB</div><div class="knobs-row">`;
-  html += makeSlider('reverbMix', 'RETURN', engine.reverbReturn ? engine.reverbReturn.gain.value : 0.35, 'fx');
+  html += makeKnob('reverbMix', 'RETURN', engine.reverbReturn ? engine.reverbReturn.gain.value : 0.35, 'fx');
   html += `</div></div>`;
   html += `<div class="fx-section"><div class="fx-label">DELAY</div><div class="knobs-row">`;
-  html += makeSlider('delayMix', 'RETURN', engine.delayReturn ? engine.delayReturn.gain.value : 0.5, 'fx');
-  html += makeSlider('delayTime', 'TIME', engine.delayNode ? engine.delayNode.delayTime.value / 2 : 0.19, 'fx');
-  html += makeSlider('delayFeedback', 'FDBK', engine.delayFeedback ? engine.delayFeedback.gain.value : 0.35, 'fx');
+  html += makeKnob('delayMix', 'RETURN', engine.delayReturn ? engine.delayReturn.gain.value : 0.5, 'fx');
+  html += makeKnob('delayTime', 'TIME', engine.delayNode ? engine.delayNode.delayTime.value / 2 : 0.19, 'fx');
+  html += makeKnob('delayFeedback', 'FDBK', engine.delayFeedback ? engine.delayFeedback.gain.value : 0.35, 'fx');
   html += `</div></div>`;
   html += `<div class="fx-section"><div class="fx-label">MASTER</div><div class="knobs-row">`;
-  html += makeSlider('masterLevel', 'OUTPUT', engine.masterLevel, 'fx');
-  html += makeSlider('masterDrive', 'DRIVE', (engine.masterDrive - 1) / 9, 'fx');
-  html += makeSlider('accentLevel', 'ACCENT', (engine.accentLevel - 1), 'fx');
+  html += makeKnob('masterLevel', 'OUTPUT', engine.masterLevel, 'fx');
+  html += makeKnob('masterDrive', 'DRIVE', (engine.masterDrive - 1) / 9, 'fx');
+  html += makeKnob('accentLevel', 'ACCENT', (engine.accentLevel - 1), 'fx');
   html += `</div></div>`;
   panel.innerHTML = html;
-  panel.querySelectorAll('.knob-input[data-type="fx"]').forEach(input => {
-    input.addEventListener('input', () => {
-      const val = parseInt(input.value) / 100;
-      switch (input.dataset.param) {
+  initKnobs(panel);
+  panel.querySelectorAll('.knob-canvas[data-type="fx"]').forEach(k => {
+    k.addEventListener('knobchange', () => {
+      const val = parseInt(k.dataset.value) / 100;
+      switch (k.dataset.param) {
         case 'reverbMix': if (engine.reverbReturn) engine.reverbReturn.gain.value = val; break;
         case 'delayMix': if (engine.delayReturn) engine.delayReturn.gain.value = val; break;
         case 'delayTime': if (engine.delayNode) engine.delayNode.delayTime.value = val * 2; break;
@@ -410,12 +414,12 @@ function buildFxPanel(panel) {
         case 'masterDrive': engine.masterDrive = 1 + val * 9; break;
         case 'accentLevel': engine.accentLevel = 1 + val; break;
       }
-      input.parentElement.querySelector('.knob-value').textContent = Math.round(val * 100);
+      k.parentElement.querySelector('.knob-value').textContent = Math.round(val * 100);
     });
   });
 }
 
-function makeSlider(param, label, value, type, min, max) {
+function makeKnob(param, label, value, type, min, max) {
   const v100 = Math.round(Math.max(0, Math.min(1, value)) * 100);
   let displayVal;
   if (type === 'deep' && min !== undefined) {
@@ -429,11 +433,102 @@ function makeSlider(param, label, value, type, min, max) {
   }
   return `<div class="knob-group">
     <label class="knob-label">${label}</label>
-    <input type="range" class="knob-input" data-param="${param}" data-type="${type}"
-           ${min !== undefined ? `data-min="${min}" data-max="${max}"` : ''}
-           min="0" max="100" value="${v100}" step="1">
+    <canvas class="knob-canvas" data-param="${param}" data-type="${type}" data-value="${v100}"
+            ${min !== undefined ? `data-min="${min}" data-max="${max}"` : ''}
+            width="88" height="88"></canvas>
     <span class="knob-value">${displayVal}</span>
   </div>`;
+}
+
+const KNOB_START = Math.PI * 0.75;
+const KNOB_END = Math.PI * 2.25;
+const KNOB_RANGE = KNOB_END - KNOB_START;
+
+function drawKnob(canvas, norm) {
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  const cx = w / 2, cy = h / 2;
+  const r = Math.min(cx, cy) - 4;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.scale(dpr, dpr);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, KNOB_START, KNOB_END);
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  if (norm > 0.005) {
+    const angle = KNOB_START + norm * KNOB_RANGE;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, KNOB_START, angle);
+    ctx.strokeStyle = '#e87830';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  const angle = KNOB_START + norm * KNOB_RANGE;
+  const ix = cx + Math.cos(angle) * (r - 8);
+  const iy = cy + Math.sin(angle) * (r - 8);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(ix, iy);
+  ctx.strokeStyle = '#f0e0c8';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function initKnobs(container) {
+  container.querySelectorAll('.knob-canvas').forEach(canvas => {
+    const dpr = window.devicePixelRatio || 1;
+    const size = 44;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const norm = parseInt(canvas.dataset.value) / 100;
+    drawKnob(canvas, norm);
+
+    let startY = 0, startVal = 0, active = false;
+
+    const onStart = (e) => {
+      e.preventDefault();
+      active = true;
+      const pt = e.touches ? e.touches[0] : e;
+      startY = pt.clientY;
+      startVal = parseInt(canvas.dataset.value);
+    };
+    const onMove = (e) => {
+      if (!active) return;
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      const dy = startY - pt.clientY;
+      const newVal = Math.max(0, Math.min(100, startVal + dy * 0.7));
+      canvas.dataset.value = Math.round(newVal);
+      drawKnob(canvas, newVal / 100);
+      canvas.dispatchEvent(new Event('knobchange'));
+    };
+    const onEnd = () => { active = false; };
+
+    canvas.addEventListener('mousedown', onStart);
+    canvas.addEventListener('touchstart', onStart, { passive: false });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
+  });
 }
 
 function buildStepGrid() {
@@ -484,6 +579,30 @@ function buildStepGrid() {
     numRow.appendChild(span);
   }
   grid.appendChild(numRow);
+
+  const fillRow = document.createElement('div');
+  fillRow.className = 'fill-row';
+  fillRow.innerHTML = '<span class="fill-label">FILL</span>';
+  for (const n of [1, 2, 3, 4]) {
+    const btn = document.createElement('button');
+    btn.className = 'fill-btn';
+    btn.textContent = '1/' + n;
+    btn.addEventListener('click', async () => {
+      await initAudio();
+      for (let s = 0; s < len; s++) seq.setStep(selectedVoice, s, s % n === 0);
+      buildStepGrid();
+    });
+    fillRow.appendChild(btn);
+  }
+  const clrBtn = document.createElement('button');
+  clrBtn.className = 'fill-btn fill-clr';
+  clrBtn.textContent = 'CLR';
+  clrBtn.addEventListener('click', () => {
+    for (let s = 0; s < len; s++) seq.setStep(selectedVoice, s, false);
+    buildStepGrid();
+  });
+  fillRow.appendChild(clrBtn);
+  grid.appendChild(fillRow);
 }
 
 function buildBassGrid() {
