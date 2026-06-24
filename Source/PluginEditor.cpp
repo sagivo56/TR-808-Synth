@@ -311,7 +311,7 @@ TR808AudioProcessorEditor::TR808AudioProcessorEditor (TR808AudioProcessor& p)
 
     setResizable (true, true);
     setWantsKeyboardFocus (true);               // so SPACE toggles transport
-    setResizeLimits (380, 480, 2400, 1500);   // small min => compact/mobile layout kicks in under 860px
+    setResizeLimits (840, 560, 2400, 1500);   // fits the transport + sequencer header rows
     setSize (1180, 720);
 }
 
