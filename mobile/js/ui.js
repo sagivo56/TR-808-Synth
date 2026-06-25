@@ -40,10 +40,11 @@ const FACTORY_PATTERNS = [
 ];
 
 async function initAudio() {
-  if (audioInitialized) return;
   await engine.init();
-  audioInitialized = true;
-  document.getElementById('init-overlay').classList.add('hidden');
+  if (!audioInitialized) {
+    audioInitialized = true;
+    document.getElementById('init-overlay').classList.add('hidden');
+  }
 }
 
 function buildUI() {

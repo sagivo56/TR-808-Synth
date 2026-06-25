@@ -185,25 +185,38 @@ class AudioEngine {
   getDlySend(id) { return this.voiceDlySend[id] || 0; }
 
   async init() {
-    if (this.ctx) return;
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+    if (this.ctx && this.ctx.state === 'running') return;
 
-    this.compressor = this.ctx.createDynamicsCompressor();
-    this.compressor.threshold.value = -10;
-    this.compressor.knee.value = 6;
-    this.compressor.ratio.value = 4;
-    this.compressor.attack.value = 0.003;
-    this.compressor.release.value = 0.12;
-    this.compressor.connect(this.ctx.destination);
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
 
-    this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = this.masterLevel;
-    this.masterGain.connect(this.compressor);
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.value = -10;
+      this.compressor.knee.value = 6;
+      this.compressor.ratio.value = 4;
+      this.compressor.attack.value = 0.003;
+      this.compressor.release.value = 0.12;
+      this.compressor.connect(this.ctx.destination);
 
-    this._setupDelay();
-    this._setupReverb();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = this.masterLevel;
+      this.masterGain.connect(this.compressor);
 
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+      this._setupDelay();
+      this._setupReverb();
+    }
+
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
+
+    // iOS requires playing a silent buffer from a user gesture to unlock audio
+    const silent = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+    const src = this.ctx.createBufferSource();
+    src.buffer = silent;
+    src.connect(this.ctx.destination);
+    src.start();
   }
 
   _setupDelay() {
