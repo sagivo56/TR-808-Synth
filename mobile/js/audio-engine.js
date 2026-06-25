@@ -211,12 +211,21 @@ class AudioEngine {
       await this.ctx.resume();
     }
 
-    // iOS requires playing a silent buffer from a user gesture to unlock audio
-    const silent = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
-    const src = this.ctx.createBufferSource();
-    src.buffer = silent;
-    src.connect(this.ctx.destination);
-    src.start();
+    // iOS unlock: play a short audible beep to force audio output
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.frequency.value = 440;
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.05);
+  }
+
+  getAudioState() {
+    if (!this.ctx) return 'not created';
+    return this.ctx.state;
   }
 
   _setupDelay() {
