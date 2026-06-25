@@ -507,8 +507,7 @@ body {
 
 .step-btn {
   flex: 1;
-  aspect-ratio: 1;
-  max-height: 36px;
+  min-width: 0;
   background: var(--step-off);
   border: 1.5px solid transparent;
   border-radius: 4px;
@@ -541,13 +540,11 @@ body {
 }
 
 .main-row .step-btn {
-  min-height: 30px;
+  height: 32px;
 }
 
 .accent-row .step-btn {
-  max-height: 18px;
-  aspect-ratio: auto;
-  min-height: 16px;
+  height: 14px;
 }
 
 .step-numbers {
