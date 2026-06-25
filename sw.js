@@ -1,12 +1,12 @@
-const CACHE_NAME = 'tr808-v7';
+const CACHE_NAME = 'tr808-v8';
 const ASSETS = [
-  './',
-  './index.html',
-  './css/style.css',
-  './js/audio-engine.js',
-  './js/sequencer.js',
-  './js/ui.js',
-  './manifest.json',
+  '/TR-808-Synth/',
+  '/TR-808-Synth/index.html',
+  '/TR-808-Synth/css/style.css',
+  '/TR-808-Synth/js/audio-engine.js',
+  '/TR-808-Synth/js/sequencer.js',
+  '/TR-808-Synth/js/ui.js',
+  '/TR-808-Synth/manifest.json',
 ];
 
 self.addEventListener('install', (event) => {
