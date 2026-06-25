@@ -493,7 +493,7 @@ function drawKnob(canvas, norm) {
 function initKnobs(container) {
   container.querySelectorAll('.knob-canvas').forEach(canvas => {
     const dpr = window.devicePixelRatio || 1;
-    const size = 44;
+    const size = 34;
     canvas.style.width = size + 'px';
     canvas.style.height = size + 'px';
     canvas.width = size * dpr;

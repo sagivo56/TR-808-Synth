@@ -96,8 +96,8 @@ body {
 /* Header */
 #header {
   background: linear-gradient(180deg, #222 0%, #1a1a1a 100%);
-  border-bottom: 3px solid var(--orange);
-  padding: 6px 10px;
+  border-bottom: 2px solid var(--orange);
+  padding: 4px 8px;
   flex-shrink: 0;
 }
 
@@ -128,8 +128,8 @@ body {
 }
 
 .transport-btn {
-  width: 42px;
-  height: 36px;
+  width: 36px;
+  height: 30px;
   background: var(--surface);
   color: var(--text);
   border: 2px solid var(--gray);
@@ -198,21 +198,21 @@ body {
 .compact-group {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
+  gap: 3px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .compact-group input[type="range"] {
-  width: 70px;
-  height: 20px;
+  width: 60px;
+  height: 16px;
   accent-color: var(--orange);
 }
 
 .compact-group span {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--orange);
   min-width: 28px;
@@ -225,7 +225,7 @@ body {
 
 /* Seq Controls */
 #seq-controls {
-  padding: 4px 6px;
+  padding: 2px 6px;
   background: var(--panel);
   border-bottom: 1px solid #333;
   flex-shrink: 0;
@@ -233,7 +233,7 @@ body {
 
 .seq-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -254,16 +254,16 @@ body {
 }
 
 .seq-btn {
-  height: 28px;
-  min-width: 30px;
-  padding: 0 6px;
+  height: 24px;
+  min-width: 26px;
+  padding: 0 4px;
   background: var(--surface);
   color: var(--text-dim);
   border: 1px solid var(--gray-off);
   border-radius: var(--radius);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   cursor: pointer;
 }
 
@@ -311,7 +311,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .ms-btns {
@@ -320,11 +320,11 @@ body {
 }
 
 .ms-btn {
-  width: 30px;
-  height: 26px;
-  border: 2px solid var(--gray);
+  width: 26px;
+  height: 22px;
+  border: 1.5px solid var(--gray);
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   cursor: pointer;
   background: var(--surface);
@@ -357,7 +357,7 @@ body {
 #tab-bar {
   display: flex;
   gap: 2px;
-  padding: 4px 6px;
+  padding: 2px 6px;
   background: #1e1e1e;
   border-bottom: 1px solid #333;
   flex-shrink: 0;
@@ -365,14 +365,14 @@ body {
 
 .tab-btn {
   flex: 1;
-  height: 30px;
+  height: 24px;
   background: var(--surface);
   color: var(--text-dim);
   border: none;
   border-radius: var(--radius);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.1s;
 }
@@ -386,7 +386,7 @@ body {
 #instrument-bar {
   display: flex;
   gap: 2px;
-  padding: 6px 6px;
+  padding: 3px 6px;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -399,15 +399,15 @@ body {
 
 .inst-btn {
   flex-shrink: 0;
-  min-width: 42px;
-  height: 34px;
+  min-width: 34px;
+  height: 26px;
   background: var(--surface);
   color: var(--text-dim);
-  border: 2px solid transparent;
+  border: 1.5px solid transparent;
   border-radius: var(--radius);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.1s;
 }
@@ -424,27 +424,27 @@ body {
 
 /* Params Panel */
 #params-panel {
-  padding: 8px 10px;
+  padding: 4px 8px;
   background: var(--panel);
   border-bottom: 1px solid #333;
   flex-shrink: 0;
 }
 
 .params-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--orange);
   letter-spacing: 1px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   text-transform: uppercase;
 }
 
 .knobs-row {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   overflow-x: auto;
   scrollbar-width: none;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
 }
 
 .knobs-row::-webkit-scrollbar { display: none; }
@@ -453,16 +453,16 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-width: 60px;
+  gap: 0px;
+  min-width: 44px;
   flex-shrink: 0;
 }
 
 .knob-label {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .knob-canvas {
@@ -471,7 +471,7 @@ body {
 }
 
 .knob-value {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--cream);
 }
@@ -482,8 +482,8 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 8px 6px;
-  gap: 6px;
+  padding: 4px 4px;
+  gap: 3px;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -491,16 +491,16 @@ body {
 
 .step-row {
   display: flex;
-  gap: 3px;
+  gap: 2px;
   align-items: center;
 }
 
 .row-label {
-  min-width: 36px;
-  font-size: 10px;
+  min-width: 28px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -508,10 +508,10 @@ body {
 .step-btn {
   flex: 1;
   aspect-ratio: 1;
-  max-height: 52px;
+  max-height: 36px;
   background: var(--step-off);
-  border: 2px solid transparent;
-  border-radius: var(--radius);
+  border: 1.5px solid transparent;
+  border-radius: 4px;
   cursor: pointer;
   transition: background 0.08s, transform 0.08s;
   position: relative;
@@ -541,13 +541,13 @@ body {
 }
 
 .main-row .step-btn {
-  min-height: 44px;
+  min-height: 30px;
 }
 
 .accent-row .step-btn {
-  max-height: 28px;
+  max-height: 18px;
   aspect-ratio: auto;
-  min-height: 24px;
+  min-height: 16px;
 }
 
 .step-numbers {
@@ -567,14 +567,14 @@ body {
 /* Auto-fill row */
 .fill-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .fill-label {
-  min-width: 36px;
-  font-size: 9px;
+  min-width: 28px;
+  font-size: 8px;
   font-weight: 700;
   color: var(--text-dim);
   letter-spacing: 1px;
@@ -584,7 +584,7 @@ body {
 
 .fill-btn {
   flex: 1;
-  height: 28px;
+  height: 24px;
   background: var(--surface);
   color: var(--text-dim);
   border: 1px solid var(--gray-off);
