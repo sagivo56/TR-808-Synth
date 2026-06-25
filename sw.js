@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tr808-v8';
+const CACHE_NAME = 'tr808-v9';
 const ASSETS = [
   '/TR-808-Synth/',
   '/TR-808-Synth/index.html',

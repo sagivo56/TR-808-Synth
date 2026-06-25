@@ -65,10 +65,19 @@ function buildInitOverlay() {
     <div class="init-content">
       <div class="init-logo">TR-808</div>
       <div class="init-sub">RHYTHM COMPOSER</div>
+      <div class="init-hint">Make sure silent mode is OFF</div>
       <button class="init-btn" id="start-btn">TAP TO START</button>
     </div>`;
   document.body.appendChild(overlay);
-  const handler = (e) => { e.preventDefault(); initAudio(); };
+  const handler = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await initAudio();
+    const state = engine.getAudioState();
+    if (state !== 'running') {
+      document.querySelector('.init-hint').textContent = 'Audio: ' + state + ' — tap again';
+    }
+  };
   document.getElementById('start-btn').addEventListener('click', handler);
   document.getElementById('start-btn').addEventListener('touchend', handler);
 }

@@ -73,8 +73,15 @@ body {
   font-size: 13px;
   letter-spacing: 6px;
   color: var(--cream);
-  margin: 8px 0 32px;
+  margin: 8px 0 16px;
   opacity: 0.7;
+}
+
+.init-hint {
+  font-size: 12px;
+  color: var(--orange);
+  margin-bottom: 20px;
+  opacity: 0.8;
 }
 
 .init-btn {
