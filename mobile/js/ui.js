@@ -649,6 +649,7 @@ function buildBassGrid() {
     for (let s = 0; s < len; s++) {
       const btn = document.createElement('button');
       btn.className = 'step-btn bass-step';
+      btn.dataset.step = s;
       if (seq.getBassNote(s) === midi) btn.classList.add('on');
       if (s % 4 === 0) btn.classList.add('beat-start');
       btn.addEventListener('click', async () => {

@@ -21,7 +21,7 @@ const DEEP_PARAMS = {
   bd: [
     { id: 'freq',      label: 'Pitch',     min: 40,  max: 80,   def: 55,   skew: false },
     { id: 'bodydecay', label: 'Body Decay', min: 50,  max: 1500, def: 650,  skew: true  },
-    { id: 'punch',     label: 'Punch',      min: 1,   max: 3,    def: 2,    skew: false },
+    { id: 'punch',     label: 'Punch',      min: 1,   max: 3,    def: 1.4,  skew: false },
     { id: 'retrig',    label: 'Retrig',     min: 0,   max: 1,    def: 0.5,  skew: false },
     { id: 'sustain',   label: 'Sustain',    min: 0,   max: 1,    def: 0,    skew: false },
     { id: 'drive',     label: 'Drive',      min: 1,   max: 10,   def: 1,    skew: true  },
@@ -392,14 +392,16 @@ class AudioEngine {
     const bodyDecay = (d.bodydecay || 650) * 0.001 * centeredScale(p.decay, 4) * (1 + (d.sustain || 0) * 8);
     const driveAmt = d.drive || 1;
     const retrigAmt = d.retrig || 0.5;
-    const switchTime = 0.5 / startFreq;
+    const sweepTime = 0.015 + 0.5 / startFreq;
 
     const osc = ctx.createOscillator();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(startFreq, t);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(baseFreq, 20), t + switchTime);
-    osc.frequency.setValueAtTime(baseFreq * (1 + retrigAmt * 0.3), t + switchTime);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(baseFreq, 20), t + switchTime + 0.02);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(baseFreq, 20), t + sweepTime);
+    if (retrigAmt > 0.05) {
+      osc.frequency.setValueAtTime(baseFreq * (1 + retrigAmt * 0.15), t + sweepTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(baseFreq, 20), t + sweepTime + 0.03);
+    }
 
     let output;
     if (driveAmt > 1.05) {
@@ -412,7 +414,7 @@ class AudioEngine {
     }
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 1.1, t);
+    gain.gain.setValueAtTime(p.level * vel * 0.9, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + bodyDecay);
 
     output.connect(gain);
@@ -422,13 +424,12 @@ class AudioEngine {
     if (p.tone > 0.01) {
       const click = ctx.createOscillator();
       click.type = 'sine';
-      click.frequency.value = 2000;
+      click.frequency.value = 1200;
       const clickGain = ctx.createGain();
-      const clickDecayTime = 0.0012;
-      clickGain.gain.setValueAtTime(p.tone * p.level * vel * 0.5, t);
-      clickGain.gain.exponentialRampToValueAtTime(0.001, t + clickDecayTime * 8);
+      clickGain.gain.setValueAtTime(p.tone * p.level * vel * 0.12, t);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.003);
       click.connect(clickGain).connect(this.masterGain);
-      click.start(t); click.stop(t + 0.015);
+      click.start(t); click.stop(t + 0.008);
     }
   }
 
