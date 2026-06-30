@@ -1,0 +1,11 @@
+# Xcode build artifacts
+iPhoneRAWConverter.xcodeproj/xcuserdata/
+iPhoneRAWConverter.xcodeproj/project.xcworkspace/xcuserdata/
+iPhoneRAWConverter.xcodeproj/project.xcworkspace/xcshareddata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.xcarchive
+build/
