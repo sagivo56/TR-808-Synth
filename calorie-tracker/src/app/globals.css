@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100dvh;
+  background-color: #14171a;
+}
+
+/* מספרים / נתונים ב-IBM Plex Mono בכיוון LTR גם בתוך layout RTL */
+.num {
+  font-family: var(--font-plex-mono), monospace;
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+}
+
+.font-display {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+/* גלילה עדינה */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1e2226;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a4046;
+  border-radius: 4px;
+}
+
+/* הסתרת חצי input number */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
