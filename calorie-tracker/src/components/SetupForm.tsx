@@ -61,7 +61,13 @@ export default function SetupForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-sm overflow-y-auto p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-sm overflow-y-auto p-4"
+      style={{
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+      }}
+    >
       <div className="w-full max-w-md rounded-2xl border border-border-2 bg-panel p-5 my-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display font-bold text-xl">
