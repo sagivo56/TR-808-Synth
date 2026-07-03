@@ -52,8 +52,10 @@ function blockImageUrl(b: ChatBlock): string | null {
 
 export default function Chat({
   onAddMeal,
+  muscleGoal,
 }: {
   onAddMeal: (r: Extract<EstimateResult, { status: "result" }>) => Promise<void>;
+  muscleGoal: boolean;
 }) {
   const [thread, setThread] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -68,6 +70,11 @@ export default function Chat({
     Extract<EstimateResult, { status: "result" }> | null
   >(null);
   const [adding, setAdding] = useState(false);
+  // טיפ שמוצג לאחר הוספת ארוחה ליומן
+  const [postAddTip, setPostAddTip] = useState<{
+    name: string;
+    tip: string;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -90,7 +97,10 @@ export default function Chat({
       const res = await fetch("/api/estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: currentThread }),
+        body: JSON.stringify({
+          messages: currentThread,
+          muscle_goal: muscleGoal,
+        }),
       });
       let data: {
         result?: EstimateResult;
@@ -150,6 +160,7 @@ export default function Chat({
     setInput("");
     setPendingImage(null);
     setResult(null);
+    setPostAddTip(null);
     await runEstimate(next);
   }
 
@@ -164,14 +175,18 @@ export default function Chat({
     setPendingImage(null);
     setResult(null);
     setError(null);
+    setPostAddTip(null);
   }
 
   async function addMeal() {
     if (!result) return;
+    const r = result;
     setAdding(true);
     try {
-      await onAddMeal(result);
+      await onAddMeal(r);
       reset();
+      // הצגת טיפ לשיפור מאזן המנה לאחר ההוספה
+      if (r.tip) setPostAddTip({ name: r.name, tip: r.tip });
     } catch (err) {
       setError(err instanceof Error ? err.message : "הוספת הארוחה נכשלה");
     } finally {
@@ -179,7 +194,8 @@ export default function Chat({
     }
   }
 
-  const hasConversation = thread.length > 0 || result !== null;
+  const hasConversation =
+    thread.length > 0 || result !== null || postAddTip !== null;
 
   return (
     <div className="rounded-2xl border border-border bg-panel p-4 sm:p-5 flex flex-col">
@@ -241,6 +257,30 @@ export default function Chat({
         <div className="text-text-muted text-sm mb-3 flex items-center gap-2">
           <span className="inline-block h-2 w-2 rounded-full bg-meter-amber animate-pulse" />
           מעריך...
+        </div>
+      )}
+
+      {/* טיפ לשיפור מאזן המנה - לאחר הוספה ליומן */}
+      {postAddTip && (
+        <div className="mb-3 rounded-xl border border-meter-green/40 bg-meter-green/10 p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-meter-green">✓</span>
+            <span className="font-display font-bold text-sm">
+              {postAddTip.name} נוסף ליומן
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-base leading-none">💡</span>
+            <p className="text-sm text-text-main/90 whitespace-pre-wrap flex-1">
+              {postAddTip.tip}
+            </p>
+          </div>
+          <button
+            onClick={() => setPostAddTip(null)}
+            className="mt-2 text-xs text-text-muted hover:text-text-main"
+          >
+            סגירה
+          </button>
         </div>
       )}
 

@@ -7,20 +7,31 @@ export const dynamic = "force-dynamic";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
 
-const SYSTEM_PROMPT = `אתה עוזר תזונה שמעריך את הערך הקלורי והמאקרו-נוטריאנטים של מנה מתוך טקסט חופשי ו/או תמונה, בעברית.
+function buildSystemPrompt(muscleGoal: boolean): string {
+  const goalLine = muscleGoal
+    ? "למשתמש יש מטרה להגדיל מסת שריר. בטיפ, שים דגש על חלבון מספק (בערך 0.3-0.4 גרם חלבון לק\"ג משקל גוף לארוחה, מקורות איכותיים), ועל פחמימות סביב אימונים לתמיכה בהתאוששות."
+    : "למשתמש אין מטרה מיוחדת של הגדלת מסת שריר. בטיפ, שים דגש על מאזן כללי ושובע (חלבון וסיבים), בלי להפריז בחלבון.";
+
+  return `אתה עוזר תזונה שמעריך את הערך הקלורי והמאקרו-נוטריאנטים של מנה מתוך טקסט חופשי ו/או תמונה, בעברית.
 
 עליך להחזיר JSON תקין בלבד — ללא טקסט נוסף, ללא הסברים, וללא code fences. אחת משתי הצורות בלבד:
 
 1. אם המנה אינה ברורה מספיק והבהרה תשנה מהותית את ההערכה (למשל גודל מנה לא ידוע, רוטב/שמן לא ברור, כמות לא ידועה) — החזר שאלת הבהרה אחת קצרה בעברית:
 {"status":"question","question":"..."}
 
-2. אחרת — החזר הערכה סופית. שדה name בעברית ותיאורי בקצרה. כל הערכים המספריים הם מספרים (לא מחרוזות), לכל המנה כפי שתוארה:
-{"status":"result","name":"...","calories":N,"protein_g":N,"carbs_g":N,"fat_g":N}
+2. אחרת — החזר הערכה סופית. שדה name בעברית ותיאורי בקצרה. כל הערכים המספריים הם מספרים (לא מחרוזות), לכל המנה כפי שתוארה. שדה tip הוא טיפ קצר (משפט אחד-שניים) בעברית כיצד לשפר את מאזן המאקרו של המנה הזו:
+{"status":"result","name":"...","calories":N,"protein_g":N,"carbs_g":N,"fat_g":N,"tip":"..."}
+
+לגבי הטיפ:
+- ${goalLine}
+- התייחס למאזן של המנה הספציפית (חלבון/פחמימות/שומן) והצע שיפור מעשי אחד או שניים (מה להוסיף/להחליף/להפחית).
+- קצר, ידידותי ומעשי. אם המנה כבר מאוזנת היטב — ציין זאת בקצרה.
 
 כללים:
 - שאל שאלה רק כאשר זה באמת משנה מהותית את ההערכה. אם ניתן להעריך בהנחות סבירות — העדף להחזיר result.
 - אל תשאל יותר משאלה אחת בכל פעם.
 - החזר תמיד JSON חוקי אחד בלבד.`;
+}
 
 // המרת בלוק צד-לקוח לבלוק תוכן של Anthropic, עם ולידציה בסיסית.
 function toAnthropicBlock(block: ChatBlock): Anthropic.ContentBlockParam | null {
@@ -83,6 +94,7 @@ function validateResult(obj: unknown): EstimateResult | null {
       protein_g: o.protein_g,
       carbs_g: o.carbs_g,
       fat_g: o.fat_g,
+      tip: typeof o.tip === "string" ? o.tip : undefined,
     };
   }
   return null;
@@ -106,6 +118,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "גוף הבקשה אינו JSON תקין" }, { status: 400 });
   }
+
+  const muscleGoal = (body as { muscle_goal?: boolean })?.muscle_goal === true;
 
   const messages = (body as { messages?: ChatMessage[] })?.messages;
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -139,8 +153,8 @@ export async function POST(req: NextRequest) {
   try {
     response = await client.messages.create({
       model: MODEL,
-      max_tokens: 512,
-      system: SYSTEM_PROMPT,
+      max_tokens: 700,
+      system: buildSystemPrompt(muscleGoal),
       messages: apiMessages,
     });
   } catch (err) {

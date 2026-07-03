@@ -19,6 +19,9 @@ export default function SetupForm({
   const [sex, setSex] = useState<Sex>(initial?.sex ?? "male");
   const [activity, setActivity] = useState<number>(initial?.activity ?? 1.375);
   const [goal, setGoal] = useState<Goal>(initial?.goal ?? "maintain");
+  const [muscleGoal, setMuscleGoal] = useState<boolean>(
+    initial?.muscle_goal ?? false
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +51,7 @@ export default function SetupForm({
           sex,
           activity,
           goal,
+          muscle_goal: muscleGoal,
         }),
       });
       const data = await res.json();
@@ -156,6 +160,17 @@ export default function SetupForm({
                 {g.label}
               </Choice>
             ))}
+          </div>
+        </Field>
+
+        <Field label="מטרה: הגדלת מסת שריר">
+          <div className="grid grid-cols-2 gap-2">
+            <Choice active={muscleGoal} onClick={() => setMuscleGoal(true)}>
+              כן
+            </Choice>
+            <Choice active={!muscleGoal} onClick={() => setMuscleGoal(false)}>
+              לא
+            </Choice>
           </div>
         </Field>
 

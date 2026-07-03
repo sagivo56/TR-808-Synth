@@ -167,7 +167,7 @@ export default function Page() {
 
       <Meter totals={totals} target={settings.target} />
 
-      <Chat onAddMeal={handleAddMeal} />
+      <Chat onAddMeal={handleAddMeal} muscleGoal={settings.muscle_goal} />
 
       <MealList meals={meals} onDelete={handleDeleteMeal} />
 

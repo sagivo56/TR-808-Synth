@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
   const sex = b.sex as Sex;
   const activity = Number(b.activity);
   const goal = b.goal as Goal;
+  const muscle_goal = b.muscle_goal === true; // ברירת מחדל: לא
 
   if (!(height_cm > 0 && height_cm < 300))
     return NextResponse.json({ error: "גובה לא תקין (ס\"מ)" }, { status: 400 });
@@ -53,7 +54,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "מטרה לא תקינה" }, { status: 400 });
 
   const target = computeTarget({ height_cm, weight_kg, age, sex, activity, goal });
-  const settings: Settings = { height_cm, weight_kg, age, sex, activity, goal, target };
+  const settings: Settings = {
+    height_cm,
+    weight_kg,
+    age,
+    sex,
+    activity,
+    goal,
+    muscle_goal,
+    target,
+  };
   saveSettings(userId, settings);
 
   const res = NextResponse.json({ settings });
