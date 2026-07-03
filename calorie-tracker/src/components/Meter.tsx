@@ -131,10 +131,20 @@ function MacroBar({
   const pct = goal > 0 ? Math.min(100, (v / goal) * 100) : 0;
   const over = goal > 0 && v > goal;
   return (
-    <div className="rounded-xl border border-border bg-bg/40 px-3 py-2">
-      <div className="flex items-baseline justify-between mb-1.5 gap-1">
-        <span className="text-text-muted text-[11px]">{label}</span>
-        <span className="font-display text-sm leading-none">
+    <div className="relative overflow-hidden rounded-xl border border-border bg-bg/40 px-3 py-2.5 text-center">
+      {/* מילוי הקובייה כולה בצבע המאקרו לפי היחס לנצרך/יעד */}
+      <div
+        className="absolute inset-y-0 transition-all duration-300"
+        style={{
+          insetInlineStart: 0,
+          width: `${pct}%`,
+          backgroundColor: color,
+          opacity: over ? 0.42 : 0.24,
+        }}
+      />
+      <div className="relative">
+        <div className="text-text-muted text-[11px] mb-0.5">{label}</div>
+        <div className="font-display text-base leading-tight">
           <span className="num" style={over ? { color } : undefined}>
             {v}
           </span>
@@ -142,13 +152,7 @@ function MacroBar({
             {" "}
             / <span className="num">{goal}</span> ג׳
           </span>
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full bg-[#242A30] overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${pct}%`, backgroundColor: color }}
-        />
+        </div>
       </div>
     </div>
   );
