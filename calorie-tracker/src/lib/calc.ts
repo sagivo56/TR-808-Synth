@@ -58,3 +58,25 @@ export function computeTarget(input: {
   const rounded = Math.round(tdee / 10) * 10;
   return Math.max(1000, rounded);
 }
+
+/**
+ * יעדי מאקרו יומיים:
+ * - חלבון: לפי משקל הגוף (מוגבר כשמטרה היא הגדלת מסת שריר).
+ * - שומן: כ-25% מהקלוריות.
+ * - פחמימות: שארית הקלוריות.
+ * (הגובה נכנס בעקיפין דרך יעד הקלוריות המחושב בנוסחת Mifflin-St Jeor.)
+ */
+export function computeMacroTargets(input: {
+  weight_kg: number;
+  muscle_goal: boolean;
+  target: number;
+}): { protein_g: number; carbs_g: number; fat_g: number } {
+  const proteinPerKg = input.muscle_goal ? 2.0 : 1.6;
+  const protein_g = Math.round(input.weight_kg * proteinPerKg);
+  const fat_g = Math.round((input.target * 0.25) / 9);
+  const carbs_g = Math.max(
+    0,
+    Math.round((input.target - protein_g * 4 - fat_g * 9) / 4)
+  );
+  return { protein_g, carbs_g, fat_g };
+}
