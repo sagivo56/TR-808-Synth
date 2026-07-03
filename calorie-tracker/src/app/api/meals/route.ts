@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveUser, attachUserCookie } from "@/lib/user";
-import { getMeals, addMeal, deleteMeal, updateMealTime } from "@/lib/db";
+import { getMeals, addMeal, deleteMeal, updateMeal } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,12 +95,15 @@ export async function PATCH(req: NextRequest) {
   const b = body as Record<string, unknown>;
   const id = typeof b.id === "string" ? b.id : "";
   const time = typeof b.time === "string" ? b.time : "";
+  const date = typeof b.date === "string" ? b.date : undefined;
   if (!id)
     return NextResponse.json({ error: "מזהה ארוחה חסר" }, { status: 400 });
   if (!/^\d{2}:\d{2}$/.test(time))
     return NextResponse.json({ error: "שעה לא תקינה (HH:MM)" }, { status: 400 });
+  if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date))
+    return NextResponse.json({ error: "תאריך לא תקין (YYYY-MM-DD)" }, { status: 400 });
 
-  const meal = updateMealTime(userId, id, time);
+  const meal = updateMeal(userId, id, time, date);
   if (!meal)
     return NextResponse.json({ error: "הארוחה לא נמצאה" }, { status: 404 });
 

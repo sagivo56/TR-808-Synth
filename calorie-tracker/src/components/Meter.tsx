@@ -61,7 +61,7 @@ export default function Meter({
       {/* סיכום מספרי */}
       <div className="mt-4 flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <div className="text-text-muted text-xs mb-1">סה"כ קלוריות היום</div>
+          <div className="text-text-muted text-xs mb-1">סה"כ קלוריות</div>
           <div className="font-display text-3xl sm:text-4xl leading-none">
             <span className="num">{cals}</span>
             <span className="text-text-muted text-base mr-1"> / </span>
