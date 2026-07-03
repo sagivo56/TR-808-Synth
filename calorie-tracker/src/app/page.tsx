@@ -7,6 +7,15 @@ import Meter from "@/components/Meter";
 import MealList from "@/components/MealList";
 import Chat from "@/components/Chat";
 
+// מיון ארוחות לפי שעה (ואז לפי סדר הוספה)
+function byTime(a: Meal, b: Meal): number {
+  return a.time === b.time
+    ? a.created_at - b.created_at
+    : a.time < b.time
+      ? -1
+      : 1;
+}
+
 export default function Page() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -62,7 +71,7 @@ export default function Page() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `שגיאה (HTTP ${res.status})`);
-    setMeals((prev) => [...prev, data.meal as Meal]);
+    setMeals((prev) => [...prev, data.meal as Meal].sort(byTime));
   }
 
   async function handleDeleteMeal(id: string) {
@@ -70,6 +79,20 @@ export default function Page() {
     setMeals((m) => m.filter((x) => x.id !== id)); // עדכון אופטימי
     const res = await fetch(`/api/meals?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
+    });
+    if (!res.ok) setMeals(prev); // החזרה במקרה כשל
+  }
+
+  async function handleEditMealTime(id: string, time: string) {
+    const prev = meals;
+    // עדכון אופטימי + מיון מחדש לפי שעה
+    setMeals((m) =>
+      m.map((x) => (x.id === id ? { ...x, time } : x)).sort(byTime)
+    );
+    const res = await fetch("/api/meals", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, time }),
     });
     if (!res.ok) setMeals(prev); // החזרה במקרה כשל
   }
@@ -169,7 +192,11 @@ export default function Page() {
 
       <Chat onAddMeal={handleAddMeal} muscleGoal={settings.muscle_goal} />
 
-      <MealList meals={meals} onDelete={handleDeleteMeal} />
+      <MealList
+        meals={meals}
+        onDelete={handleDeleteMeal}
+        onEditTime={handleEditMealTime}
+      />
 
       {showSetup && (
         <SetupForm

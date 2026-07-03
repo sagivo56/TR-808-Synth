@@ -123,10 +123,28 @@ export function getMeals(userId: string, date: string): Meal[] {
   const rows = getDb()
     .prepare(
       `SELECT id, date, time, name, calories, protein_g, carbs_g, fat_g, created_at
-       FROM meals WHERE user_id = ? AND date = ? ORDER BY created_at ASC`
+       FROM meals WHERE user_id = ? AND date = ? ORDER BY time ASC, created_at ASC`
     )
     .all(userId, date) as Meal[];
   return rows;
+}
+
+/** עדכון שעת ארוחה (הזזה לזמן אחר). מחזיר את הארוחה המעודכנת או null. */
+export function updateMealTime(
+  userId: string,
+  mealId: string,
+  time: string
+): Meal | null {
+  const res = getDb()
+    .prepare("UPDATE meals SET time = ? WHERE user_id = ? AND id = ?")
+    .run(time, userId, mealId);
+  if (res.changes === 0) return null;
+  return getDb()
+    .prepare(
+      `SELECT id, date, time, name, calories, protein_g, carbs_g, fat_g, created_at
+       FROM meals WHERE user_id = ? AND id = ?`
+    )
+    .get(userId, mealId) as Meal;
 }
 
 export function addMeal(
