@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Settings, Meal, EstimateResult } from "@/lib/types";
 import SetupForm from "@/components/SetupForm";
 import Meter from "@/components/Meter";
 import MealList from "@/components/MealList";
 import Chat from "@/components/Chat";
+import {
+  localDateISO,
+  localTimeHM,
+  shiftDateISO,
+  dayLabel,
+} from "@/lib/date";
 
 // מיון ארוחות לפי שעה (ואז לפי סדר הוספה)
 function byTime(a: Meal, b: Meal): number {
@@ -20,21 +26,21 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [selectedDate, setSelectedDate] = useState(() => localDateISO());
   const [showSetup, setShowSetup] = useState(false);
   const [editingTarget, setEditingTarget] = useState(false);
   const [targetInput, setTargetInput] = useState("");
 
+  const today = localDateISO();
+  const isToday = selectedDate === today;
+
+  // טעינת הגדרות (פעם אחת)
   useEffect(() => {
     (async () => {
       try {
-        const [sRes, mRes] = await Promise.all([
-          fetch("/api/settings"),
-          fetch("/api/meals"),
-        ]);
+        const sRes = await fetch("/api/settings");
         const sData = await sRes.json();
-        const mData = await mRes.json();
         setSettings(sData.settings ?? null);
-        setMeals(mData.meals ?? []);
       } catch {
         // מוצג מסך הגדרה במקרה של כשל טעינה
       } finally {
@@ -42,6 +48,21 @@ export default function Page() {
       }
     })();
   }, []);
+
+  const loadMeals = useCallback(async (date: string) => {
+    try {
+      const res = await fetch(`/api/meals?date=${encodeURIComponent(date)}`);
+      const data = await res.json();
+      setMeals(data.meals ?? []);
+    } catch {
+      setMeals([]);
+    }
+  }, []);
+
+  // טעינת ארוחות לפי היום הנבחר
+  useEffect(() => {
+    loadMeals(selectedDate);
+  }, [selectedDate, loadMeals]);
 
   const totals = useMemo(() => {
     return meals.reduce(
@@ -67,6 +88,9 @@ export default function Page() {
         protein_g: r.protein_g,
         carbs_g: r.carbs_g,
         fat_g: r.fat_g,
+        // תאריך/שעה לפי השעון המקומי של המשתמש (היום הנבחר)
+        date: selectedDate,
+        time: localTimeHM(),
       }),
     });
     const data = await res.json();
@@ -83,16 +107,23 @@ export default function Page() {
     if (!res.ok) setMeals(prev); // החזרה במקרה כשל
   }
 
-  async function handleEditMealTime(id: string, time: string) {
+  // הזזת ארוחה לזמן אחר: שעה, ואופציונלית תאריך (יום אחר)
+  async function handleEditMeal(
+    id: string,
+    time: string,
+    date: string
+  ) {
     const prev = meals;
-    // עדכון אופטימי + מיון מחדש לפי שעה
+    // עדכון אופטימי: אם עברה ליום אחר - מוסרת מהתצוגה הנוכחית
     setMeals((m) =>
-      m.map((x) => (x.id === id ? { ...x, time } : x)).sort(byTime)
+      date === selectedDate
+        ? m.map((x) => (x.id === id ? { ...x, time } : x)).sort(byTime)
+        : m.filter((x) => x.id !== id)
     );
     const res = await fetch("/api/meals", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, time }),
+      body: JSON.stringify({ id, time, date }),
     });
     if (!res.ok) setMeals(prev); // החזרה במקרה כשל
   }
@@ -188,14 +219,34 @@ export default function Page() {
         </div>
       </header>
 
+      {/* ניווט בין ימים */}
+      <div className="flex items-center justify-between rounded-xl border border-border bg-panel px-2 py-2">
+        <button
+          onClick={() => setSelectedDate((d) => shiftDateISO(d, -1))}
+          className="rounded-lg border border-border-2 text-text-muted hover:text-text-main px-3 py-1.5 text-sm"
+        >
+          ‹ יום קודם
+        </button>
+        <span className="font-display text-sm">{dayLabel(selectedDate)}</span>
+        <button
+          onClick={() => setSelectedDate((d) => shiftDateISO(d, 1))}
+          disabled={isToday}
+          className="rounded-lg border border-border-2 text-text-muted hover:text-text-main px-3 py-1.5 text-sm disabled:opacity-30 disabled:hover:text-text-muted"
+        >
+          יום הבא ›
+        </button>
+      </div>
+
       <Meter totals={totals} target={settings.target} />
 
       <Chat onAddMeal={handleAddMeal} muscleGoal={settings.muscle_goal} />
 
       <MealList
         meals={meals}
+        today={today}
+        dayLabel={dayLabel(selectedDate)}
         onDelete={handleDeleteMeal}
-        onEditTime={handleEditMealTime}
+        onEditMeal={handleEditMeal}
       />
 
       {showSetup && (

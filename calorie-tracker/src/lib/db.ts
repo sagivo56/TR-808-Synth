@@ -129,15 +129,20 @@ export function getMeals(userId: string, date: string): Meal[] {
   return rows;
 }
 
-/** עדכון שעת ארוחה (הזזה לזמן אחר). מחזיר את הארוחה המעודכנת או null. */
-export function updateMealTime(
+/** הזזת ארוחה לזמן אחר: שעה, ואופציונלית גם תאריך. מחזיר את הארוחה המעודכנת או null. */
+export function updateMeal(
   userId: string,
   mealId: string,
-  time: string
+  time: string,
+  date?: string
 ): Meal | null {
-  const res = getDb()
-    .prepare("UPDATE meals SET time = ? WHERE user_id = ? AND id = ?")
-    .run(time, userId, mealId);
+  const res = date
+    ? getDb()
+        .prepare("UPDATE meals SET time = ?, date = ? WHERE user_id = ? AND id = ?")
+        .run(time, date, userId, mealId)
+    : getDb()
+        .prepare("UPDATE meals SET time = ? WHERE user_id = ? AND id = ?")
+        .run(time, userId, mealId);
   if (res.changes === 0) return null;
   return getDb()
     .prepare(
