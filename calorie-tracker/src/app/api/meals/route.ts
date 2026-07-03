@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveUser, attachUserCookie } from "@/lib/user";
-import { getMeals, addMeal, deleteMeal } from "@/lib/db";
+import { getMeals, addMeal, deleteMeal, updateMealTime } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,4 +77,32 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "הארוחה לא נמצאה" }, { status: 404 });
 
   return NextResponse.json({ ok: true });
+}
+
+// PATCH - עדכון שעת ארוחה (הזזה לזמן אחר)
+export async function PATCH(req: NextRequest) {
+  const { userId, isNew } = resolveUser();
+  if (isNew)
+    return NextResponse.json({ error: "הארוחה לא נמצאה" }, { status: 404 });
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "גוף הבקשה אינו JSON תקין" }, { status: 400 });
+  }
+
+  const b = body as Record<string, unknown>;
+  const id = typeof b.id === "string" ? b.id : "";
+  const time = typeof b.time === "string" ? b.time : "";
+  if (!id)
+    return NextResponse.json({ error: "מזהה ארוחה חסר" }, { status: 400 });
+  if (!/^\d{2}:\d{2}$/.test(time))
+    return NextResponse.json({ error: "שעה לא תקינה (HH:MM)" }, { status: 400 });
+
+  const meal = updateMealTime(userId, id, time);
+  if (!meal)
+    return NextResponse.json({ error: "הארוחה לא נמצאה" }, { status: 404 });
+
+  return NextResponse.json({ meal });
 }
