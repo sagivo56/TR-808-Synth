@@ -70,6 +70,8 @@ export default function Chat({
     Extract<EstimateResult, { status: "result" }> | null
   >(null);
   const [adding, setAdding] = useState(false);
+  // מכפיל כמות המנה (לשינוי כמויות לאחר האנליזה)
+  const [portion, setPortion] = useState(1);
   // טיפ שמוצג לאחר הוספת ארוחה ליומן
   const [postAddTip, setPostAddTip] = useState<{
     name: string;
@@ -127,6 +129,7 @@ export default function Chat({
         ]);
       } else {
         // תוצאה סופית
+        setPortion(1);
         setResult(r);
       }
     } catch (err) {
@@ -176,17 +179,32 @@ export default function Chat({
     setResult(null);
     setError(null);
     setPostAddTip(null);
+    setPortion(1);
+  }
+
+  function adjustPortion(delta: number) {
+    setPortion((p) => Math.min(10, Math.max(0.25, Math.round((p + delta) * 100) / 100)));
   }
 
   async function addMeal() {
     if (!result) return;
     const r = result;
+    // שקלול לפי מכפיל הכמות שנבחר
+    const scaled: Extract<EstimateResult, { status: "result" }> = {
+      status: "result",
+      name: portion !== 1 ? `${r.name} (×${portion})` : r.name,
+      calories: r.calories * portion,
+      protein_g: r.protein_g * portion,
+      carbs_g: r.carbs_g * portion,
+      fat_g: r.fat_g * portion,
+      tip: r.tip,
+    };
     setAdding(true);
     try {
-      await onAddMeal(r);
+      await onAddMeal(scaled);
       reset();
-      // הצגת טיפ לשיפור מאזן המנה לאחר ההוספה
-      if (r.tip) setPostAddTip({ name: r.name, tip: r.tip });
+      // הצגת טיפ לשיפור מאזן המנה לאחר ההוספה (יחסי המאקרו לא משתנים עם הכמות)
+      if (r.tip) setPostAddTip({ name: scaled.name, tip: r.tip });
     } catch (err) {
       setError(err instanceof Error ? err.message : "הוספת הארוחה נכשלה");
     } finally {
@@ -290,11 +308,46 @@ export default function Chat({
           <div className="font-display font-bold text-base mb-2">
             {result.name}
           </div>
+
+          {/* בקר כמות: שינוי כמות המנה לאחר האנליזה */}
+          <div className="flex items-center justify-between gap-2 mb-3 rounded-lg border border-border bg-bg/40 px-2 py-1.5">
+            <span className="text-text-muted text-xs pr-1">כמות</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => adjustPortion(-0.25)}
+                aria-label="הפחתת כמות"
+                className="h-8 w-8 rounded-lg border border-border-2 text-text-main text-lg leading-none flex items-center justify-center hover:border-meter-green disabled:opacity-40"
+                disabled={portion <= 0.25}
+              >
+                −
+              </button>
+              <span className="num w-14 text-center font-display text-base">
+                ×{portion}
+              </span>
+              <button
+                onClick={() => adjustPortion(0.25)}
+                aria-label="הגדלת כמות"
+                className="h-8 w-8 rounded-lg border border-border-2 text-text-main text-lg leading-none flex items-center justify-center hover:border-meter-green disabled:opacity-40"
+                disabled={portion >= 10}
+              >
+                +
+              </button>
+              {portion !== 1 && (
+                <button
+                  onClick={() => setPortion(1)}
+                  className="text-text-muted text-xs px-1 hover:text-text-main"
+                >
+                  איפוס
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-4 gap-2 text-center mb-3">
-            <ResCell label='קק"ל' value={Math.round(result.calories)} big />
-            <ResCell label="חלבון" value={Math.round(result.protein_g)} />
-            <ResCell label="פחמ׳" value={Math.round(result.carbs_g)} />
-            <ResCell label="שומן" value={Math.round(result.fat_g)} />
+            <ResCell label='קק"ל' value={Math.round(result.calories * portion)} big />
+            <ResCell label="חלבון" value={Math.round(result.protein_g * portion)} />
+            <ResCell label="פחמ׳" value={Math.round(result.carbs_g * portion)} />
+            <ResCell label="שומן" value={Math.round(result.fat_g * portion)} />
           </div>
           <button
             onClick={addMeal}
