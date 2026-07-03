@@ -13,9 +13,11 @@ function colorForPosition(posPercent: number): string {
 export default function Meter({
   totals,
   target,
+  macroTargets,
 }: {
   totals: DaySummary["totals"];
   target: number;
+  macroTargets: { protein_g: number; carbs_g: number; fat_g: number };
 }) {
   const cals = Math.round(totals.calories);
   const pct = target > 0 ? (cals / target) * 100 : 0;
@@ -89,23 +91,64 @@ export default function Meter({
         </div>
       </div>
 
-      {/* מאקרו: חלבון / פחמימות / שומן */}
+      {/* מאקרו: חלבון / פחמימות / שומן - מד מתמלא ביחס ליעד */}
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <MacroBox label="חלבון" value={totals.protein_g} />
-        <MacroBox label="פחמימות" value={totals.carbs_g} />
-        <MacroBox label="שומן" value={totals.fat_g} />
+        <MacroBar
+          label="חלבון"
+          value={totals.protein_g}
+          goal={macroTargets.protein_g}
+          color="#8FBF6B"
+        />
+        <MacroBar
+          label="פחמימות"
+          value={totals.carbs_g}
+          goal={macroTargets.carbs_g}
+          color="#E0A94C"
+        />
+        <MacroBar
+          label="שומן"
+          value={totals.fat_g}
+          goal={macroTargets.fat_g}
+          color="#D9634B"
+        />
       </div>
     </div>
   );
 }
 
-function MacroBox({ label, value }: { label: string; value: number }) {
+function MacroBar({
+  label,
+  value,
+  goal,
+  color,
+}: {
+  label: string;
+  value: number;
+  goal: number;
+  color: string;
+}) {
+  const v = Math.round(value);
+  const pct = goal > 0 ? Math.min(100, (v / goal) * 100) : 0;
+  const over = goal > 0 && v > goal;
   return (
-    <div className="rounded-xl border border-border bg-bg/40 px-3 py-2 text-center">
-      <div className="text-text-muted text-[11px] mb-0.5">{label}</div>
-      <div className="font-display text-lg">
-        <span className="num">{Math.round(value)}</span>
-        <span className="text-text-muted text-xs"> ג׳</span>
+    <div className="rounded-xl border border-border bg-bg/40 px-3 py-2">
+      <div className="flex items-baseline justify-between mb-1.5 gap-1">
+        <span className="text-text-muted text-[11px]">{label}</span>
+        <span className="font-display text-sm leading-none">
+          <span className="num" style={over ? { color } : undefined}>
+            {v}
+          </span>
+          <span className="text-text-muted text-[10px]">
+            {" "}
+            / <span className="num">{goal}</span> ג׳
+          </span>
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-[#242A30] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
       </div>
     </div>
   );

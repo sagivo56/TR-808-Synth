@@ -12,6 +12,7 @@ import {
   shiftDateISO,
   dayLabel,
 } from "@/lib/date";
+import { computeMacroTargets } from "@/lib/calc";
 
 // מיון ארוחות לפי שעה (ואז לפי סדר הוספה)
 function byTime(a: Meal, b: Meal): number {
@@ -237,7 +238,11 @@ export default function Page() {
         </button>
       </div>
 
-      <Meter totals={totals} target={settings.target} />
+      <Meter
+        totals={totals}
+        target={settings.target}
+        macroTargets={computeMacroTargets(settings)}
+      />
 
       <Chat onAddMeal={handleAddMeal} muscleGoal={settings.muscle_goal} />
 
