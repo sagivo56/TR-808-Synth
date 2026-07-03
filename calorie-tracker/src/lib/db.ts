@@ -26,6 +26,7 @@ function getDb(): Database.Database {
       sex         TEXT NOT NULL,
       activity    REAL NOT NULL,
       goal        TEXT NOT NULL,
+      muscle_goal INTEGER NOT NULL DEFAULT 0,
       target      INTEGER NOT NULL,
       created_at  INTEGER NOT NULL,
       updated_at  INTEGER NOT NULL
@@ -47,6 +48,14 @@ function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_meals_user_date ON meals (user_id, date);
   `);
 
+  // מיגרציה: הוספת עמודת muscle_goal לטבלאות קיימות שנוצרו לפני הפיצ'ר
+  const hasMuscleGoal = (
+    db.prepare("PRAGMA table_info(users)").all() as { name: string }[]
+  ).some((c) => c.name === "muscle_goal");
+  if (!hasMuscleGoal) {
+    db.exec("ALTER TABLE users ADD COLUMN muscle_goal INTEGER NOT NULL DEFAULT 0");
+  }
+
   return db;
 }
 
@@ -58,13 +67,14 @@ interface UserRow {
   sex: Sex;
   activity: number;
   goal: Goal;
+  muscle_goal: number;
   target: number;
 }
 
 export function getSettings(userId: string): Settings | null {
   const row = getDb()
     .prepare(
-      "SELECT height_cm, weight_kg, age, sex, activity, goal, target FROM users WHERE id = ?"
+      "SELECT height_cm, weight_kg, age, sex, activity, goal, muscle_goal, target FROM users WHERE id = ?"
     )
     .get(userId) as UserRow | undefined;
   if (!row) return null;
@@ -75,6 +85,7 @@ export function getSettings(userId: string): Settings | null {
     sex: row.sex,
     activity: row.activity,
     goal: row.goal,
+    muscle_goal: !!row.muscle_goal,
     target: row.target,
   };
 }
@@ -83,8 +94,8 @@ export function saveSettings(userId: string, s: Settings): void {
   const now = Date.now();
   getDb()
     .prepare(
-      `INSERT INTO users (id, height_cm, weight_kg, age, sex, activity, goal, target, created_at, updated_at)
-       VALUES (@id, @height_cm, @weight_kg, @age, @sex, @activity, @goal, @target, @now, @now)
+      `INSERT INTO users (id, height_cm, weight_kg, age, sex, activity, goal, muscle_goal, target, created_at, updated_at)
+       VALUES (@id, @height_cm, @weight_kg, @age, @sex, @activity, @goal, @muscle_goal, @target, @now, @now)
        ON CONFLICT(id) DO UPDATE SET
          height_cm = @height_cm,
          weight_kg = @weight_kg,
@@ -92,10 +103,12 @@ export function saveSettings(userId: string, s: Settings): void {
          sex = @sex,
          activity = @activity,
          goal = @goal,
+         muscle_goal = @muscle_goal,
          target = @target,
          updated_at = @now`
     )
-    .run({ id: userId, ...s, now });
+    // better-sqlite3 אינו כובל boolean ישירות - המרה ל-0/1
+    .run({ id: userId, ...s, muscle_goal: s.muscle_goal ? 1 : 0, now });
 }
 
 /** עדכון ידני מהיר של מספר היעד בלבד. */

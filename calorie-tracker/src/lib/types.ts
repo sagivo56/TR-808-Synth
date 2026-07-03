@@ -9,6 +9,7 @@ export interface Settings {
   sex: Sex;
   activity: number; // 1.2 / 1.375 / 1.55 / 1.725 / 1.9
   goal: Goal;
+  muscle_goal: boolean; // האם יש מטרה להגדיל מסת שריר
   target: number; // יעד קלורי יומי מחושב (או ידני)
 }
 
@@ -58,4 +59,5 @@ export type EstimateResult =
       protein_g: number;
       carbs_g: number;
       fat_g: number;
+      tip?: string; // טיפ קצר לשיפור מאזן המנה (מותאם למטרת השריר)
     };
