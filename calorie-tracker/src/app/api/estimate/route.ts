@@ -30,7 +30,8 @@ function buildSystemPrompt(muscleGoal: boolean): string {
 כללים:
 - שאל שאלה רק כאשר זה באמת משנה מהותית את ההערכה. אם ניתן להעריך בהנחות סבירות — העדף להחזיר result.
 - אל תשאל יותר משאלה אחת בכל פעם.
-- החזר תמיד JSON חוקי אחד בלבד.`;
+- החזר תמיד אובייקט JSON חוקי אחד בלבד, ללא טקסט לפניו או אחריו, וללא אובייקט שני.
+- אל תוסיף שדות שלא צוינו למעלה. שמור על שם המנה (name) קצר וסביר.`;
 }
 
 // המרת בלוק צד-לקוח לבלוק תוכן של Anthropic, עם ולידציה בסיסית.
@@ -60,17 +61,36 @@ function toAnthropicBlock(block: ChatBlock): Anthropic.ContentBlockParam | null 
   return null;
 }
 
-// חילוץ מחרוזת JSON מתוך טקסט (מסיר code fences / טקסט עוטף אם קיים).
+// חילוץ אובייקט ה-JSON הראשון והמאוזן מתוך הטקסט, תוך התעלמות מטקסט/אובייקט
+// נוסף שהמודל עלול להוסיף אחריו. סורק מאזן סוגריים ומכבד מחרוזות ותווי escape.
 function extractJson(text: string): string {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced ? fenced[1].trim() : trimmed;
+
   const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) {
-    return candidate.slice(start, end + 1);
+  if (start === -1) return candidate;
+
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < candidate.length; i++) {
+    const ch = candidate[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+    } else if (ch === '"') {
+      inStr = true;
+    } else if (ch === "{") {
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0) return candidate.slice(start, i + 1);
+    }
   }
-  return candidate;
+  // לא נמצא אובייקט מאוזן (למשל תשובה שנקטעה) - מחזירים כפי שהוא לצורך שגיאה ברורה
+  return candidate.slice(start);
 }
 
 function validateResult(obj: unknown): EstimateResult | null {
@@ -153,7 +173,7 @@ export async function POST(req: NextRequest) {
   try {
     response = await client.messages.create({
       model: MODEL,
-      max_tokens: 700,
+      max_tokens: 1000,
       system: buildSystemPrompt(muscleGoal),
       messages: apiMessages,
     });
