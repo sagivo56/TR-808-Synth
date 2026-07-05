@@ -358,7 +358,7 @@ function buildDeepPanel(panel) {
   let html = `<div class="params-title">${v.fullName} - DEEP EDIT</div><div class="knobs-row deep-row">`;
   for (const dp of deepDefs) {
     const norm = (d[dp.id] - dp.min) / (dp.max - dp.min);
-    html += makeKnob(dp.id, dp.label, norm, 'deep', dp.min, dp.max);
+    html += makeKnob(dp.id, dp.label, norm, 'deep', dp.min, dp.max, dp.labels);
   }
   html += '</div>';
   panel.innerHTML = html;
@@ -368,7 +368,14 @@ function buildDeepPanel(panel) {
       const min = parseFloat(k.dataset.min), max = parseFloat(k.dataset.max);
       const val = min + (parseInt(k.dataset.value) / 100) * (max - min);
       engine.deep[v.id][k.dataset.param] = val;
-      k.parentElement.querySelector('.knob-value').textContent = val >= 100 ? Math.round(val) : val.toFixed(1);
+      const labels = k.dataset.labels ? k.dataset.labels.split(',') : null;
+      let display;
+      if (labels) {
+        display = labels[Math.max(0, Math.min(labels.length - 1, Math.round(val)))];
+      } else {
+        display = val >= 100 ? Math.round(val) : val.toFixed(1);
+      }
+      k.parentElement.querySelector('.knob-value').textContent = display;
     });
   });
 }
@@ -429,10 +436,13 @@ function buildFxPanel(panel) {
   });
 }
 
-function makeKnob(param, label, value, type, min, max) {
+function makeKnob(param, label, value, type, min, max, labels) {
   const v100 = Math.round(Math.max(0, Math.min(1, value)) * 100);
   let displayVal;
-  if (type === 'deep' && min !== undefined) {
+  if (labels) {
+    const idx = Math.max(0, Math.min(labels.length - 1, Math.round(value * (max - min) + min)));
+    displayVal = labels[idx];
+  } else if (type === 'deep' && min !== undefined) {
     const raw = min + value * (max - min);
     displayVal = raw >= 100 ? Math.round(raw) : raw.toFixed(1);
   } else if (type === 'pan') {
@@ -445,6 +455,7 @@ function makeKnob(param, label, value, type, min, max) {
     <label class="knob-label">${label}</label>
     <canvas class="knob-canvas" data-param="${param}" data-type="${type}" data-value="${v100}"
             ${min !== undefined ? `data-min="${min}" data-max="${max}"` : ''}
+            ${labels ? `data-labels="${labels.join(',')}"` : ''}
             width="88" height="88"></canvas>
     <span class="knob-value">${displayVal}</span>
   </div>`;

@@ -17,24 +17,33 @@ const VOICES = [
   { id: 'cl', name: 'CL',  fullName: 'Claves',     gmNote: 75, tone: false, decay: false, snappy: false, tune: false },
 ];
 
+const WAVE_LABELS = ['SIN', 'TRI', 'SQR', 'SAW'];
+
 const DEEP_PARAMS = {
   bd: [
-    { id: 'freq',      label: 'Pitch',     min: 40,  max: 80,   def: 55,   skew: false },
-    { id: 'bodydecay', label: 'Body Decay', min: 50,  max: 1500, def: 650,  skew: true  },
-    { id: 'punch',     label: 'Punch',      min: 1,   max: 3,    def: 1.4,  skew: false },
-    { id: 'retrig',    label: 'Retrig',     min: 0,   max: 1,    def: 0.5,  skew: false },
-    { id: 'sustain',   label: 'Sustain',    min: 0,   max: 1,    def: 0,    skew: false },
-    { id: 'drive',     label: 'Drive',      min: 1,   max: 10,   def: 1,    skew: true  },
+    { id: 'freq',      label: 'Pitch',      min: 40,   max: 80,    def: 55,   skew: false },
+    { id: 'wave',      label: 'Waveform',   min: 0,    max: 3,     def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'attack',    label: 'Attack',     min: 0,    max: 20,    def: 1,    skew: false },
+    { id: 'bodydecay', label: 'Body Decay', min: 50,   max: 1500,  def: 650,  skew: true  },
+    { id: 'punch',     label: 'Punch',      min: 1,    max: 3,     def: 1.4,  skew: false },
+    { id: 'retrig',    label: 'Retrig',     min: 0,    max: 1,     def: 0.5,  skew: false },
+    { id: 'sustain',   label: 'Sustain',    min: 0,    max: 1,     def: 0,    skew: false },
+    { id: 'drive',     label: 'Drive',      min: 1,    max: 10,    def: 1,    skew: true  },
+    { id: 'clickfreq', label: 'Click Freq', min: 200,  max: 5000,  def: 1200, skew: true  },
+    { id: 'clickamt',  label: 'Click Amt',  min: 0,    max: 1,     def: 0.12, skew: false },
   ],
   sd: [
-    { id: 'o1freq',     label: 'Osc1 Freq',    min: 100, max: 300,  def: 180,  skew: false },
-    { id: 'o2freq',     label: 'Osc2 Freq',    min: 200, max: 500,  def: 330,  skew: false },
-    { id: 'oscmix',     label: 'Osc Mix',      min: 0,   max: 1,    def: 0.5,  skew: false },
-    { id: 'shelldecay', label: 'Shell Decay',   min: 20,  max: 400,  def: 130,  skew: true  },
-    { id: 'nbpfreq',    label: 'Noise BP',     min: 800, max: 4000, def: 1800, skew: true  },
-    { id: 'nbpq',       label: 'Noise Q',      min: 0.3, max: 3,    def: 1.1,  skew: false },
-    { id: 'ndecay',     label: 'Noise Decay',  min: 20,  max: 600,  def: 200,  skew: true  },
-    { id: 'balance',    label: 'Shell/Noise',  min: 0,   max: 1,    def: 0.5,  skew: false },
+    { id: 'o1freq',     label: 'Osc1 Freq',   min: 100,  max: 300,  def: 180,  skew: false },
+    { id: 'o1wave',     label: 'Osc1 Wave',   min: 0,    max: 3,    def: 1,    skew: false, labels: WAVE_LABELS },
+    { id: 'o2freq',     label: 'Osc2 Freq',   min: 200,  max: 500,  def: 330,  skew: false },
+    { id: 'o2wave',     label: 'Osc2 Wave',   min: 0,    max: 3,    def: 1,    skew: false, labels: WAVE_LABELS },
+    { id: 'oscmix',     label: 'Osc Mix',     min: 0,    max: 1,    def: 0.5,  skew: false },
+    { id: 'shelldecay', label: 'Shell Decay', min: 20,   max: 400,  def: 130,  skew: true  },
+    { id: 'nbpfreq',    label: 'Noise BP',    min: 800,  max: 4000, def: 1800, skew: true  },
+    { id: 'nbpq',       label: 'Noise Q',     min: 0.3,  max: 3,    def: 1.1,  skew: false },
+    { id: 'ndecay',     label: 'Noise Decay', min: 20,   max: 600,  def: 200,  skew: true  },
+    { id: 'balance',    label: 'Shell/Noise', min: 0,    max: 1,    def: 0.5,  skew: false },
+    { id: 'attack',     label: 'Attack',      min: 0,    max: 20,   def: 1,    skew: false },
   ],
   cp: [
     { id: 'bpfreq',    label: 'BP Centre',     min: 500,  max: 2000, def: 1000, skew: true  },
@@ -42,86 +51,122 @@ const DEEP_PARAMS = {
     { id: 'npulses',   label: 'Pulses',        min: 1,    max: 6,    def: 3,    skew: false },
     { id: 'spacing',   label: 'Pulse Spacing', min: 3,    max: 30,   def: 10,   skew: false },
     { id: 'taildecay', label: 'Tail Decay',    min: 20,   max: 400,  def: 120,  skew: true  },
+    { id: 'noiseamt',  label: 'Noise Amt',     min: 0,    max: 1,    def: 0.5,  skew: false },
+    { id: 'attack',    label: 'Attack',        min: 0,    max: 10,   def: 0,    skew: false },
   ],
   rs: [
     { id: 'freq',      label: 'Tune',    min: 1000, max: 3000, def: 1700, skew: true  },
+    { id: 'o1wave',    label: 'Wave 1',  min: 0,    max: 3,    def: 1,    skew: false, labels: WAVE_LABELS },
+    { id: 'o2wave',    label: 'Wave 2',  min: 0,    max: 3,    def: 1,    skew: false, labels: WAVE_LABELS },
     { id: 'decaytime', label: 'Decay',   min: 10,   max: 200,  def: 60,   skew: true  },
+    { id: 'attack',    label: 'Attack',  min: 0,    max: 10,   def: 0,    skew: false },
   ],
   cl: [
-    { id: 'freq',      label: 'Tune',    min: 1500, max: 4000, def: 2500, skew: true  },
-    { id: 'decaytime', label: 'Decay',   min: 10,   max: 200,  def: 50,   skew: true  },
+    { id: 'freq',      label: 'Tune',     min: 1500, max: 4000, def: 2500, skew: true  },
+    { id: 'wave',      label: 'Waveform', min: 0,    max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'decaytime', label: 'Decay',    min: 10,   max: 200,  def: 50,   skew: true  },
+    { id: 'attack',    label: 'Attack',   min: 0,    max: 10,   def: 0,    skew: false },
   ],
   cb: [
-    { id: 'o1freq',    label: 'Osc1 Freq',  min: 400,  max: 700,  def: 540,  skew: false },
-    { id: 'o2freq',    label: 'Osc2 Freq',  min: 600,  max: 1000, def: 800,  skew: false },
-    { id: 'bpfreq',    label: 'BP Centre',  min: 1000, max: 4000, def: 2640, skew: true  },
-    { id: 'bpq',       label: 'BP Q',       min: 0.3,  max: 3,    def: 0.8,  skew: false },
-    { id: 'decaytime', label: 'Decay',      min: 100,  max: 1000, def: 400,  skew: true  },
+    { id: 'o1freq',    label: 'Osc1 Freq', min: 400,  max: 700,  def: 540,  skew: false },
+    { id: 'o1wave',    label: 'Osc1 Wave', min: 0,    max: 3,    def: 2,    skew: false, labels: WAVE_LABELS },
+    { id: 'o2freq',    label: 'Osc2 Freq', min: 600,  max: 1000, def: 800,  skew: false },
+    { id: 'o2wave',    label: 'Osc2 Wave', min: 0,    max: 3,    def: 2,    skew: false, labels: WAVE_LABELS },
+    { id: 'bpfreq',    label: 'BP Centre', min: 1000, max: 4000, def: 2640, skew: true  },
+    { id: 'bpq',       label: 'BP Q',      min: 0.3,  max: 3,    def: 0.8,  skew: false },
+    { id: 'decaytime', label: 'Decay',     min: 100,  max: 1000, def: 400,  skew: true  },
+    { id: 'attack',    label: 'Attack',    min: 0,    max: 10,   def: 2,    skew: false },
   ],
   cy: [
+    { id: 'oscfreq',   label: 'Osc Base',    min: 100,  max: 500,  def: 240,  skew: true  },
     { id: 'hpf',       label: 'HPF',         min: 2000, max: 9000, def: 5000, skew: true  },
     { id: 'bpfreq',    label: 'Clang Band',  min: 1500, max: 6000, def: 3200, skew: true  },
     { id: 'decaytime', label: 'Decay',       min: 400,  max: 4000, def: 1500, skew: true  },
-    { id: 'balance',   label: 'Band Balance', min: 0,   max: 1,    def: 0.5,  skew: false },
+    { id: 'balance',   label: 'Band Balance',min: 0,    max: 1,    def: 0.5,  skew: false },
+    { id: 'attack',    label: 'Attack',      min: 0,    max: 30,   def: 2,    skew: false },
   ],
   oh: [
-    { id: 'hpf',       label: 'HPF',    min: 2000, max: 12000, def: 3000,  skew: true  },
-    { id: 'lpf',       label: 'Color',  min: 5000, max: 16000, def: 12000, skew: true  },
-    { id: 'decaytime', label: 'Decay',  min: 150,  max: 1500,  def: 600,   skew: true  },
+    { id: 'oscfreq',   label: 'Osc Base', min: 150,  max: 600,   def: 320,  skew: true  },
+    { id: 'hpf',       label: 'HPF',      min: 2000, max: 12000, def: 3000, skew: true  },
+    { id: 'lpf',       label: 'Color',    min: 5000, max: 16000, def: 12000,skew: true  },
+    { id: 'decaytime', label: 'Decay',    min: 150,  max: 1500,  def: 600,  skew: true  },
+    { id: 'attack',    label: 'Attack',   min: 0,    max: 20,    def: 1,    skew: false },
   ],
   ch: [
-    { id: 'hpf',       label: 'HPF',    min: 2000, max: 12000, def: 3000,  skew: true  },
-    { id: 'lpf',       label: 'Color',  min: 5000, max: 16000, def: 11000, skew: true  },
-    { id: 'decaytime', label: 'Decay',  min: 20,   max: 300,   def: 180,   skew: true  },
+    { id: 'oscfreq',   label: 'Osc Base', min: 150,  max: 600,   def: 320,  skew: true  },
+    { id: 'hpf',       label: 'HPF',      min: 2000, max: 12000, def: 3000, skew: true  },
+    { id: 'lpf',       label: 'Color',    min: 5000, max: 16000, def: 11000,skew: true  },
+    { id: 'decaytime', label: 'Decay',    min: 20,   max: 300,   def: 180,  skew: true  },
+    { id: 'attack',    label: 'Attack',   min: 0,    max: 10,    def: 0,    skew: false },
   ],
   ma: [
-    { id: 'hpf',       label: 'HPF',    min: 3000, max: 12000, def: 6000, skew: true  },
-    { id: 'decaytime', label: 'Decay',  min: 10,   max: 100,   def: 30,   skew: true  },
+    { id: 'hpf',       label: 'HPF',      min: 3000, max: 12000, def: 6000, skew: true  },
+    { id: 'noiseamt',  label: 'Noise Amt',min: 0,    max: 1,     def: 0.35, skew: false },
+    { id: 'decaytime', label: 'Decay',    min: 10,   max: 100,   def: 30,   skew: true  },
+    { id: 'attack',    label: 'Attack',   min: 0,    max: 5,     def: 0,    skew: false },
   ],
 };
 
 const TOM_DEEP = {
   lt: [
-    { id: 'freq',      label: 'Tune',           min: 40,  max: 200,  def: 90,  skew: true  },
-    { id: 'penvamt',   label: 'Pitch Env Amt',  min: 0,   max: 1,    def: 0.6, skew: false },
-    { id: 'penvtime',  label: 'Pitch Env Time', min: 5,   max: 150,  def: 40,  skew: true  },
-    { id: 'decaytime', label: 'Decay',           min: 50,  max: 2000, def: 600, skew: true  },
-    { id: 'atknoise',  label: 'Attack Noise',   min: 0,   max: 1,    def: 0.3, skew: false },
+    { id: 'freq',        label: 'Tune',           min: 40,  max: 200,  def: 90,   skew: true  },
+    { id: 'wave',        label: 'Waveform',        min: 0,   max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'penvamt',     label: 'Pitch Env Amt',   min: 0,   max: 1,    def: 0.6,  skew: false },
+    { id: 'penvtime',    label: 'Pitch Env Time',  min: 5,   max: 150,  def: 40,   skew: true  },
+    { id: 'attack',      label: 'Attack',          min: 0,   max: 20,   def: 1,    skew: false },
+    { id: 'decaytime',   label: 'Decay',           min: 50,  max: 2000, def: 600,  skew: true  },
+    { id: 'atknoise',    label: 'Attack Noise',    min: 0,   max: 1,    def: 0.3,  skew: false },
+    { id: 'noisebpfreq', label: 'Noise Freq',      min: 500, max: 8000, def: 2000, skew: true  },
   ],
   mt: [
-    { id: 'freq',      label: 'Tune',           min: 50,  max: 260,  def: 130, skew: true  },
-    { id: 'penvamt',   label: 'Pitch Env Amt',  min: 0,   max: 1,    def: 0.6, skew: false },
-    { id: 'penvtime',  label: 'Pitch Env Time', min: 5,   max: 150,  def: 40,  skew: true  },
-    { id: 'decaytime', label: 'Decay',           min: 50,  max: 2000, def: 500, skew: true  },
-    { id: 'atknoise',  label: 'Attack Noise',   min: 0,   max: 1,    def: 0.3, skew: false },
+    { id: 'freq',        label: 'Tune',           min: 50,  max: 260,  def: 130,  skew: true  },
+    { id: 'wave',        label: 'Waveform',        min: 0,   max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'penvamt',     label: 'Pitch Env Amt',   min: 0,   max: 1,    def: 0.6,  skew: false },
+    { id: 'penvtime',    label: 'Pitch Env Time',  min: 5,   max: 150,  def: 40,   skew: true  },
+    { id: 'attack',      label: 'Attack',          min: 0,   max: 20,   def: 1,    skew: false },
+    { id: 'decaytime',   label: 'Decay',           min: 50,  max: 2000, def: 500,  skew: true  },
+    { id: 'atknoise',    label: 'Attack Noise',    min: 0,   max: 1,    def: 0.3,  skew: false },
+    { id: 'noisebpfreq', label: 'Noise Freq',      min: 500, max: 8000, def: 2000, skew: true  },
   ],
   ht: [
-    { id: 'freq',      label: 'Tune',           min: 60,  max: 320,  def: 180, skew: true  },
-    { id: 'penvamt',   label: 'Pitch Env Amt',  min: 0,   max: 1,    def: 0.6, skew: false },
-    { id: 'penvtime',  label: 'Pitch Env Time', min: 5,   max: 150,  def: 40,  skew: true  },
-    { id: 'decaytime', label: 'Decay',           min: 50,  max: 1500, def: 450, skew: true  },
-    { id: 'atknoise',  label: 'Attack Noise',   min: 0,   max: 1,    def: 0.3, skew: false },
+    { id: 'freq',        label: 'Tune',           min: 60,  max: 320,  def: 180,  skew: true  },
+    { id: 'wave',        label: 'Waveform',        min: 0,   max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'penvamt',     label: 'Pitch Env Amt',   min: 0,   max: 1,    def: 0.6,  skew: false },
+    { id: 'penvtime',    label: 'Pitch Env Time',  min: 5,   max: 150,  def: 40,   skew: true  },
+    { id: 'attack',      label: 'Attack',          min: 0,   max: 20,   def: 1,    skew: false },
+    { id: 'decaytime',   label: 'Decay',           min: 50,  max: 1500, def: 450,  skew: true  },
+    { id: 'atknoise',    label: 'Attack Noise',    min: 0,   max: 1,    def: 0.3,  skew: false },
+    { id: 'noisebpfreq', label: 'Noise Freq',      min: 500, max: 8000, def: 2500, skew: true  },
   ],
   lc: [
-    { id: 'freq',      label: 'Tune',           min: 120, max: 400,  def: 220, skew: true  },
-    { id: 'penvamt',   label: 'Pitch Env Amt',  min: 0,   max: 1,    def: 0.6, skew: false },
-    { id: 'penvtime',  label: 'Pitch Env Time', min: 5,   max: 150,  def: 40,  skew: true  },
-    { id: 'decaytime', label: 'Decay',           min: 30,  max: 800,  def: 250, skew: true  },
-    { id: 'atknoise',  label: 'Attack Noise',   min: 0,   max: 1,    def: 0.3, skew: false },
+    { id: 'freq',        label: 'Tune',           min: 120, max: 400,  def: 220,  skew: true  },
+    { id: 'wave',        label: 'Waveform',        min: 0,   max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'penvamt',     label: 'Pitch Env Amt',   min: 0,   max: 1,    def: 0.6,  skew: false },
+    { id: 'penvtime',    label: 'Pitch Env Time',  min: 5,   max: 150,  def: 40,   skew: true  },
+    { id: 'attack',      label: 'Attack',          min: 0,   max: 20,   def: 1,    skew: false },
+    { id: 'decaytime',   label: 'Decay',           min: 30,  max: 800,  def: 250,  skew: true  },
+    { id: 'atknoise',    label: 'Attack Noise',    min: 0,   max: 1,    def: 0.3,  skew: false },
+    { id: 'noisebpfreq', label: 'Noise Freq',      min: 500, max: 8000, def: 2000, skew: true  },
   ],
   mc: [
-    { id: 'freq',      label: 'Tune',           min: 150, max: 460,  def: 280, skew: true  },
-    { id: 'penvamt',   label: 'Pitch Env Amt',  min: 0,   max: 1,    def: 0.6, skew: false },
-    { id: 'penvtime',  label: 'Pitch Env Time', min: 5,   max: 150,  def: 40,  skew: true  },
-    { id: 'decaytime', label: 'Decay',           min: 30,  max: 700,  def: 220, skew: true  },
-    { id: 'atknoise',  label: 'Attack Noise',   min: 0,   max: 1,    def: 0.3, skew: false },
+    { id: 'freq',        label: 'Tune',           min: 150, max: 460,  def: 280,  skew: true  },
+    { id: 'wave',        label: 'Waveform',        min: 0,   max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'penvamt',     label: 'Pitch Env Amt',   min: 0,   max: 1,    def: 0.6,  skew: false },
+    { id: 'penvtime',    label: 'Pitch Env Time',  min: 5,   max: 150,  def: 40,   skew: true  },
+    { id: 'attack',      label: 'Attack',          min: 0,   max: 20,   def: 1,    skew: false },
+    { id: 'decaytime',   label: 'Decay',           min: 30,  max: 700,  def: 220,  skew: true  },
+    { id: 'atknoise',    label: 'Attack Noise',    min: 0,   max: 1,    def: 0.3,  skew: false },
+    { id: 'noisebpfreq', label: 'Noise Freq',      min: 500, max: 8000, def: 2500, skew: true  },
   ],
   hc: [
-    { id: 'freq',      label: 'Tune',           min: 200, max: 560,  def: 370, skew: true  },
-    { id: 'penvamt',   label: 'Pitch Env Amt',  min: 0,   max: 1,    def: 0.6, skew: false },
-    { id: 'penvtime',  label: 'Pitch Env Time', min: 5,   max: 150,  def: 40,  skew: true  },
-    { id: 'decaytime', label: 'Decay',           min: 30,  max: 600,  def: 200, skew: true  },
-    { id: 'atknoise',  label: 'Attack Noise',   min: 0,   max: 1,    def: 0.3, skew: false },
+    { id: 'freq',        label: 'Tune',           min: 200, max: 560,  def: 370,  skew: true  },
+    { id: 'wave',        label: 'Waveform',        min: 0,   max: 3,    def: 0,    skew: false, labels: WAVE_LABELS },
+    { id: 'penvamt',     label: 'Pitch Env Amt',   min: 0,   max: 1,    def: 0.6,  skew: false },
+    { id: 'penvtime',    label: 'Pitch Env Time',  min: 5,   max: 150,  def: 40,   skew: true  },
+    { id: 'attack',      label: 'Attack',          min: 0,   max: 20,   def: 1,    skew: false },
+    { id: 'decaytime',   label: 'Decay',           min: 30,  max: 600,  def: 200,  skew: true  },
+    { id: 'atknoise',    label: 'Attack Noise',    min: 0,   max: 1,    def: 0.3,  skew: false },
+    { id: 'noisebpfreq', label: 'Noise Freq',      min: 500, max: 8000, def: 3000, skew: true  },
   ],
 };
 
@@ -211,7 +256,6 @@ class AudioEngine {
       await this.ctx.resume();
     }
 
-    // iOS unlock: play a short audible beep to force audio output
     const ctx = this.ctx;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
@@ -358,6 +402,23 @@ class AudioEngine {
     return curve;
   }
 
+  _getWave(val) {
+    return ['sine', 'triangle', 'square', 'sawtooth'][Math.max(0, Math.min(3, Math.round(val || 0)))];
+  }
+
+  _applyEnv(gain, amp, atkMs, decayTime, t) {
+    const atk = (atkMs || 0) * 0.001;
+    if (atk > 0.001) {
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(amp, t + atk);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + atk + decayTime);
+    } else {
+      gain.gain.setValueAtTime(amp, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
+    }
+    return atk;
+  }
+
   _connectToFx(node, voiceId) {
     if (voiceId && this.voicePan[voiceId] !== 0) {
       const pan = this.ctx.createStereoPanner();
@@ -387,7 +448,7 @@ class AudioEngine {
   _bassDrum(t, p, d, vel, vid) {
     const ctx = this.ctx;
     const baseFreq = (d.freq || 55) * centeredPitch(p.tune, 12);
-    const punchMult = Math.max(1, Math.min(4, d.punch || 2));
+    const punchMult = Math.max(1, Math.min(4, d.punch || 1.4));
     const startFreq = baseFreq * punchMult;
     const bodyDecay = (d.bodydecay || 650) * 0.001 * centeredScale(p.decay, 4) * (1 + (d.sustain || 0) * 8);
     const driveAmt = d.drive || 1;
@@ -395,7 +456,7 @@ class AudioEngine {
     const sweepTime = 0.015 + 0.5 / startFreq;
 
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
+    osc.type = this._getWave(d.wave);
     osc.frequency.setValueAtTime(startFreq, t);
     osc.frequency.exponentialRampToValueAtTime(Math.max(baseFreq, 20), t + sweepTime);
     if (retrigAmt > 0.05) {
@@ -414,19 +475,19 @@ class AudioEngine {
     }
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.9, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + bodyDecay);
+    const atk = this._applyEnv(gain, p.level * vel * 0.9, d.attack, bodyDecay, t);
 
     output.connect(gain);
     this._connectToFx(gain, vid);
-    osc.start(t); osc.stop(t + bodyDecay + 0.05);
+    osc.start(t); osc.stop(t + atk + bodyDecay + 0.05);
 
-    if (p.tone > 0.01) {
+    const clickAmt = (d.clickamt !== undefined ? d.clickamt : 0.12);
+    if (p.tone > 0.01 && clickAmt > 0.001) {
       const click = ctx.createOscillator();
       click.type = 'sine';
-      click.frequency.value = 1200;
+      click.frequency.value = d.clickfreq || 1200;
       const clickGain = ctx.createGain();
-      clickGain.gain.setValueAtTime(p.tone * p.level * vel * 0.12, t);
+      clickGain.gain.setValueAtTime(p.tone * p.level * vel * clickAmt, t);
       clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.003);
       click.connect(clickGain).connect(this.masterGain);
       click.start(t); click.stop(t + 0.008);
@@ -439,27 +500,26 @@ class AudioEngine {
     const decayTime = (d.decaytime || 60) * 0.001;
 
     const osc1 = ctx.createOscillator();
-    osc1.type = 'triangle';
+    osc1.type = this._getWave(d.o1wave !== undefined ? d.o1wave : 1);
     osc1.frequency.value = freq;
 
     const osc2 = ctx.createOscillator();
-    osc2.type = 'triangle';
+    osc2.type = this._getWave(d.o2wave !== undefined ? d.o2wave : 1);
     osc2.frequency.value = freq * 0.56;
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.55, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
 
     const bp = ctx.createBiquadFilter();
     bp.type = 'bandpass';
     bp.frequency.value = freq * 0.7;
     bp.Q.value = 4;
 
+    const gain = ctx.createGain();
+    const atk = this._applyEnv(gain, p.level * vel * 0.55, d.attack, decayTime, t);
+
     osc1.connect(bp); osc2.connect(bp);
     bp.connect(gain);
     this._connectToFx(gain, vid);
-    osc1.start(t); osc1.stop(t + decayTime + 0.01);
-    osc2.start(t); osc2.stop(t + decayTime + 0.01);
+    osc1.start(t); osc1.stop(t + atk + decayTime + 0.01);
+    osc2.start(t); osc2.stop(t + atk + decayTime + 0.01);
   }
 
   _snare(t, p, d, vel, vid) {
@@ -471,14 +531,15 @@ class AudioEngine {
     const noiseDecay = (d.ndecay || 200) * 0.001 * centeredScale(p.snappy, 2.5);
     const balance = d.balance || 0.5;
     const snappyMod = centeredScale(p.snappy, 2);
+    const atkMs = d.attack || 1;
 
     const osc1 = ctx.createOscillator();
-    osc1.type = 'triangle';
+    osc1.type = this._getWave(d.o1wave !== undefined ? d.o1wave : 1);
     osc1.frequency.setValueAtTime(o1freq * 1.7, t);
     osc1.frequency.exponentialRampToValueAtTime(o1freq, t + 0.028);
 
     const osc2 = ctx.createOscillator();
-    osc2.type = 'triangle';
+    osc2.type = this._getWave(d.o2wave !== undefined ? d.o2wave : 1);
     osc2.frequency.setValueAtTime(o2freq * 1.5, t);
     osc2.frequency.exponentialRampToValueAtTime(o2freq, t + 0.028);
 
@@ -488,8 +549,7 @@ class AudioEngine {
     osc2Gain.gain.value = oscMix * 1.5;
 
     const shellGain = ctx.createGain();
-    shellGain.gain.setValueAtTime(p.level * vel * (1 - balance) * 0.7, t);
-    shellGain.gain.exponentialRampToValueAtTime(0.001, t + shellDecay);
+    const atk = this._applyEnv(shellGain, p.level * vel * (1 - balance) * 0.7, atkMs, shellDecay, t);
 
     osc1.connect(osc1Gain).connect(shellGain);
     osc2.connect(osc2Gain).connect(shellGain);
@@ -500,11 +560,11 @@ class AudioEngine {
     shellGain.connect(hpf);
     this._connectToFx(hpf, vid);
 
-    osc1.start(t); osc1.stop(t + shellDecay + 0.02);
-    osc2.start(t); osc2.stop(t + shellDecay + 0.02);
+    osc1.start(t); osc1.stop(t + atk + shellDecay + 0.02);
+    osc2.start(t); osc2.stop(t + atk + shellDecay + 0.02);
 
     this._noiseHit(t, p.level * vel * balance * snappyMod * 0.7, noiseDecay,
-                   d.nbpfreq || 1800, d.nbpq || 1.1, d.hpf || 300, vid);
+                   d.nbpfreq || 1800, d.nbpq || 1.1, d.hpf || 300, vid, atkMs);
   }
 
   _clap(t, p, d, vel, vid) {
@@ -514,12 +574,14 @@ class AudioEngine {
     const numPulses = Math.round(d.npulses || 3);
     const spacing = (d.spacing || 10) * 0.001;
     const tailDecay = (d.taildecay || 120) * 0.001;
-    const amp = p.level * vel * 0.5;
+    const noiseAmt = d.noiseamt !== undefined ? d.noiseamt : 0.5;
+    const amp = p.level * vel * noiseAmt;
+    const atkMs = d.attack || 0;
 
     for (let i = 0; i < numPulses; i++) {
-      this._filteredNoiseHit(t + i * spacing, amp * 0.6, 0.005, bpFreq, bpQ, vid);
+      this._filteredNoiseHit(t + i * spacing, amp * 0.6, 0.005, bpFreq, bpQ, vid, atkMs);
     }
-    this._filteredNoiseHit(t + numPulses * spacing, amp, tailDecay, bpFreq, bpQ, vid);
+    this._filteredNoiseHit(t + numPulses * spacing, amp, tailDecay, bpFreq, bpQ, vid, atkMs);
   }
 
   _tomConga(t, p, d, vel, vid) {
@@ -529,40 +591,32 @@ class AudioEngine {
     const penvAmt = d.penvamt || 0.6;
     const penvTime = (d.penvtime || 40) * 0.001;
     const atkNoise = d.atknoise || 0.3;
-    const driveAmt = d.drive || 1;
+    const atkMs = d.attack || 1;
+    const noiseBpFreq = d.noisebpfreq || 2000;
 
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
+    osc.type = this._getWave(d.wave);
     osc.frequency.setValueAtTime(baseFreq * (1 + penvAmt), t);
     osc.frequency.exponentialRampToValueAtTime(Math.max(baseFreq, 20), t + penvTime);
 
-    let output;
-    if (driveAmt > 1.05) {
-      const ws = ctx.createWaveShaper();
-      ws.curve = this._tanhCurve(driveAmt);
-      osc.connect(ws);
-      output = ws;
-    } else {
-      output = osc;
-    }
-
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.8, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
+    const atk = this._applyEnv(gain, p.level * vel * 0.8, atkMs, decayTime, t);
 
-    output.connect(gain);
+    osc.connect(gain);
     this._connectToFx(gain, vid);
-    osc.start(t); osc.stop(t + decayTime + 0.05);
+    osc.start(t); osc.stop(t + atk + decayTime + 0.05);
 
     if (atkNoise > 0.01) {
-      this._noiseHit(t, p.level * vel * atkNoise * 0.3, 0.004, 2000, 1.0, 0, vid);
+      this._noiseHit(t, p.level * vel * atkNoise * 0.3, 0.004, noiseBpFreq, 1.0, 0, vid);
     }
   }
 
   _maracas(t, p, d, vel, vid) {
     const hpf = d.hpf || 6000;
     const decayTime = (d.decaytime || 30) * 0.001;
-    this._noiseHit(t, p.level * vel * 0.35, decayTime, hpf, 1.0, hpf, vid);
+    const noiseAmt = d.noiseamt !== undefined ? d.noiseamt : 0.35;
+    const atkMs = d.attack || 0;
+    this._noiseHit(t, p.level * vel * noiseAmt, decayTime, hpf, 1.0, hpf, vid, atkMs);
   }
 
   _cowbell(t, p, d, vel, vid) {
@@ -572,13 +626,14 @@ class AudioEngine {
     const bpFreq = d.bpfreq || 2640;
     const bpQ = d.bpq || 0.8;
     const decayTime = (d.decaytime || 400) * 0.001;
+    const atkMs = d.attack || 2;
 
     const osc1 = ctx.createOscillator();
-    osc1.type = 'square';
+    osc1.type = this._getWave(d.o1wave !== undefined ? d.o1wave : 2);
     osc1.frequency.value = o1freq;
 
     const osc2 = ctx.createOscillator();
-    osc2.type = 'square';
+    osc2.type = this._getWave(d.o2wave !== undefined ? d.o2wave : 2);
     osc2.frequency.value = o2freq;
 
     const mix = ctx.createGain();
@@ -591,14 +646,12 @@ class AudioEngine {
     bp.Q.value = bpQ;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.3, t);
-    gain.gain.setValueAtTime(p.level * vel * 0.22, t + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
+    const atk = this._applyEnv(gain, p.level * vel * 0.3, atkMs, decayTime, t);
 
     mix.connect(bp).connect(gain);
     this._connectToFx(gain, vid);
-    osc1.start(t); osc1.stop(t + decayTime + 0.01);
-    osc2.start(t); osc2.stop(t + decayTime + 0.01);
+    osc1.start(t); osc1.stop(t + atk + decayTime + 0.01);
+    osc2.start(t); osc2.stop(t + atk + decayTime + 0.01);
   }
 
   _cymbal(t, p, d, vel, vid) {
@@ -607,6 +660,8 @@ class AudioEngine {
     const bpFreq = d.bpfreq || 3200;
     const decayTime = (d.decaytime || 1500) * 0.001 * centeredScale(p.decay, 3);
     const balance = Math.max(0, Math.min(1, (d.balance || 0.5) + (p.tone - 0.5)));
+    const oscBase = d.oscfreq || 240;
+    const atkMs = d.attack || 2;
 
     const ratios = [1.0, 1.483, 1.932, 2.546, 2.987, 3.412];
     const merger = ctx.createGain();
@@ -615,7 +670,7 @@ class AudioEngine {
     for (const r of ratios) {
       const osc = ctx.createOscillator();
       osc.type = 'square';
-      osc.frequency.value = 240 * r;
+      osc.frequency.value = oscBase * r;
       const g = ctx.createGain();
       g.gain.value = 0.08;
       osc.connect(g).connect(merger);
@@ -637,8 +692,7 @@ class AudioEngine {
     bpGain.gain.value = 1 - balance;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.25, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
+    this._applyEnv(gain, p.level * vel * 0.25, atkMs, decayTime, t);
 
     const sum = ctx.createGain();
     sum.gain.value = 1;
@@ -653,6 +707,8 @@ class AudioEngine {
     const hpfFreq = d.hpf || 3000;
     const lpfFreq = d.lpf || (open ? 12000 : 11000);
     const decayTime = (d.decaytime || (open ? 600 : 180)) * 0.001 * (open ? centeredScale(p.decay, 3) : 1);
+    const oscBase = d.oscfreq || 320;
+    const atkMs = d.attack || (open ? 1 : 0);
 
     const ratios = [1.0, 1.483, 1.932, 2.546, 2.987, 3.412];
     const merger = ctx.createGain();
@@ -661,7 +717,7 @@ class AudioEngine {
     for (const r of ratios) {
       const osc = ctx.createOscillator();
       osc.type = 'square';
-      osc.frequency.value = 320 * r;
+      osc.frequency.value = oscBase * r;
       const g = ctx.createGain();
       g.gain.value = 0.06;
       osc.connect(g).connect(merger);
@@ -678,8 +734,7 @@ class AudioEngine {
     lp.frequency.value = lpfFreq;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.28, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
+    this._applyEnv(gain, p.level * vel * 0.28, atkMs, decayTime, t);
 
     merger.connect(hp).connect(lp).connect(gain);
     this._connectToFx(gain, vid);
@@ -689,9 +744,10 @@ class AudioEngine {
     const ctx = this.ctx;
     const freq = d.freq || 2500;
     const decayTime = (d.decaytime || 50) * 0.001;
+    const atkMs = d.attack || 0;
 
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
+    osc.type = this._getWave(d.wave);
     osc.frequency.value = freq;
 
     const bp = ctx.createBiquadFilter();
@@ -700,15 +756,14 @@ class AudioEngine {
     bp.Q.value = 15;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level * vel * 0.4, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
+    const atk = this._applyEnv(gain, p.level * vel * 0.4, atkMs, decayTime, t);
 
     osc.connect(bp).connect(gain);
     this._connectToFx(gain, vid);
-    osc.start(t); osc.stop(t + decayTime + 0.02);
+    osc.start(t); osc.stop(t + atk + decayTime + 0.02);
   }
 
-  _noiseHit(t, amp, duration, freq, q, hpfFreq, vid) {
+  _noiseHit(t, amp, duration, freq, q, hpfFreq, vid, attackMs = 0) {
     const ctx = this.ctx;
     const bufferSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -736,18 +791,17 @@ class AudioEngine {
     }
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(amp, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    const atk = this._applyEnv(gain, amp, attackMs, duration, t);
     chain.push(gain);
 
     let prev = src;
     for (const node of chain) { prev.connect(node); prev = node; }
     this._connectToFx(prev, vid);
 
-    src.start(t); src.stop(t + duration + 0.01);
+    src.start(t); src.stop(t + atk + duration + 0.01);
   }
 
-  _filteredNoiseHit(t, amp, duration, bpFreq, bpQ, vid) {
+  _filteredNoiseHit(t, amp, duration, bpFreq, bpQ, vid, attackMs = 0) {
     const ctx = this.ctx;
     const bufferSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -763,12 +817,11 @@ class AudioEngine {
     bp.Q.value = bpQ;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(amp, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    const atk = this._applyEnv(gain, amp, attackMs, duration, t);
 
     src.connect(bp).connect(gain);
     this._connectToFx(gain, vid);
-    src.start(t); src.stop(t + duration + 0.02);
+    src.start(t); src.stop(t + atk + duration + 0.02);
   }
 }
 
