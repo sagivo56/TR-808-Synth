@@ -285,6 +285,7 @@ function selectVoice(index) {
 
 function buildParamsPanel() {
   const panel = document.getElementById('params-panel');
+  panel.classList.remove('deep-mode');
   switch (currentTab) {
     case 'fx':   buildFxPanel(panel); return;
     case 'bass': buildBassPanel(panel); return;
@@ -349,20 +350,40 @@ function buildParamsPanel() {
 function buildDeepPanel(panel) {
   const v = VOICES[selectedVoice];
   const deepDefs = DEEP_PARAMS[v.id];
+  panel.classList.add('deep-mode');
   if (!deepDefs || deepDefs.length === 0) {
     panel.innerHTML = `<div class="params-title">${v.fullName} - DEEP EDIT</div>
       <div class="params-empty">No deep parameters for this voice</div>`;
     return;
   }
   const d = engine.deep[v.id];
-  let html = `<div class="params-title">${v.fullName} - DEEP EDIT</div><div class="knobs-row deep-row">`;
+
+  // Group params by section preserving order
+  const sections = [];
+  const secIndex = {};
   for (const dp of deepDefs) {
-    const norm = (d[dp.id] - dp.min) / (dp.max - dp.min);
-    html += makeKnob(dp.id, dp.label, norm, 'deep', dp.min, dp.max, dp.labels);
+    const sec = dp.section || 'OTHER';
+    if (secIndex[sec] === undefined) { secIndex[sec] = sections.length; sections.push({ name: sec, params: [] }); }
+    sections[secIndex[sec]].params.push(dp);
   }
-  html += '</div>';
+
+  let html = `<div class="deep-header">
+    <span class="params-title">${v.fullName} — DEEP</span>
+    <button class="reset-btn" id="deep-reset-btn">&#x21BA; RESET</button>
+  </div>`;
+
+  for (const sec of sections) {
+    html += `<div class="deep-section"><div class="deep-sec-label">${sec.name}</div><div class="knobs-row">`;
+    for (const dp of sec.params) {
+      const norm = (d[dp.id] - dp.min) / (dp.max - dp.min);
+      html += makeKnob(dp.id, dp.label, norm, 'deep', dp.min, dp.max, dp.labels);
+    }
+    html += `</div></div>`;
+  }
+
   panel.innerHTML = html;
   initKnobs(panel);
+
   panel.querySelectorAll('.knob-canvas[data-type="deep"]').forEach(k => {
     k.addEventListener('knobchange', () => {
       const min = parseFloat(k.dataset.min), max = parseFloat(k.dataset.max);
@@ -377,6 +398,11 @@ function buildDeepPanel(panel) {
       }
       k.parentElement.querySelector('.knob-value').textContent = display;
     });
+  });
+
+  document.getElementById('deep-reset-btn').addEventListener('click', () => {
+    for (const dp of deepDefs) engine.deep[v.id][dp.id] = dp.def;
+    buildDeepPanel(panel);
   });
 }
 
