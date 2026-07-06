@@ -1,0 +1,23 @@
+{
+  "name": "TR-808 Rhythm Composer",
+  "short_name": "TR-808",
+  "description": "Mobile TR-808 drum machine synthesizer",
+  "start_url": "/TR-808-Synth/",
+  "scope": "/TR-808-Synth/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
