@@ -131,6 +131,10 @@ const DEEP_PARAMS = {
     { id: 'bpfreq',       label: 'Clang Band',  min: 1500, max: 6000,  def: 3200,  skew: true,  section: 'METAL'  },
     { id: 'balance',      label: 'Band Bal.',   min: 0,    max: 1,     def: 0.5,   skew: false, section: 'METAL'  },
     { id: 'humanize',     label: 'Humanize',    min: 0,    max: 1,     def: 0,     skew: false, section: 'METAL'  },
+    { id: 'noiseAmt',     label: 'Noise Amt',   min: 0,    max: 1,     def: 0.25,  skew: false, section: 'NOISE'  },
+    { id: 'noiseType',    label: 'Noise Type',  min: 0,    max: 1,     def: 0,     skew: false, labels: ['WHT','PNK'], section: 'NOISE' },
+    { id: 'noisehpf',     label: 'Noise HPF',   min: 500,  max: 15000, def: 6000,  skew: true,  section: 'NOISE'  },
+    { id: 'noiselpf',     label: 'Noise LP',    min: 2000, max: 20000, def: 14000, skew: true,  section: 'NOISE'  },
     { id: 'filtertype',   label: 'Type',        min: 0,    max: 2,     def: 0,     skew: false, labels: FILTER_LABELS, section: 'FILTER' },
     { id: 'cutoff',       label: 'Cutoff',      min: 20,   max: 20000, def: 20000, skew: true,  section: 'FILTER' },
     { id: 'resonance',    label: 'Reson.',      min: 0.1,  max: 20,    def: 0.7,   skew: true,  section: 'FILTER' },
@@ -147,6 +151,10 @@ const DEEP_PARAMS = {
     { id: 'lpf',          label: 'Color',     min: 5000, max: 16000, def: 12000, skew: true,  section: 'METAL'  },
     { id: 'humanize',     label: 'Humanize',  min: 0,    max: 1,     def: 0,     skew: false, section: 'METAL'  },
     { id: 'chokeGroup',   label: 'Choke',     min: 0,    max: 1,     def: 1,     skew: false, labels: ['OFF','ON'], section: 'METAL' },
+    { id: 'noiseAmt',     label: 'Noise Amt', min: 0,    max: 1,     def: 0.3,   skew: false, section: 'NOISE'  },
+    { id: 'noiseType',    label: 'Noise Type',min: 0,    max: 1,     def: 0,     skew: false, labels: ['WHT','PNK'], section: 'NOISE' },
+    { id: 'noisehpf',     label: 'Noise HPF', min: 500,  max: 15000, def: 4000,  skew: true,  section: 'NOISE'  },
+    { id: 'noiselpf',     label: 'Noise LP',  min: 2000, max: 20000, def: 12000, skew: true,  section: 'NOISE'  },
     { id: 'filtertype',   label: 'Type',      min: 0,    max: 2,     def: 0,     skew: false, labels: FILTER_LABELS, section: 'FILTER' },
     { id: 'cutoff',       label: 'Cutoff',    min: 20,   max: 20000, def: 20000, skew: true,  section: 'FILTER' },
     { id: 'resonance',    label: 'Reson.',    min: 0.1,  max: 20,    def: 0.7,   skew: true,  section: 'FILTER' },
@@ -163,6 +171,10 @@ const DEEP_PARAMS = {
     { id: 'lpf',          label: 'Color',     min: 5000, max: 16000, def: 11000, skew: true,  section: 'METAL'  },
     { id: 'humanize',     label: 'Humanize',  min: 0,    max: 1,     def: 0,     skew: false, section: 'METAL'  },
     { id: 'chokeGroup',   label: 'Choke',     min: 0,    max: 1,     def: 1,     skew: false, labels: ['OFF','ON'], section: 'METAL' },
+    { id: 'noiseAmt',     label: 'Noise Amt', min: 0,    max: 1,     def: 0.4,   skew: false, section: 'NOISE'  },
+    { id: 'noiseType',    label: 'Noise Type',min: 0,    max: 1,     def: 0,     skew: false, labels: ['WHT','PNK'], section: 'NOISE' },
+    { id: 'noisehpf',     label: 'Noise HPF', min: 500,  max: 15000, def: 5000,  skew: true,  section: 'NOISE'  },
+    { id: 'noiselpf',     label: 'Noise LP',  min: 2000, max: 20000, def: 11000, skew: true,  section: 'NOISE'  },
     { id: 'filtertype',   label: 'Type',      min: 0,    max: 2,     def: 0,     skew: false, labels: FILTER_LABELS, section: 'FILTER' },
     { id: 'cutoff',       label: 'Cutoff',    min: 20,   max: 20000, def: 20000, skew: true,  section: 'FILTER' },
     { id: 'resonance',    label: 'Reson.',    min: 0.1,  max: 20,    def: 0.7,   skew: true,  section: 'FILTER' },
@@ -733,6 +745,31 @@ class AudioEngine {
     const gain = ctx.createGain();
     this._applyEnv(gain, p.level * hVel * 0.25, d.attack, decayMs, t, d.sustainLevel, d.release);
     sum.connect(gain);
+
+    // Noise layer — mixed into the same ADSR gain
+    const noiseAmt = d.noiseAmt ?? 0.25;
+    if (noiseAmt > 0.005) {
+      const nBufSize = Math.ceil(ctx.sampleRate * (decayMs * 0.001 + 0.1));
+      const nBuf = ctx.createBuffer(1, nBufSize, ctx.sampleRate);
+      const nData = nBuf.getChannelData(0);
+      for (let i = 0; i < nBufSize; i++) nData[i] = Math.random() * 2 - 1;
+      const nSrc = ctx.createBufferSource();
+      nSrc.buffer = nBuf;
+
+      const nHpf = ctx.createBiquadFilter(); nHpf.type = 'highpass'; nHpf.frequency.value = Math.max(20, d.noisehpf ?? 6000);
+      const nLpf = ctx.createBiquadFilter(); nLpf.type = 'lowpass';  nLpf.frequency.value = Math.min(20000, d.noiselpf ?? 14000);
+      const nG = ctx.createGain(); nG.gain.value = noiseAmt;
+
+      if ((d.noiseType ?? 0) > 0.5) {
+        const nPink = ctx.createBiquadFilter(); nPink.type = 'lowpass'; nPink.frequency.value = 3000;
+        nSrc.connect(nHpf); nHpf.connect(nPink); nPink.connect(nLpf);
+      } else {
+        nSrc.connect(nHpf); nHpf.connect(nLpf);
+      }
+      nLpf.connect(nG); nG.connect(gain);
+      nSrc.start(t); nSrc.stop(t + decayMs * 0.001 + 0.1);
+    }
+
     this._connectFiltered(gain, vid, d, t, d.attack, decayMs);
   }
 
@@ -749,6 +786,7 @@ class AudioEngine {
       oh.gain.gain.setValueAtTime(oh.peakAmp * 0.5, t);
       oh.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.004);
       oh.oscs.forEach(o => { try { o.stop(t + 0.006); } catch(e) {} });
+      if (oh.noiseSrc) { try { oh.noiseSrc.stop(t + 0.006); } catch(e) {} }
       this._ohNodes = null;
     }
 
@@ -775,9 +813,36 @@ class AudioEngine {
     const amp = p.level * hVel * 0.28;
     this._applyEnv(gain, amp, d.attack, decayMs, t, d.sustainLevel, d.release);
     merger.connect(hp).connect(lp).connect(gain);
+
+    // Noise layer — mixed into the same ADSR gain so it shares the envelope
+    let noiseSrc = null;
+    const noiseAmt = d.noiseAmt ?? 0.3;
+    if (noiseAmt > 0.005) {
+      const nBufSize = Math.ceil(ctx.sampleRate * (decayMs * 0.001 + 0.1));
+      const nBuf = ctx.createBuffer(1, nBufSize, ctx.sampleRate);
+      const nData = nBuf.getChannelData(0);
+      for (let i = 0; i < nBufSize; i++) nData[i] = Math.random() * 2 - 1;
+      noiseSrc = ctx.createBufferSource();
+      noiseSrc.buffer = nBuf;
+
+      const nHpf = ctx.createBiquadFilter(); nHpf.type = 'highpass'; nHpf.frequency.value = Math.max(20, d.noisehpf ?? 4000);
+      const nLpf = ctx.createBiquadFilter(); nLpf.type = 'lowpass';  nLpf.frequency.value = Math.min(20000, d.noiselpf ?? 12000);
+      const nG = ctx.createGain(); nG.gain.value = noiseAmt;
+
+      if ((d.noiseType ?? 0) > 0.5) {
+        // Pink approximation: extra gentle rolloff before main LPF
+        const nPink = ctx.createBiquadFilter(); nPink.type = 'lowpass'; nPink.frequency.value = 3000;
+        noiseSrc.connect(nHpf); nHpf.connect(nPink); nPink.connect(nLpf);
+      } else {
+        noiseSrc.connect(nHpf); nHpf.connect(nLpf);
+      }
+      nLpf.connect(nG); nG.connect(gain);
+      noiseSrc.start(t); noiseSrc.stop(t + decayMs * 0.001 + 0.1);
+    }
+
     this._connectFiltered(gain, vid, d, t, d.attack, decayMs);
 
-    if (open) this._ohNodes = { gain, oscs, peakAmp: amp };
+    if (open) this._ohNodes = { gain, oscs, peakAmp: amp, noiseSrc };
   }
 
   _claves(t, p, d, vel, vid) {
