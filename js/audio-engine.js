@@ -246,8 +246,14 @@ class AudioEngine {
     this.delayReturn = null;
     this.convolver = null;
 
-    this._ohNodes = null;   // for OH/CH choke
-    this._keepAliveEl = null; // silent looping audio for iOS silent mode
+    this._ohNodes = null;
+    this._keepAliveEl = null;
+
+    this.phaserRate = 0.5;
+    this.phaserDepth = 0.467;
+    this.phaserFeedbackAmt = 0.3;
+    this.chorusRate = 0.8;
+    this.chorusDepth = 0.3;
 
     this.params = {};
     for (const v of VOICES) {
@@ -269,10 +275,14 @@ class AudioEngine {
     this.voicePan = {};
     this.voiceRevSend = {};
     this.voiceDlySend = {};
+    this.voicePhaseSend = {};
+    this.voiceChorusSend = {};
     for (const v of VOICES) {
       this.voicePan[v.id] = 0;
       this.voiceRevSend[v.id] = 0;
       this.voiceDlySend[v.id] = 0;
+      this.voicePhaseSend[v.id] = 0;
+      this.voiceChorusSend[v.id] = 0;
     }
   }
 
@@ -282,6 +292,10 @@ class AudioEngine {
   getRevSend(id) { return this.voiceRevSend[id] || 0; }
   setDlySend(id, val) { this.voiceDlySend[id] = Math.max(0, Math.min(1, val)); }
   getDlySend(id) { return this.voiceDlySend[id] || 0; }
+  setPhaseSend(id, val) { this.voicePhaseSend[id] = Math.max(0, Math.min(1, val)); }
+  getPhaseSend(id) { return this.voicePhaseSend[id] || 0; }
+  setChorusSend(id, val) { this.voiceChorusSend[id] = Math.max(0, Math.min(1, val)); }
+  getChorusSend(id) { return this.voiceChorusSend[id] || 0; }
 
   async init() {
     if (this.ctx && this.ctx.state === 'running') return;
@@ -304,6 +318,8 @@ class AudioEngine {
 
       this._setupDelay();
       this._setupReverb();
+      this._setupPhaser();
+      this._setupChorus();
     }
 
     if (this.ctx.state === 'suspended') await this.ctx.resume();
@@ -404,6 +420,87 @@ class AudioEngine {
     this.reverbHpf.connect(this.convolver);
     this.convolver.connect(this.reverbReturn);
     this.reverbReturn.connect(this.masterGain);
+  }
+
+  _setupPhaser() {
+    const ctx = this.ctx;
+    // 4-stage allpass phaser. LFO sweeps all stage frequencies in unison.
+    this.phaserInput = ctx.createGain();
+    this.phaserAllpass = [];
+    for (let i = 0; i < 4; i++) {
+      const ap = ctx.createBiquadFilter();
+      ap.type = 'allpass';
+      ap.frequency.value = 1000;
+      ap.Q.value = 8;
+      this.phaserAllpass.push(ap);
+    }
+    this.phaserInput.connect(this.phaserAllpass[0]);
+    for (let i = 0; i < 3; i++) this.phaserAllpass[i].connect(this.phaserAllpass[i + 1]);
+
+    this.phaserFeedbackGain = ctx.createGain();
+    this.phaserFeedbackGain.gain.value = this.phaserFeedbackAmt;
+    this.phaserAllpass[3].connect(this.phaserFeedbackGain);
+    this.phaserFeedbackGain.connect(this.phaserInput);
+
+    this.phaserLfo = ctx.createOscillator();
+    this.phaserLfo.type = 'sine';
+    this.phaserLfo.frequency.value = this.phaserRate;
+    this.phaserLfoDepth = ctx.createGain();
+    this.phaserLfoDepth.gain.value = this.phaserDepth * 1500;
+    this.phaserLfo.connect(this.phaserLfoDepth);
+    this.phaserAllpass.forEach(ap => this.phaserLfoDepth.connect(ap.frequency));
+    this.phaserLfo.start();
+
+    this.phaserSend = ctx.createGain();
+    this.phaserSend.gain.value = 1.0;
+    this.phaserReturn = ctx.createGain();
+    this.phaserReturn.gain.value = 0.5;
+
+    this.phaserSend.connect(this.phaserInput);
+    this.phaserAllpass[3].connect(this.phaserReturn);
+    this.phaserReturn.connect(this.masterGain);
+  }
+
+  _setupChorus() {
+    const ctx = this.ctx;
+    // Stereo chorus: two delay lines with slightly different LFO rates.
+    this.chorusDelayL = ctx.createDelay(0.05);
+    this.chorusDelayR = ctx.createDelay(0.05);
+    this.chorusDelayL.delayTime.value = 0.015;
+    this.chorusDelayR.delayTime.value = 0.017;
+
+    this.chorusLfoL = ctx.createOscillator();
+    this.chorusLfoL.type = 'sine';
+    this.chorusLfoL.frequency.value = this.chorusRate;
+    this.chorusLfoR = ctx.createOscillator();
+    this.chorusLfoR.type = 'sine';
+    this.chorusLfoR.frequency.value = this.chorusRate * 1.3;
+
+    this.chorusLfoDepthL = ctx.createGain();
+    this.chorusLfoDepthL.gain.value = this.chorusDepth * 0.01;
+    this.chorusLfoDepthR = ctx.createGain();
+    this.chorusLfoDepthR.gain.value = this.chorusDepth * 0.01;
+
+    this.chorusLfoL.connect(this.chorusLfoDepthL);
+    this.chorusLfoDepthL.connect(this.chorusDelayL.delayTime);
+    this.chorusLfoR.connect(this.chorusLfoDepthR);
+    this.chorusLfoDepthR.connect(this.chorusDelayR.delayTime);
+    this.chorusLfoL.start();
+    this.chorusLfoR.start();
+
+    const merger = ctx.createChannelMerger(2);
+    this.chorusDelayL.connect(merger, 0, 0);
+    this.chorusDelayR.connect(merger, 0, 1);
+
+    this.chorusSend = ctx.createGain();
+    this.chorusSend.gain.value = 1.0;
+    this.chorusReturn = ctx.createGain();
+    this.chorusReturn.gain.value = 0.5;
+
+    this.chorusSend.connect(this.chorusDelayL);
+    this.chorusSend.connect(this.chorusDelayR);
+    merger.connect(this.chorusReturn);
+    this.chorusReturn.connect(this.masterGain);
   }
 
   get currentTime() { return this.ctx ? this.ctx.currentTime : 0; }
@@ -539,6 +636,16 @@ class AudioEngine {
       const dg = this.ctx.createGain();
       dg.gain.value = this.voiceDlySend[voiceId];
       node.connect(dg).connect(this.delaySend);
+    }
+    if (this.phaserSend && voiceId && (this.voicePhaseSend[voiceId] || 0) > 0.01) {
+      const pg = this.ctx.createGain();
+      pg.gain.value = this.voicePhaseSend[voiceId];
+      node.connect(pg).connect(this.phaserSend);
+    }
+    if (this.chorusSend && voiceId && (this.voiceChorusSend[voiceId] || 0) > 0.01) {
+      const cg = this.ctx.createGain();
+      cg.gain.value = this.voiceChorusSend[voiceId];
+      node.connect(cg).connect(this.chorusSend);
     }
   }
 
