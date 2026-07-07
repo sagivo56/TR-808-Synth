@@ -248,6 +248,7 @@ class AudioEngine {
 
     this._ohNodes = null;
     this._keepAliveEl = null;
+    this._noiseBuffer = null;
 
     this.phaserRate = 0.5;
     this.phaserDepth = 0.467;
@@ -320,6 +321,7 @@ class AudioEngine {
       this._setupReverb();
       this._setupPhaser();
       this._setupChorus();
+      this._setupNoise();
     }
 
     if (this.ctx.state === 'suspended') await this.ctx.resume();
@@ -501,6 +503,26 @@ class AudioEngine {
     this.chorusSend.connect(this.chorusDelayR);
     merger.connect(this.chorusReturn);
     this.chorusReturn.connect(this.masterGain);
+  }
+
+  _setupNoise() {
+    // Pre-generate a shared 4-second white-noise buffer reused by all voices.
+    // Eliminates per-trigger buffer allocation and Math.random() filling
+    // that causes main-thread jank when many voices fire simultaneously.
+    const sr = this.ctx.sampleRate;
+    this._noiseBuffer = this.ctx.createBuffer(1, sr * 4, sr);
+    const d = this._noiseBuffer.getChannelData(0);
+    for (let i = 0; i < sr * 4; i++) d[i] = Math.random() * 2 - 1;
+  }
+
+  _noiseSource() {
+    const src = this.ctx.createBufferSource();
+    src.buffer = this._noiseBuffer;
+    src.loop = true;
+    // Random start offset so each trigger sounds different.
+    src.loopStart = 0;
+    src.loopEnd = this._noiseBuffer.duration;
+    return src;
   }
 
   get currentTime() { return this.ctx ? this.ctx.currentTime : 0; }
@@ -856,12 +878,7 @@ class AudioEngine {
     // Noise layer — mixed into the same ADSR gain
     const noiseAmt = d.noiseAmt ?? 0.25;
     if (noiseAmt > 0.005) {
-      const nBufSize = Math.ceil(ctx.sampleRate * (decayMs * 0.001 + 0.1));
-      const nBuf = ctx.createBuffer(1, nBufSize, ctx.sampleRate);
-      const nData = nBuf.getChannelData(0);
-      for (let i = 0; i < nBufSize; i++) nData[i] = Math.random() * 2 - 1;
-      const nSrc = ctx.createBufferSource();
-      nSrc.buffer = nBuf;
+      const nSrc = this._noiseSource();
 
       const nHpf = ctx.createBiquadFilter(); nHpf.type = 'highpass'; nHpf.frequency.value = Math.max(20, d.noisehpf ?? 6000);
       const nLpf = ctx.createBiquadFilter(); nLpf.type = 'lowpass';  nLpf.frequency.value = Math.min(20000, d.noiselpf ?? 14000);
@@ -925,12 +942,7 @@ class AudioEngine {
     let noiseSrc = null;
     const noiseAmt = d.noiseAmt ?? 0.3;
     if (noiseAmt > 0.005) {
-      const nBufSize = Math.ceil(ctx.sampleRate * (decayMs * 0.001 + 0.1));
-      const nBuf = ctx.createBuffer(1, nBufSize, ctx.sampleRate);
-      const nData = nBuf.getChannelData(0);
-      for (let i = 0; i < nBufSize; i++) nData[i] = Math.random() * 2 - 1;
-      noiseSrc = ctx.createBufferSource();
-      noiseSrc.buffer = nBuf;
+      noiseSrc = this._noiseSource();
 
       const nHpf = ctx.createBiquadFilter(); nHpf.type = 'highpass'; nHpf.frequency.value = Math.max(20, d.noisehpf ?? 4000);
       const nLpf = ctx.createBiquadFilter(); nLpf.type = 'lowpass';  nLpf.frequency.value = Math.min(20000, d.noiselpf ?? 12000);
@@ -970,11 +982,7 @@ class AudioEngine {
 
   _noiseHit(t, amp, duration, freq, q, hpfFreq, vid, attackMs = 0) {
     const ctx = this.ctx;
-    const bufSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
+    const src = this._noiseSource();
 
     const chain = [];
     if (hpfFreq > 0) { const h = ctx.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = hpfFreq; chain.push(h); }
@@ -992,11 +1000,7 @@ class AudioEngine {
 
   _filteredNoiseHit(t, amp, duration, bpFreq, bpQ, vid, attackMs = 0) {
     const ctx = this.ctx;
-    const bufSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
+    const src = this._noiseSource();
 
     const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = bpFreq; bp.Q.value = bpQ;
     const gain = ctx.createGain();
