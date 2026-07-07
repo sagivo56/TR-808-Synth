@@ -90,7 +90,7 @@ function buildHeader() {
       <div class="compact-group">
         <label>BPM</label>
         <input type="range" id="tempo-slider" min="40" max="300" value="120" step="1">
-        <span id="tempo-val">120</span>
+        <input type="number" id="tempo-val" min="40" max="300" value="120" step="1">
       </div>
       <div class="compact-group">
         <label>SWING</label>
@@ -113,8 +113,16 @@ function buildHeader() {
   });
   document.getElementById('tempo-slider').addEventListener('input', (e) => {
     seq.bpm = parseInt(e.target.value);
-    document.getElementById('tempo-val').textContent = e.target.value;
+    document.getElementById('tempo-val').value = e.target.value;
   });
+  const applyTempo = (val) => {
+    const bpm = Math.max(40, Math.min(300, parseInt(val) || 120));
+    seq.bpm = bpm;
+    document.getElementById('tempo-slider').value = bpm;
+    document.getElementById('tempo-val').value = bpm;
+  };
+  document.getElementById('tempo-val').addEventListener('change', (e) => applyTempo(e.target.value));
+  document.getElementById('tempo-val').addEventListener('keydown', (e) => { if (e.key === 'Enter') { applyTempo(e.target.value); e.target.blur(); } });
   document.getElementById('swing-slider').addEventListener('input', (e) => {
     seq.swing = parseInt(e.target.value) / 100;
     document.getElementById('swing-val').textContent = e.target.value + '%';
@@ -225,7 +233,7 @@ function loadFactoryPattern(idx) {
   const p = FACTORY_PATTERNS[idx];
   seq.clearPattern(); seq.bpm = p.bpm;
   document.getElementById('tempo-slider').value = p.bpm;
-  document.getElementById('tempo-val').textContent = p.bpm;
+  document.getElementById('tempo-val').value = p.bpm;
   for (const [v, steps] of Object.entries(p.data)) {
     for (let s = 0; s < steps.length; s++) seq.setStep(parseInt(v), s, !!steps[s]);
   }

@@ -172,12 +172,39 @@ body {
   accent-color: var(--orange);
 }
 
-#tempo-val, #swing-val {
+#swing-val {
   font-size: 12px;
   font-weight: 700;
   color: var(--orange);
   min-width: 30px;
   text-align: right;
+}
+
+#tempo-val {
+  width: 38px;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--orange-dim);
+  border-radius: 0;
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 2px;
+  -webkit-user-select: text;
+  user-select: text;
+  -moz-appearance: textfield;
+}
+
+#tempo-val:focus {
+  outline: none;
+  border-bottom-color: var(--orange);
+  background: rgba(232,120,48,0.08);
+}
+
+#tempo-val::-webkit-outer-spin-button,
+#tempo-val::-webkit-inner-spin-button {
+  -webkit-appearance: none;
 }
 
 .header-select {
