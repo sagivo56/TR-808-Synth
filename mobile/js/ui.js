@@ -176,9 +176,11 @@ function buildSeqControls() {
         </select>
         <button class="seq-btn" id="trip-btn">1/16</button>
       </div>
-      <div class="seq-group">
+      <div class="seq-group song-group">
         <button class="seq-btn" id="song-btn">SONG</button>
-        <input class="chain-input" id="chain-input" placeholder="1 2 1 3" type="text">
+        <button class="seq-btn" id="chain-add-btn" title="Add current pattern to chain">+PAT</button>
+        <button class="seq-btn" id="chain-clr-btn">CLR</button>
+        <div class="chain-display" id="chain-display"></div>
       </div>
     </div>`;
 
@@ -219,16 +221,37 @@ function buildSeqControls() {
     seq.triplet = !seq.triplet;
     document.getElementById('trip-btn').textContent = seq.triplet ? '1/16T' : '1/16';
   });
+  const renderChainDisplay = () => {
+    const el = document.getElementById('chain-display');
+    if (!el) return;
+    el.innerHTML = seq.chain.map((p, i) =>
+      `<span class="chain-chip">${p + 1}<button class="chain-chip-del" data-idx="${i}">×</button></span>`
+    ).join('');
+    el.querySelectorAll('.chain-chip-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        seq.chain.splice(parseInt(btn.dataset.idx), 1);
+        renderChainDisplay();
+      });
+    });
+  };
+
   document.getElementById('song-btn').addEventListener('click', () => {
     seq.chainEnabled = !seq.chainEnabled;
-    document.getElementById('song-btn').classList.toggle('active', seq.chainEnabled);
+    const on = seq.chainEnabled;
+    document.getElementById('song-btn').classList.toggle('active', on);
+    document.getElementById('chain-display').classList.toggle('chain-active', on);
   });
-  const chainInput = document.getElementById('chain-input');
-  const applyChain = () => {
-    seq.chain = chainInput.value.split(/[\s,]+/).filter(s => s).map(s => parseInt(s) - 1).filter(n => n >= 0 && n < NUM_PATTERNS);
-  };
-  chainInput.addEventListener('change', applyChain);
-  chainInput.addEventListener('blur', applyChain);
+  document.getElementById('chain-add-btn').addEventListener('click', () => {
+    seq.chain.push(seq.currentPattern);
+    renderChainDisplay();
+  });
+  document.getElementById('chain-clr-btn').addEventListener('click', () => {
+    seq.chain = [];
+    seq.chainIndex = 0;
+    renderChainDisplay();
+  });
+  renderChainDisplay();
 }
 
 function syncSeqUI() {
