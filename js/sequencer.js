@@ -116,6 +116,21 @@ class Sequencer {
     pat.vars[to] = dst;
   }
 
+  copyPattern(from, to) {
+    const dst = this._emptyPattern();
+    const src = this.patterns[from];
+    for (let vi = 0; vi < NUM_VARS; vi++) {
+      const sv = src.vars[vi];
+      const dv = dst.vars[vi];
+      for (let v = 0; v < NUM_VOICES; v++) dv.grid[v] = [...sv.grid[v]];
+      dv.accent = [...sv.accent];
+      dv.bassNotes = [...sv.bassNotes];
+      dv.length = sv.length;
+      dv.stepDiv = sv.stepDiv;
+    }
+    this.patterns[to] = dst;
+  }
+
   _getPlayVar() {
     switch (this.playMode) {
       case 'a': return 0;
