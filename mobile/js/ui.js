@@ -309,6 +309,8 @@ function buildParamsPanel() {
   html += makeKnob('pan', 'PAN', (engine.getPan(v.id) + 1) / 2, 'pan');
   html += makeKnob('revsend', 'RVB', engine.getRevSend(v.id), 'send');
   html += makeKnob('dlysend', 'DLY', engine.getDlySend(v.id), 'send');
+  html += makeKnob('phzsend', 'PHZ', engine.getPhaseSend(v.id), 'send');
+  html += makeKnob('chrsend', 'CHR', engine.getChorusSend(v.id), 'send');
   html += '</div>';
   panel.innerHTML = html;
   initKnobs(panel);
@@ -329,8 +331,10 @@ function buildParamsPanel() {
   panel.querySelectorAll('.knob-canvas[data-type="send"]').forEach(k => {
     k.addEventListener('knobchange', () => {
       const val = parseInt(k.dataset.value) / 100;
-      if (k.dataset.param === 'revsend') engine.setRevSend(v.id, val);
-      else engine.setDlySend(v.id, val);
+      if      (k.dataset.param === 'revsend')  engine.setRevSend(v.id, val);
+      else if (k.dataset.param === 'dlysend')  engine.setDlySend(v.id, val);
+      else if (k.dataset.param === 'phzsend')  engine.setPhaseSend(v.id, val);
+      else if (k.dataset.param === 'chrsend')  engine.setChorusSend(v.id, val);
       k.parentElement.querySelector('.knob-value').textContent = Math.round(val * 100);
     });
   });
@@ -429,6 +433,7 @@ function buildBassPanel(panel) {
 }
 
 function buildFxPanel(panel) {
+  panel.classList.add('deep-mode');
   let html = `<div class="params-title">FX</div>`;
   html += `<div class="fx-section"><div class="fx-label">REVERB</div><div class="knobs-row">`;
   html += makeKnob('reverbMix', 'RETURN', engine.reverbReturn ? engine.reverbReturn.gain.value : 0.35, 'fx');
@@ -437,6 +442,17 @@ function buildFxPanel(panel) {
   html += makeKnob('delayMix', 'RETURN', engine.delayReturn ? engine.delayReturn.gain.value : 0.5, 'fx');
   html += makeKnob('delayTime', 'TIME', engine.delayNode ? engine.delayNode.delayTime.value / 2 : 0.19, 'fx');
   html += makeKnob('delayFeedback', 'FDBK', engine.delayFeedback ? engine.delayFeedback.gain.value : 0.35, 'fx');
+  html += `</div></div>`;
+  html += `<div class="fx-section"><div class="fx-label">PHASER</div><div class="knobs-row">`;
+  html += makeKnob('phaserReturn',   'RETURN', engine.phaserReturn ? engine.phaserReturn.gain.value : 0.5, 'fx');
+  html += makeKnob('phaserRate',     'RATE',   (engine.phaserRate - 0.05) / 7.95, 'fx');
+  html += makeKnob('phaserDepth',    'DEPTH',  engine.phaserDepth, 'fx');
+  html += makeKnob('phaserFeedback', 'FDBK',   engine.phaserFeedbackAmt / 0.95, 'fx');
+  html += `</div></div>`;
+  html += `<div class="fx-section"><div class="fx-label">CHORUS</div><div class="knobs-row">`;
+  html += makeKnob('chorusReturn', 'RETURN', engine.chorusReturn ? engine.chorusReturn.gain.value : 0.5, 'fx');
+  html += makeKnob('chorusRate',   'RATE',   (engine.chorusRate - 0.1) / 4.9, 'fx');
+  html += makeKnob('chorusDepth',  'DEPTH',  engine.chorusDepth, 'fx');
   html += `</div></div>`;
   html += `<div class="fx-section"><div class="fx-label">MASTER</div><div class="knobs-row">`;
   html += makeKnob('masterLevel', 'OUTPUT', engine.masterLevel, 'fx');
@@ -449,10 +465,39 @@ function buildFxPanel(panel) {
     k.addEventListener('knobchange', () => {
       const val = parseInt(k.dataset.value) / 100;
       switch (k.dataset.param) {
-        case 'reverbMix': if (engine.reverbReturn) engine.reverbReturn.gain.value = val; break;
-        case 'delayMix': if (engine.delayReturn) engine.delayReturn.gain.value = val; break;
-        case 'delayTime': if (engine.delayNode) engine.delayNode.delayTime.value = val * 2; break;
+        case 'reverbMix':     if (engine.reverbReturn) engine.reverbReturn.gain.value = val; break;
+        case 'delayMix':      if (engine.delayReturn) engine.delayReturn.gain.value = val; break;
+        case 'delayTime':     if (engine.delayNode) engine.delayNode.delayTime.value = val * 2; break;
         case 'delayFeedback': if (engine.delayFeedback) engine.delayFeedback.gain.value = val; break;
+        case 'phaserReturn':  if (engine.phaserReturn) engine.phaserReturn.gain.value = val; break;
+        case 'phaserRate': {
+          engine.phaserRate = 0.05 + val * 7.95;
+          if (engine.phaserLfo) engine.phaserLfo.frequency.value = engine.phaserRate;
+          break;
+        }
+        case 'phaserDepth': {
+          engine.phaserDepth = val;
+          if (engine.phaserLfoDepth) engine.phaserLfoDepth.gain.value = val * 1500;
+          break;
+        }
+        case 'phaserFeedback': {
+          engine.phaserFeedbackAmt = val * 0.95;
+          if (engine.phaserFeedbackGain) engine.phaserFeedbackGain.gain.value = engine.phaserFeedbackAmt;
+          break;
+        }
+        case 'chorusReturn': if (engine.chorusReturn) engine.chorusReturn.gain.value = val; break;
+        case 'chorusRate': {
+          engine.chorusRate = 0.1 + val * 4.9;
+          if (engine.chorusLfoL) engine.chorusLfoL.frequency.value = engine.chorusRate;
+          if (engine.chorusLfoR) engine.chorusLfoR.frequency.value = engine.chorusRate * 1.3;
+          break;
+        }
+        case 'chorusDepth': {
+          engine.chorusDepth = val;
+          if (engine.chorusLfoDepthL) engine.chorusLfoDepthL.gain.value = val * 0.01;
+          if (engine.chorusLfoDepthR) engine.chorusLfoDepthR.gain.value = val * 0.01;
+          break;
+        }
         case 'masterLevel': engine.masterLevel = val; if (engine.masterGain) engine.masterGain.gain.value = val; break;
         case 'masterDrive': engine.masterDrive = 1 + val * 9; break;
         case 'accentLevel': engine.accentLevel = 1 + val; break;
