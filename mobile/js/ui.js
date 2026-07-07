@@ -147,6 +147,10 @@ function buildSeqControls() {
         ${Array.from({length: 8}, (_, i) =>
           `<button class="seq-btn pat-btn${i === seq.currentPattern ? ' selected' : ''}" data-pat="${i}">${i+1}</button>`
         ).join('')}
+        <select class="seq-select" id="copy-pat">
+          <option value="">COPY</option>
+          ${Array.from({length: 8}, (_, i) => `<option value="${i}">→${i+1}</option>`).join('')}
+        </select>
       </div>
       <div class="seq-group">
         <label class="seq-label">VAR</label>
@@ -197,6 +201,12 @@ function buildSeqControls() {
     if (e.target.value === '') return;
     seq.copyVariation(seq.currentVar, parseInt(e.target.value));
     e.target.value = ''; renderStepGrid();
+  });
+  document.getElementById('copy-pat').addEventListener('change', (e) => {
+    if (e.target.value === '') return;
+    const dest = parseInt(e.target.value);
+    seq.copyPattern(seq.currentPattern, dest);
+    e.target.value = '';
   });
   document.getElementById('step-len').addEventListener('change', (e) => {
     seq.steps = parseInt(e.target.value); renderStepGrid();
