@@ -721,7 +721,23 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   margin-bottom: 4px;
+}
+
+.bass-basic-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.bass-deep-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: var(--surface);
+  color: var(--orange);
+  border-color: var(--orange-dim);
 }
 
 .deep-section {
