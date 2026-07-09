@@ -451,25 +451,62 @@ function buildDeepPanel(panel) {
   });
 }
 
+const BASS_DEEP_PARAMS = [
+  { section: 'AMP',    id: 'level',      label: 'LEVEL',     norm: (p) => p.level,                       fromNorm: (v) => v },
+  { section: 'AMP',    id: 'velSens',    label: 'VEL',       norm: (p) => p.velSens,                     fromNorm: (v) => v },
+  { section: 'AMP',    id: 'drive',      label: 'DRIVE',     norm: (p) => (p.drive - 1) / 9,             fromNorm: (v) => 1 + v * 9 },
+  { section: 'OSC',    id: 'wave',       label: 'WAVE',      norm: (p) => p.wave / 3,                    fromNorm: (v) => Math.round(v * 3), labels: ['SIN','TRI','SQR','SAW'] },
+  { section: 'OSC',    id: 'punch',      label: 'PUNCH',     norm: (p) => p.punch,                       fromNorm: (v) => v },
+  { section: 'OSC',    id: 'pitchDecay', label: 'P.DECAY',   norm: (p) => p.pitchDecay,                  fromNorm: (v) => v },
+  { section: 'OSC',    id: 'sub',        label: 'SUB',       norm: (p) => p.sub,                         fromNorm: (v) => v },
+  { section: 'FILTER', id: 'tone',       label: 'CUTOFF',    norm: (p) => p.tone,                        fromNorm: (v) => v },
+  { section: 'FILTER', id: 'resonance',  label: 'RESON.',    norm: (p) => p.resonance,                   fromNorm: (v) => v },
+  { section: 'FILTER', id: 'filterEnv',  label: 'F.ENV',     norm: (p) => p.filterEnv,                   fromNorm: (v) => v },
+  { section: 'ENV',    id: 'attack',     label: 'ATTACK',    norm: (p) => p.attack / 50,                 fromNorm: (v) => v * 50 },
+  { section: 'ENV',    id: 'decay',      label: 'DECAY',     norm: (p) => p.decay,                       fromNorm: (v) => v },
+  { section: 'ENV',    id: 'sustain',    label: 'SUSTAIN',   norm: (p) => p.sustain,                     fromNorm: (v) => v },
+  { section: 'ENV',    id: 'release',    label: 'RELEASE',   norm: (p) => p.release / 0.5,               fromNorm: (v) => v * 0.5 },
+];
+
 function buildBassPanel(panel) {
+  panel.classList.add('deep-mode');
   const p = engine.bassParams;
-  let html = `<div class="params-title">BD BASS</div><div class="knobs-row">`;
-  html += makeKnob('level', 'LEVEL', p.level, 'bass');
-  html += makeKnob('tone',  'TONE',  p.tone,  'bass');
-  html += makeKnob('decay', 'DECAY', p.decay, 'bass');
-  html += makeKnob('punch', 'PUNCH', p.punch, 'bass');
-  html += makeKnob('drive', 'DRIVE', (p.drive - 1) / 9, 'bass');
-  html += '</div>';
+  const sections = [];
+  const secIdx = {};
+  for (const dp of BASS_DEEP_PARAMS) {
+    const s = dp.section;
+    if (secIdx[s] === undefined) { secIdx[s] = sections.length; sections.push({ name: s, params: [] }); }
+    sections[secIdx[s]].params.push(dp);
+  }
+  let html = `<div class="deep-header"><span class="params-title">BD BASS — DEEP</span>
+    <button class="reset-btn" id="bass-reset-btn">&#x21BA; RESET</button></div>`;
+  for (const sec of sections) {
+    html += `<div class="deep-section"><div class="deep-sec-label">${sec.name}</div><div class="knobs-row">`;
+    for (const dp of sec.params) {
+      html += makeKnob(dp.id, dp.label, dp.norm(p), 'bass', 0, 1, dp.labels || null);
+    }
+    html += `</div></div>`;
+  }
   panel.innerHTML = html;
   initKnobs(panel);
   panel.querySelectorAll('.knob-canvas[data-type="bass"]').forEach(k => {
     k.addEventListener('knobchange', () => {
-      let val = parseInt(k.dataset.value) / 100;
-      if (k.dataset.param === 'drive') val = 1 + val * 9;
-      engine.bassParams[k.dataset.param] = val;
-      k.parentElement.querySelector('.knob-value').textContent =
-        k.dataset.param === 'drive' ? val.toFixed(1) : Math.round(val * 100);
+      const norm = parseInt(k.dataset.value) / 100;
+      const dp = BASS_DEEP_PARAMS.find(d => d.id === k.dataset.param);
+      if (!dp) return;
+      engine.bassParams[dp.id] = dp.fromNorm(norm);
+      const labels = k.dataset.labels ? k.dataset.labels.split(',') : null;
+      const display = labels
+        ? labels[Math.max(0, Math.min(labels.length - 1, Math.round(norm * (labels.length - 1))))]
+        : Math.round(norm * 100);
+      k.parentElement.querySelector('.knob-value').textContent = display;
     });
+  });
+  document.getElementById('bass-reset-btn').addEventListener('click', () => {
+    const def = { level:0.7, velSens:0.5, wave:0, punch:0.5, pitchDecay:0.3, sub:0,
+                  tone:0.5, resonance:0, filterEnv:0, attack:0, decay:0.5, sustain:0, release:0.05, drive:1.0 };
+    Object.assign(engine.bassParams, def);
+    buildBassPanel(panel);
   });
 }
 

@@ -271,7 +271,13 @@ class AudioEngine {
     this.masterLevel = 0.85;
     this.accentLevel = 1.3;
 
-    this.bassParams = { level: 0.7, tone: 0.5, decay: 0.5, punch: 0.5, drive: 1.0 };
+    this.bassParams = {
+      level: 0.7, velSens: 0.5,
+      wave: 0, punch: 0.5, pitchDecay: 0.3, sub: 0,
+      tone: 0.5, resonance: 0, filterEnv: 0,
+      attack: 0, decay: 0.5, sustain: 0, release: 0.05,
+      drive: 1.0,
+    };
 
     this.voicePan = {};
     this.voiceRevSend = {};
@@ -550,37 +556,78 @@ class AudioEngine {
     }
   }
 
-  triggerBass(midiNote, time) {
+  triggerBass(midiNote, time, velocity = 0.75) {
     if (!this.ctx) return;
     const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
     const p = this.bassParams;
     const t = time || this.ctx.currentTime;
     const ctx = this.ctx;
-    const decayTime = 0.15 + p.decay * 0.8;
-    const punchMult = 1.5 + p.punch;
 
+    const atkS  = Math.max(0, (p.attack  || 0)) * 0.001;
+    const decS  = Math.max(0.05, 0.15 + (p.decay  || 0.5) * 0.85);
+    const relS  = Math.max(0.01, (p.release || 0.05) * 0.5);
+    const sus   = Math.max(0.0001, Math.min(1, p.sustain || 0));
+    const totalDur = atkS + decS + relS + 0.05;
+
+    // Main oscillator
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
+    osc.type = this._getWave(p.wave || 0);
+    const punchMult = 1.5 + (p.punch || 0.5);
+    const pitchDecS = Math.max(0.005, (p.pitchDecay || 0.3) * 0.1);
     osc.frequency.setValueAtTime(freq * punchMult, t);
-    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + pitchDecS);
 
+    // Sub oscillator (one octave down)
+    let subNode = null;
+    if ((p.sub || 0) > 0.01) {
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.value = freq / 2;
+      const subGain = ctx.createGain();
+      subGain.gain.value = p.sub;
+      subOsc.connect(subGain);
+      subNode = subGain;
+      subOsc.start(t); subOsc.stop(t + totalDur);
+    }
+
+    // Drive / waveshaper
     let output = osc;
-    if (p.drive > 1.1) {
+    if ((p.drive || 1) > 1.1) {
       const ws = ctx.createWaveShaper();
       ws.curve = this._tanhCurve(p.drive);
       const pg = ctx.createGain(); pg.gain.value = p.drive;
       osc.connect(pg).connect(ws); output = ws;
     }
 
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
-
+    // Filter with envelope
     const toneFilter = ctx.createBiquadFilter();
     toneFilter.type = 'lowpass';
-    toneFilter.frequency.value = 200 + p.tone * 2000;
-    output.connect(toneFilter).connect(gain).connect(this.masterGain);
-    osc.start(t); osc.stop(t + decayTime + 0.05);
+    toneFilter.Q.value = 0.1 + (p.resonance || 0) * 12;
+    const baseCutoff = 200 + (p.tone || 0.5) * 2000;
+    const envBoost = (p.filterEnv || 0) * 4000;
+    toneFilter.frequency.setValueAtTime(Math.min(20000, baseCutoff + envBoost), t);
+    toneFilter.frequency.exponentialRampToValueAtTime(Math.max(20, baseCutoff), t + atkS + decS * 0.6);
+
+    // Amp envelope
+    const velScale = (1 - (p.velSens || 0.5)) + (p.velSens || 0.5) * velocity;
+    const level = (p.level || 0.7) * velScale;
+    const gain = ctx.createGain();
+    if (atkS > 0.001) {
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(level, t + atkS);
+    } else {
+      gain.gain.setValueAtTime(level, t);
+    }
+    const susLevel = Math.max(0.0001, level * sus);
+    gain.gain.exponentialRampToValueAtTime(susLevel, t + atkS + decS);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + atkS + decS + relS);
+
+    // Wire up
+    if (subNode) subNode.connect(toneFilter);
+    output.connect(toneFilter);
+    toneFilter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t); osc.stop(t + totalDur);
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
