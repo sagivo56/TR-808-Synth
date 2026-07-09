@@ -7,6 +7,7 @@ const seq = new Sequencer(engine);
 let selectedVoice = 0;
 let audioInitialized = false;
 let currentTab = 'drum';
+let bassDeepMode = false;
 
 const FACTORY_PATTERNS = [
   {
@@ -292,6 +293,7 @@ function buildTabBar() {
 }
 
 function setTab(tab) {
+  if (tab !== 'bass') bassDeepMode = false;
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('selected', ['drum','deep','bass','fx'][i] === tab);
@@ -468,26 +470,7 @@ const BASS_DEEP_PARAMS = [
   { section: 'ENV',    id: 'release',    label: 'RELEASE',   norm: (p) => p.release / 0.5,               fromNorm: (v) => v * 0.5 },
 ];
 
-function buildBassPanel(panel) {
-  panel.classList.add('deep-mode');
-  const p = engine.bassParams;
-  const sections = [];
-  const secIdx = {};
-  for (const dp of BASS_DEEP_PARAMS) {
-    const s = dp.section;
-    if (secIdx[s] === undefined) { secIdx[s] = sections.length; sections.push({ name: s, params: [] }); }
-    sections[secIdx[s]].params.push(dp);
-  }
-  let html = `<div class="deep-header"><span class="params-title">BD BASS — DEEP</span>
-    <button class="reset-btn" id="bass-reset-btn">&#x21BA; RESET</button></div>`;
-  for (const sec of sections) {
-    html += `<div class="deep-section"><div class="deep-sec-label">${sec.name}</div><div class="knobs-row">`;
-    for (const dp of sec.params) {
-      html += makeKnob(dp.id, dp.label, dp.norm(p), 'bass', 0, 1, dp.labels || null);
-    }
-    html += `</div></div>`;
-  }
-  panel.innerHTML = html;
+function _attachBassKnobs(panel) {
   initKnobs(panel);
   panel.querySelectorAll('.knob-canvas[data-type="bass"]').forEach(k => {
     k.addEventListener('knobchange', () => {
@@ -502,12 +485,59 @@ function buildBassPanel(panel) {
       k.parentElement.querySelector('.knob-value').textContent = display;
     });
   });
-  document.getElementById('bass-reset-btn').addEventListener('click', () => {
-    const def = { level:0.7, velSens:0.5, wave:0, punch:0.5, pitchDecay:0.3, sub:0,
-                  tone:0.5, resonance:0, filterEnv:0, attack:0, decay:0.5, sustain:0, release:0.05, drive:1.0 };
-    Object.assign(engine.bassParams, def);
-    buildBassPanel(panel);
-  });
+}
+
+function buildBassPanel(panel) {
+  const p = engine.bassParams;
+  panel.classList.remove('deep-mode');
+
+  if (bassDeepMode) {
+    panel.classList.add('deep-mode');
+    const sections = [];
+    const secIdx = {};
+    for (const dp of BASS_DEEP_PARAMS) {
+      const s = dp.section;
+      if (secIdx[s] === undefined) { secIdx[s] = sections.length; sections.push({ name: s, params: [] }); }
+      sections[secIdx[s]].params.push(dp);
+    }
+    let html = `<div class="deep-header">
+      <button class="seq-btn" id="bass-back-btn">← BACK</button>
+      <span class="params-title">BD BASS — DEEP</span>
+      <button class="reset-btn" id="bass-reset-btn">&#x21BA;</button>
+    </div>`;
+    for (const sec of sections) {
+      html += `<div class="deep-section"><div class="deep-sec-label">${sec.name}</div><div class="knobs-row">`;
+      for (const dp of sec.params) {
+        html += makeKnob(dp.id, dp.label, dp.norm(p), 'bass', 0, 1, dp.labels || null);
+      }
+      html += `</div></div>`;
+    }
+    panel.innerHTML = html;
+    _attachBassKnobs(panel);
+    document.getElementById('bass-back-btn').addEventListener('click', () => {
+      bassDeepMode = false; buildBassPanel(panel);
+    });
+    document.getElementById('bass-reset-btn').addEventListener('click', () => {
+      const def = { level:0.7, velSens:0.5, wave:0, punch:0.5, pitchDecay:0.3, sub:0,
+                    tone:0.5, resonance:0, filterEnv:0, attack:0, decay:0.5, sustain:0, release:0.05, drive:1.0 };
+      Object.assign(engine.bassParams, def);
+      buildBassPanel(panel);
+    });
+  } else {
+    const BASIC = ['level','tone','decay','punch','drive'];
+    let html = `<div class="bass-basic-row">`;
+    for (const id of BASIC) {
+      const dp = BASS_DEEP_PARAMS.find(d => d.id === id);
+      html += makeKnob(dp.id, dp.label, dp.norm(p), 'bass', 0, 1, dp.labels || null);
+    }
+    html += `<button class="seq-btn bass-deep-btn" id="bass-deep-btn">DEEP</button>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+    _attachBassKnobs(panel);
+    document.getElementById('bass-deep-btn').addEventListener('click', () => {
+      bassDeepMode = true; buildBassPanel(panel);
+    });
+  }
 }
 
 function buildFxPanel(panel) {

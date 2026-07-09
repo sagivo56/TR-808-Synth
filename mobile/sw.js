@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tr808-v19';
+const CACHE_NAME = 'tr808-v20';
 const ASSETS = [
   '/mobile/',
   '/mobile/index.html',
