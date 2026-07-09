@@ -248,6 +248,7 @@ class AudioEngine {
 
     this._ohNodes = null;
     this._keepAliveEl = null;
+    this._noiseBuffer = null;
 
     this.phaserRate = 0.5;
     this.phaserDepth = 0.467;
@@ -270,7 +271,13 @@ class AudioEngine {
     this.masterLevel = 0.85;
     this.accentLevel = 1.3;
 
-    this.bassParams = { level: 0.7, tone: 0.5, decay: 0.5, punch: 0.5, drive: 1.0 };
+    this.bassParams = {
+      level: 0.7, velSens: 0.5,
+      wave: 0, punch: 0.5, pitchDecay: 0.3, sub: 0,
+      tone: 0.5, resonance: 0, filterEnv: 0,
+      attack: 0, decay: 0.5, sustain: 0, release: 0.05,
+      drive: 1.0,
+    };
 
     this.voicePan = {};
     this.voiceRevSend = {};
@@ -320,6 +327,7 @@ class AudioEngine {
       this._setupReverb();
       this._setupPhaser();
       this._setupChorus();
+      this._setupNoise();
     }
 
     if (this.ctx.state === 'suspended') await this.ctx.resume();
@@ -503,6 +511,26 @@ class AudioEngine {
     this.chorusReturn.connect(this.masterGain);
   }
 
+  _setupNoise() {
+    // Pre-generate a shared 4-second white-noise buffer reused by all voices.
+    // Eliminates per-trigger buffer allocation and Math.random() filling
+    // that causes main-thread jank when many voices fire simultaneously.
+    const sr = this.ctx.sampleRate;
+    this._noiseBuffer = this.ctx.createBuffer(1, sr * 4, sr);
+    const d = this._noiseBuffer.getChannelData(0);
+    for (let i = 0; i < sr * 4; i++) d[i] = Math.random() * 2 - 1;
+  }
+
+  _noiseSource() {
+    const src = this.ctx.createBufferSource();
+    src.buffer = this._noiseBuffer;
+    src.loop = true;
+    // Random start offset so each trigger sounds different.
+    src.loopStart = 0;
+    src.loopEnd = this._noiseBuffer.duration;
+    return src;
+  }
+
   get currentTime() { return this.ctx ? this.ctx.currentTime : 0; }
 
   trigger(voiceIndex, time, accent) {
@@ -528,37 +556,78 @@ class AudioEngine {
     }
   }
 
-  triggerBass(midiNote, time) {
+  triggerBass(midiNote, time, velocity = 0.75) {
     if (!this.ctx) return;
     const freq = 440 * Math.pow(2, (midiNote - 69) / 12);
     const p = this.bassParams;
     const t = time || this.ctx.currentTime;
     const ctx = this.ctx;
-    const decayTime = 0.15 + p.decay * 0.8;
-    const punchMult = 1.5 + p.punch;
 
+    const atkS  = Math.max(0, (p.attack  || 0)) * 0.001;
+    const decS  = Math.max(0.05, 0.15 + (p.decay  || 0.5) * 0.85);
+    const relS  = Math.max(0.01, (p.release || 0.05) * 0.5);
+    const sus   = Math.max(0.0001, Math.min(1, p.sustain || 0));
+    const totalDur = atkS + decS + relS + 0.05;
+
+    // Main oscillator
     const osc = ctx.createOscillator();
-    osc.type = 'sine';
+    osc.type = this._getWave(p.wave || 0);
+    const punchMult = 1.5 + (p.punch || 0.5);
+    const pitchDecS = Math.max(0.005, (p.pitchDecay || 0.3) * 0.1);
     osc.frequency.setValueAtTime(freq * punchMult, t);
-    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + pitchDecS);
 
+    // Sub oscillator (one octave down)
+    let subNode = null;
+    if ((p.sub || 0) > 0.01) {
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.value = freq / 2;
+      const subGain = ctx.createGain();
+      subGain.gain.value = p.sub;
+      subOsc.connect(subGain);
+      subNode = subGain;
+      subOsc.start(t); subOsc.stop(t + totalDur);
+    }
+
+    // Drive / waveshaper
     let output = osc;
-    if (p.drive > 1.1) {
+    if ((p.drive || 1) > 1.1) {
       const ws = ctx.createWaveShaper();
       ws.curve = this._tanhCurve(p.drive);
       const pg = ctx.createGain(); pg.gain.value = p.drive;
       osc.connect(pg).connect(ws); output = ws;
     }
 
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(p.level, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + decayTime);
-
+    // Filter with envelope
     const toneFilter = ctx.createBiquadFilter();
     toneFilter.type = 'lowpass';
-    toneFilter.frequency.value = 200 + p.tone * 2000;
-    output.connect(toneFilter).connect(gain).connect(this.masterGain);
-    osc.start(t); osc.stop(t + decayTime + 0.05);
+    toneFilter.Q.value = 0.1 + (p.resonance || 0) * 12;
+    const baseCutoff = 200 + (p.tone || 0.5) * 2000;
+    const envBoost = (p.filterEnv || 0) * 4000;
+    toneFilter.frequency.setValueAtTime(Math.min(20000, baseCutoff + envBoost), t);
+    toneFilter.frequency.exponentialRampToValueAtTime(Math.max(20, baseCutoff), t + atkS + decS * 0.6);
+
+    // Amp envelope
+    const velScale = (1 - (p.velSens || 0.5)) + (p.velSens || 0.5) * velocity;
+    const level = (p.level || 0.7) * velScale;
+    const gain = ctx.createGain();
+    if (atkS > 0.001) {
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(level, t + atkS);
+    } else {
+      gain.gain.setValueAtTime(level, t);
+    }
+    const susLevel = Math.max(0.0001, level * sus);
+    gain.gain.exponentialRampToValueAtTime(susLevel, t + atkS + decS);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + atkS + decS + relS);
+
+    // Wire up
+    if (subNode) subNode.connect(toneFilter);
+    output.connect(toneFilter);
+    toneFilter.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t); osc.stop(t + totalDur);
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
@@ -856,12 +925,7 @@ class AudioEngine {
     // Noise layer — mixed into the same ADSR gain
     const noiseAmt = d.noiseAmt ?? 0.25;
     if (noiseAmt > 0.005) {
-      const nBufSize = Math.ceil(ctx.sampleRate * (decayMs * 0.001 + 0.1));
-      const nBuf = ctx.createBuffer(1, nBufSize, ctx.sampleRate);
-      const nData = nBuf.getChannelData(0);
-      for (let i = 0; i < nBufSize; i++) nData[i] = Math.random() * 2 - 1;
-      const nSrc = ctx.createBufferSource();
-      nSrc.buffer = nBuf;
+      const nSrc = this._noiseSource();
 
       const nHpf = ctx.createBiquadFilter(); nHpf.type = 'highpass'; nHpf.frequency.value = Math.max(20, d.noisehpf ?? 6000);
       const nLpf = ctx.createBiquadFilter(); nLpf.type = 'lowpass';  nLpf.frequency.value = Math.min(20000, d.noiselpf ?? 14000);
@@ -925,12 +989,7 @@ class AudioEngine {
     let noiseSrc = null;
     const noiseAmt = d.noiseAmt ?? 0.3;
     if (noiseAmt > 0.005) {
-      const nBufSize = Math.ceil(ctx.sampleRate * (decayMs * 0.001 + 0.1));
-      const nBuf = ctx.createBuffer(1, nBufSize, ctx.sampleRate);
-      const nData = nBuf.getChannelData(0);
-      for (let i = 0; i < nBufSize; i++) nData[i] = Math.random() * 2 - 1;
-      noiseSrc = ctx.createBufferSource();
-      noiseSrc.buffer = nBuf;
+      noiseSrc = this._noiseSource();
 
       const nHpf = ctx.createBiquadFilter(); nHpf.type = 'highpass'; nHpf.frequency.value = Math.max(20, d.noisehpf ?? 4000);
       const nLpf = ctx.createBiquadFilter(); nLpf.type = 'lowpass';  nLpf.frequency.value = Math.min(20000, d.noiselpf ?? 12000);
@@ -970,11 +1029,7 @@ class AudioEngine {
 
   _noiseHit(t, amp, duration, freq, q, hpfFreq, vid, attackMs = 0) {
     const ctx = this.ctx;
-    const bufSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
+    const src = this._noiseSource();
 
     const chain = [];
     if (hpfFreq > 0) { const h = ctx.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = hpfFreq; chain.push(h); }
@@ -992,11 +1047,7 @@ class AudioEngine {
 
   _filteredNoiseHit(t, amp, duration, bpFreq, bpQ, vid, attackMs = 0) {
     const ctx = this.ctx;
-    const bufSize = Math.ceil(ctx.sampleRate * (duration + 0.05));
-    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
+    const src = this._noiseSource();
 
     const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = bpFreq; bp.Q.value = bpQ;
     const gain = ctx.createGain();
