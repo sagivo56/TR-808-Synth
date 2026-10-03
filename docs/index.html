@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C0E12">
+<meta name="description" content="מעקב אימוני קליסטניקס (Tom Holland) — AMRAP 20 דקות וסולם 1,500 חזרות">
+<title>אימון קליסטניקס</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  /* Layout: full-height arcade app, single centered column, one exercise at a time
+     with an animated demo + giant tap target. Committed single dark "neon arcade" world. */
+  :root {
+    --bg: #0C0E12; --panel: #15181E; --line: #262B33; --line2: #39414C;
+    --fg: #EDEDE6; --muted: #868D96;
+    --cyan: #22E3E3; --pink: #FF3D7F; --lime: #B6FF3C; --amber: #FFB020;
+    --disp: "Space Grotesk", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(120% 70% at 50% -10%, #141926 0%, var(--bg) 55%) fixed, var(--bg);
+    color: var(--fg); font-family: var(--disp); -webkit-font-smoothing: antialiased; direction: rtl;
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100%; padding: 16px; padding-block: 16px;
+         display: flex; flex-direction: column; gap: 14px; }
+  .num { font-family: var(--mono); direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; display: inline-block; }
+  h1 { font-size: 1.55rem; margin: 0; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 2px 0 0; }
+  .muted { color: var(--muted); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+
+  .btn-ghost { height: 42px; padding: 0 14px; border-radius: 12px; background: transparent;
+               border: 1px solid var(--line2); color: var(--muted); font-family: var(--disp);
+               font-weight: 700; font-size: .9rem; cursor: pointer; }
+  .btn-ghost:hover { color: var(--fg); }
+  .icon-btn { height: 44px; width: 44px; border-radius: 12px; border: 1px solid var(--line2);
+              background: transparent; font-size: 1.2rem; cursor: pointer; color: var(--fg); }
+
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--bg);
+         border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+  .seg button { border: 0; border-radius: 9px; padding: 11px 6px; cursor: pointer; font-family: var(--disp);
+                font-weight: 700; font-size: .9rem; color: var(--muted); background: transparent; }
+  .seg button[aria-pressed="true"].on-cyan { background: var(--cyan); color: #04201f; }
+  .seg button[aria-pressed="true"].on-amber { background: var(--amber); color: #241700; }
+
+  .card { width: 100%; text-align: right; cursor: pointer; display: flex; flex-direction: column; gap: 8px;
+          background: var(--panel); border-radius: 20px; padding: 18px; color: var(--fg);
+          border: 2px solid var(--line); transition: transform .06s, border-color .15s; }
+  .card:active { transform: scale(.99); }
+  .card.cyan { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+  .card.cyan:hover { border-color: var(--cyan); }
+  .card.pink { border-color: color-mix(in srgb, var(--pink) 55%, transparent); }
+  .card.pink:hover { border-color: var(--pink); }
+  .card .title { font-size: 1.3rem; font-weight: 700; }
+  .card.cyan .title { color: var(--cyan); }
+  .card.pink .title { color: var(--pink); }
+  .pb-val { font-family: var(--mono); font-weight: 700; color: var(--lime); }
+
+  .mega { width: 100%; min-height: 40vh; min-height: 40dvh; margin-top: auto; border: 0; border-radius: 26px;
+          cursor: pointer; font-family: var(--disp); font-weight: 700; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 6px; transition: transform .06s; }
+  .mega:active { transform: scale(.975); }
+  .mega.cyan { background: var(--cyan); box-shadow: 0 0 48px -10px var(--cyan); color: #04201f; }
+  .mega.pink { background: var(--pink); box-shadow: 0 0 48px -10px var(--pink); color: #2a0714; }
+  .mega.lime { background: var(--lime); box-shadow: 0 0 52px -10px var(--lime); color: #0d1f00; }
+  .mega .big { font-size: clamp(2rem, 10vw, 2.8rem); line-height: 1.05; text-align: center; }
+  .mega .small { font-family: var(--mono); font-size: 1.15rem; opacity: .82; }
+  .mega.act { min-height: 28vh; min-height: 28dvh; }
+
+  .clock { font-family: var(--mono); font-weight: 700; line-height: 1; font-size: clamp(2.1rem, 11vw, 3rem); }
+  .clock.urgent { color: var(--pink); animation: pulse 1s infinite; }
+  .lvl { font-family: var(--mono); font-weight: 700; color: var(--pink); font-size: clamp(3rem, 18vw, 5rem); line-height: 1; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  .blink { animation: pulse 1s infinite; }
+
+  ul.ex { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  ul.ex li { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  ul.ex .name { font-weight: 700; font-size: 1.05rem; }
+  ul.ex .en { color: var(--muted); font-size: .72rem; margin-inline-start: 8px; }
+  ul.ex .reps { font-family: var(--mono); font-weight: 700; font-size: 1.5rem; color: var(--cyan); }
+
+  .dots { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .dot { height: 9px; width: 9px; border-radius: 99px; background: var(--line2); }
+  .dot.done { background: var(--lime); }
+  .dot.cur { background: var(--pink); width: 24px; }
+  .dot.cyan.cur { background: var(--cyan); }
+
+  .center { text-align: center; }
+  .grow { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  .big-count { font-family: var(--mono); font-weight: 700; font-size: clamp(4rem, 26vw, 7rem); line-height: 1; color: var(--cyan); }
+  .pbflag { font-weight: 700; font-size: 1.4rem; color: var(--lime); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .done-btn { border-radius: 18px; font-family: var(--disp); font-weight: 700; font-size: 1.2rem; padding: 18px 8px; cursor: pointer; }
+  .done-btn.primary-cyan { background: transparent; border: 2px solid var(--cyan); color: var(--cyan); }
+  .done-btn.primary-pink { background: transparent; border: 2px solid var(--pink); color: var(--pink); }
+  .done-btn.ghost { background: transparent; border: 1px solid var(--line2); color: var(--fg); }
+
+  /* exercise demo animation */
+  .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; }
+  .animbox { display: flex; align-items: center; justify-content: center; }
+  .animbox.pop { animation: pop .28s ease-out; }
+  @keyframes pop { from { transform: scale(.82); opacity: .35; } to { transform: scale(1); opacity: 1; } }
+  .fig { width: clamp(132px, 46vw, 196px); height: auto; display: block; }
+  .ex-name { font-weight: 700; font-size: 1.5rem; text-align: center; }
+  .ex-en { color: var(--muted); font-size: .8rem; margin-top: 2px; }
+  .ex-reps { font-family: var(--mono); font-weight: 700; line-height: 1; margin-top: 4px; font-size: clamp(2.6rem, 15vw, 4rem); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var EX = {
+    pullups:   { full: ["מתח", "Pull-ups"],          none: ["משיכות סופרמן", "Superman Pull-downs"] },
+    dips:      { full: ["מקבילים", "Dips"],           none: ["מקבילים בכיסא", "Chair Dips"] },
+    pushups:   { full: ["שכיבות סמיכה", "Push-ups"],  none: ["שכיבות סמיכה", "Push-ups"] },
+    airsquats: { full: ["סקוואט אוויר", "Air Squats"],none: ["סקוואט אוויר", "Air Squats"] },
+    situps:    { full: ["כפיפות בטן", "Sit-ups"],     none: ["כפיפות בטן", "Sit-ups"] },
+    squats:    { full: ["סקוואט", "Squats"],          none: ["סקוואט", "Squats"] }
+  };
+  var AMRAP_ROUND = [["pullups", 5], ["pushups", 10], ["airsquats", 15]];
+  var AMRAP_SECONDS = 20 * 60, REPS_PER_ROUND = 30;
+  var MULT = [["pullups", 1], ["dips", 2], ["pushups", 3], ["situps", 4], ["squats", 5]];
+  var SEQ = [1,2,3,4,5,6,7,8,9,10,9,8,7,6,5,4,3,2,1];
+  var LADDER_TOTAL = 1500;
+
+  function exName(key, eq) { return EX[key][eq]; }
+  function ladderReps(level) { return MULT.map(function (m) { return [m[0], level * m[1]]; }); }
+  function repsBefore(idx) { var s = 0; for (var i = 0; i < idx; i++) s += SEQ[i] * 15; return s; }
+  function animType(key, eq) {
+    if (key === "pullups") return eq === "full" ? "pullup" : "superman";
+    if (key === "dips") return eq === "full" ? "dip" : "chairdip";
+    if (key === "pushups") return "pushup";
+    if (key === "situps") return "situp";
+    return "squat"; // airsquats / squats
+  }
+  function fmtInt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function fmtClock(sec) { sec = Math.max(0, Math.round(sec)); return pad(Math.floor(sec/60)) + ":" + pad(sec%60); }
+  function fmtStop(ms) { var t = Math.floor(Math.max(0,ms)/100), d = t%10, ts = Math.floor(t/10); return pad(Math.floor(ts/60)) + ":" + pad(ts%60) + "." + d; }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  // ----- exercise demo animations (SVG + SMIL, self-contained) -----
+  function fig(inner) {
+    return '<svg class="fig" viewBox="0 0 160 120" fill="none" stroke="currentColor" stroke-width="6" ' +
+           'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+  }
+  var AT = '<animateTransform attributeName="transform" type=';
+  function animSVG(type) {
+    switch (type) {
+      case "squat": return fig(
+        '<line x1="70" y1="80" x2="58" y2="108"/>' +
+        '<g>' + AT + '"rotate" values="0 70 80;30 70 80;0 70 80" dur="1.6s" repeatCount="indefinite"/>' +
+          '<line x1="70" y1="58" x2="70" y2="80"/>' +
+          '<g>' + AT + '"rotate" values="0 70 58;-26 70 58;0 70 58" dur="1.6s" repeatCount="indefinite"/>' +
+            '<line x1="70" y1="58" x2="70" y2="36"/><circle cx="70" cy="26" r="8"/>' +
+            '<g>' + AT + '"rotate" values="0 70 38;-38 70 38;0 70 38" dur="1.6s" repeatCount="indefinite"/>' +
+              '<line x1="70" y1="38" x2="94" y2="46"/></g>' +
+          '</g></g>');
+      case "pushup": return fig(
+        '<line x1="38" y1="104" x2="128" y2="104" stroke-width="4" opacity=".35"/>' +
+        '<g>' + AT + '"rotate" values="0 122 98;9 122 98;0 122 98" dur="1.3s" repeatCount="indefinite"/>' +
+          '<line x1="122" y1="98" x2="60" y2="78"/><circle cx="52" cy="76" r="8"/>' +
+          '<line x1="60" y1="78" x2="58" y2="100"/><line x1="92" y1="88" x2="92" y2="100"/></g>');
+      case "pullup": return fig(
+        '<line x1="40" y1="14" x2="100" y2="14"/>' +
+        '<g>' + AT + '"translate" values="0 0;0 -18;0 0" dur="1.6s" repeatCount="indefinite"/>' +
+          '<circle cx="70" cy="42" r="8"/><line x1="70" y1="50" x2="70" y2="78"/>' +
+          '<line x1="70" y1="78" x2="60" y2="96"/><line x1="70" y1="78" x2="80" y2="96"/></g>' +
+        '<line x1="60" y1="14" x2="66" y2="50"><animate attributeName="y2" values="50;32;50" dur="1.6s" repeatCount="indefinite"/></line>' +
+        '<line x1="80" y1="14" x2="74" y2="50"><animate attributeName="y2" values="50;32;50" dur="1.6s" repeatCount="indefinite"/></line>');
+      case "superman": return fig(
+        '<circle cx="70" cy="24" r="8"/><line x1="70" y1="32" x2="70" y2="72"/>' +
+        '<line x1="70" y1="72" x2="60" y2="100"/><line x1="70" y1="72" x2="80" y2="100"/>' +
+        '<g>' + AT + '"rotate" values="0 70 38;70 70 38;0 70 38" dur="1.4s" repeatCount="indefinite"/><line x1="70" y1="38" x2="50" y2="16"/></g>' +
+        '<g>' + AT + '"rotate" values="0 70 38;-70 70 38;0 70 38" dur="1.4s" repeatCount="indefinite"/><line x1="70" y1="38" x2="90" y2="16"/></g>');
+      case "dip": return fig(
+        '<line x1="40" y1="40" x2="58" y2="40"/><line x1="82" y1="40" x2="100" y2="40"/>' +
+        '<g>' + AT + '"translate" values="0 0;0 14;0 0" dur="1.5s" repeatCount="indefinite"/>' +
+          '<circle cx="70" cy="30" r="7"/><line x1="70" y1="37" x2="70" y2="64"/>' +
+          '<line x1="70" y1="64" x2="80" y2="74"/><line x1="80" y1="74" x2="72" y2="86"/></g>' +
+        '<line x1="52" y1="40" x2="66" y2="40"><animate attributeName="y2" values="40;54;40" dur="1.5s" repeatCount="indefinite"/></line>' +
+        '<line x1="88" y1="40" x2="74" y2="40"><animate attributeName="y2" values="40;54;40" dur="1.5s" repeatCount="indefinite"/></line>');
+      case "chairdip": return fig(
+        '<rect x="92" y="44" width="40" height="8" rx="2"/><line x1="98" y1="52" x2="98" y2="86"/><line x1="126" y1="52" x2="126" y2="86"/>' +
+        '<line x1="40" y1="100" x2="60" y2="100"/>' +
+        '<g>' + AT + '"translate" values="0 0;0 14;0 0" dur="1.5s" repeatCount="indefinite"/>' +
+          '<circle cx="74" cy="40" r="7"/><line x1="74" y1="47" x2="70" y2="70"/>' +
+          '<line x1="70" y1="70" x2="48" y2="86"/><line x1="48" y1="86" x2="48" y2="100"/></g>' +
+        '<line x1="100" y1="46" x2="78" y2="46"><animate attributeName="y2" values="46;60;46" dur="1.5s" repeatCount="indefinite"/></line>');
+      case "situp": return fig(
+        '<line x1="40" y1="100" x2="112" y2="100" stroke-width="4" opacity=".35"/>' +
+        '<line x1="96" y1="96" x2="74" y2="78"/><line x1="74" y1="78" x2="74" y2="100"/>' +
+        '<g>' + AT + '"rotate" values="0 96 96;-55 96 96;0 96 96" dur="1.6s" repeatCount="indefinite"/>' +
+          '<line x1="96" y1="96" x2="62" y2="96"/><circle cx="54" cy="94" r="7"/><line x1="72" y1="96" x2="64" y2="86"/></g>');
+      default: return fig('<circle cx="70" cy="40" r="10"/>');
+    }
+  }
+
+  // ----- storage -----
+  function readNum(k){try{var v=localStorage.getItem(k);if(v==null)return null;var n=Number(v);return isFinite(n)?n:null;}catch(e){return null;}}
+  function writeNum(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+  function getAmrapPB(){return readNum("workout_pb_amrap_rounds");}
+  function saveAmrapPB(r){var p=getAmrapPB();if(p==null||r>p){writeNum("workout_pb_amrap_rounds",r);return true;}return false;}
+  function getLadderPB(){return readNum("workout_pb_ladder_ms");}
+  function saveLadderPB(ms){var p=getLadderPB();if(p==null||ms<p){writeNum("workout_pb_ladder_ms",ms);return true;}return false;}
+  function getEquip(){try{return localStorage.getItem("workout_equipment")==="none"?"none":"full";}catch(e){return "full";}}
+  function saveEquip(eq){try{localStorage.setItem("workout_equipment",eq);}catch(e){}}
+  function getMuted(){try{return localStorage.getItem("workout_muted")==="1";}catch(e){return false;}}
+  function saveMuted(m){try{localStorage.setItem("workout_muted",m?"1":"0");}catch(e){}}
+
+  // ----- 8-bit audio -----
+  var AudioEngine = (function () {
+    var ctx = null, muted = getMuted();
+    function ensure(){ if(typeof window==="undefined")return null; if(!ctx){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;try{ctx=new AC();}catch(e){return null;}} if(ctx.state==="suspended"){ctx.resume().catch(function(){});} return ctx; }
+    function note(f,at,dur,wave,peak){ if(!ctx)return; var o=ctx.createOscillator(),g=ctx.createGain(); o.type=wave||"square"; o.frequency.setValueAtTime(f,at); g.gain.setValueAtTime(0.0001,at); g.gain.exponentialRampToValueAtTime(peak||0.22,at+0.008); g.gain.exponentialRampToValueAtTime(0.0001,at+dur); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+dur+0.02); }
+    function play(seq){ if(muted)return; var c=ensure(); if(!c)return; var t=c.currentTime+0.01; for(var i=0;i<seq.length;i++){note(seq[i].f,t,seq[i].d,seq[i].w,seq[i].p);t+=seq[i].d;} }
+    return {
+      unlock:function(){ensure();},
+      setMuted:function(m){muted=m;}, isMuted:function(){return muted;},
+      blip:function(){play([{f:784,d:0.05},{f:1046,d:0.08}]);},                       // tap one exercise
+      round:function(){play([{f:660,d:0.06},{f:880,d:0.06},{f:1318,d:0.11}]);},       // finished a round / level
+      tick:function(s){var f=500+Math.max(0,Math.min(10,s))*40;play([{f:f,d:0.09,p:0.18}]);},
+      finish:function(){play([{f:523,d:0.11},{f:659,d:0.11},{f:784,d:0.11},{f:1046,d:0.16},{f:784,d:0.09},{f:1046,d:0.3,p:0.26}]);},
+      gameOver:function(){play([{f:440,d:0.14,w:"triangle"},{f:349,d:0.14,w:"triangle"},{f:262,d:0.3,w:"triangle",p:0.24}]);}
+    };
+  })();
+
+  // ----- wake lock -----
+  var wake = null;
+  function requestWake(){ if(!navigator.wakeLock)return; navigator.wakeLock.request("screen").then(function(s){wake=s;}).catch(function(){}); }
+  function releaseWake(){ if(wake){try{wake.release();}catch(e){} wake=null;} }
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible"&&S.running) requestWake(); });
+
+  // ----- state -----
+  var S = {
+    screen:"menu", equip:getEquip(), running:false,
+    aPhase:"ready", aRounds:0, aEx:0, endTime:0, finalRounds:0, aPB:false, prevTick:-1,
+    lPhase:"ready", lStep:0, lEx:0, startTime:0, finalMs:0, lPB:false
+  };
+  var timer = null;
+  function clearTimer(){ if(timer){clearInterval(timer);timer=null;} }
+  var app = document.getElementById("app");
+
+  // =================== MENU ===================
+  function renderMenu() {
+    S.running=false; releaseWake(); clearTimer();
+    var eq=S.equip;
+    var roundDesc = AMRAP_ROUND.map(function(r){return r[1]+" "+exName(r[0],eq)[0];}).join(" · ");
+    var amrapPB=getAmrapPB(), ladderPB=getLadderPB();
+    app.innerHTML =
+      '<div class="row"><div><h1>אימוני כוח</h1><p class="sub">Tom Holland · Calisthenics</p></div>' +
+      '<button class="icon-btn" id="mute">'+(AudioEngine.isMuted()?"🔇":"🔊")+'</button></div>' +
+      '<section class="panel"><div class="row" style="margin-bottom:10px"><span style="font-weight:700">ציוד זמין</span>' +
+        '<span class="muted" style="font-size:.75rem">משנה שמות + אנימציות</span></div>' +
+        '<div class="seg"><button class="on-cyan" data-eq="full" aria-pressed="'+(eq==="full")+'">מוט מתח + מקבילים</button>' +
+        '<button class="on-amber" data-eq="none" aria-pressed="'+(eq==="none")+'">בלי ציוד</button></div></section>' +
+      '<button class="card cyan" id="go-amrap"><div class="row"><span class="title">20 דקות AMRAP</span><span class="muted">Cindy</span></div>' +
+        '<p class="muted" style="margin:0;font-size:.9rem">'+roundDesc+'</p>' +
+        '<p style="margin:0;font-size:.9rem">🏆 שיא: <span class="pb-val num">'+(amrapPB!=null?amrapPB+" סיבובים":"—")+'</span></p></button>' +
+      '<button class="card pink" id="go-ladder"><div class="row"><span class="title">סולם '+fmtInt(LADDER_TOTAL)+' חזרות</span><span class="muted">Monster</span></div>' +
+        '<p class="muted" style="margin:0;font-size:.88rem">רמות 1→10→1 · מתח ×1, מקבילים ×2, שכיבות ×3, בטן ×4, סקוואט ×5</p>' +
+        '<p style="margin:0;font-size:.9rem">🏆 שיא: <span class="pb-val num">'+(ladderPB!=null?fmtStop(ladderPB):"—")+'</span></p></button>';
+    document.getElementById("mute").onclick=function(){var m=!AudioEngine.isMuted();AudioEngine.setMuted(m);saveMuted(m);this.innerHTML=m?"🔇":"🔊";};
+    Array.prototype.forEach.call(app.querySelectorAll(".seg button"),function(b){b.onclick=function(){S.equip=b.getAttribute("data-eq");saveEquip(S.equip);renderMenu();};});
+    document.getElementById("go-amrap").onclick=function(){AudioEngine.unlock();S.screen="amrap";S.aPhase="ready";render();};
+    document.getElementById("go-ladder").onclick=function(){AudioEngine.unlock();S.screen="ladder";S.lPhase="ready";render();};
+  }
+  function topBar(title,sub){ return '<div class="row"><div><h1 style="font-size:1.2rem">'+title+'</h1><p class="sub">'+sub+'</p></div><button class="btn-ghost" id="to-menu">← תפריט</button></div>'; }
+  function wireMenuBtn(){ var b=document.getElementById("to-menu"); if(b) b.onclick=function(){S.screen="menu";render();}; }
+
+  // =================== AMRAP ===================
+  function renderAmrap() {
+    var eq=S.equip;
+    if (S.aPhase==="ready") {
+      S.running=false; releaseWake(); clearTimer();
+      var pb=getAmrapPB();
+      var list=AMRAP_ROUND.map(function(r){var n=exName(r[0],eq);return '<li><span class="name">'+n[0]+'</span><span><span class="en">'+n[1]+'</span><span class="reps">×'+r[1]+'</span></span></li>';}).join("");
+      app.innerHTML = topBar("20 דקות AMRAP","Cindy") +
+        '<div class="animbox pop" style="color:var(--cyan)">'+animSVG(animType(AMRAP_ROUND[0][0],eq))+'</div>' +
+        '<section class="panel"><p class="muted" style="margin:0 0 10px">כל סיבוב — תרגיל אחד בכל פעם:</p><ul class="ex">'+list+'</ul></section>' +
+        '<p class="center" style="font-size:.95rem">🏆 שיא נוכחי: <span class="pb-val num">'+(pb!=null?pb+" סיבובים":"—")+'</span></p>' +
+        '<button class="mega cyan" id="start"><span class="big">התחל ▶</span></button>';
+      wireMenuBtn(); document.getElementById("start").onclick=startAmrap; return;
+    }
+    if (S.aPhase==="done") {
+      S.running=false; releaseWake(); clearTimer();
+      app.innerHTML = topBar("20 דקות AMRAP","Cindy") +
+        '<div class="grow center">'+(S.aPB?'<div class="pbflag blink">🎉 שיא חדש!</div>':"") +
+          '<div class="muted">סיבובים שהושלמו</div><div class="big-count">'+S.finalRounds+'</div>' +
+          '<div class="muted" style="font-size:.9rem">= <span class="num">'+(S.finalRounds*REPS_PER_ROUND)+'</span> חזרות סה״כ</div></div>' +
+        '<div class="grid2"><button class="done-btn primary-cyan" id="again">שוב ↺</button><button class="done-btn ghost" id="menu2">תפריט</button></div>';
+      wireMenuBtn();
+      document.getElementById("again").onclick=function(){S.aPhase="ready";render();};
+      document.getElementById("menu2").onclick=function(){S.screen="menu";render();}; return;
+    }
+    // running — one exercise at a time
+    S.running=true; requestWake();
+    var cur=AMRAP_ROUND[S.aEx], n=exName(cur[0],eq);
+    var isRoundEnd=S.aEx===AMRAP_ROUND.length-1;
+    var nxt=AMRAP_ROUND[(S.aEx+1)%AMRAP_ROUND.length], nxtName=exName(nxt[0],eq)[0];
+    var dots=AMRAP_ROUND.map(function(_,i){return '<span class="dot cyan '+(i<S.aEx?"done":(i===S.aEx?"cur":""))+'"></span>';}).join("");
+    app.innerHTML =
+      '<div class="row"><button class="btn-ghost" id="abandon">← יציאה</button>' +
+        '<div class="center"><div class="muted" style="font-size:.65rem">זמן</div><div class="clock num" id="clock">20:00</div></div>' +
+        '<button class="btn-ghost" id="early">סיום</button></div>' +
+      '<div class="center muted" style="font-size:.8rem">סיבוב <span class="num" id="rnum">'+(S.aRounds+1)+'</span> · תרגיל <span class="num">'+(S.aEx+1)+'</span>/'+AMRAP_ROUND.length+'</div>' +
+      '<div class="stage"><div class="animbox pop" style="color:var(--cyan)">'+animSVG(animType(cur[0],eq))+'</div>' +
+        '<div class="center"><div class="ex-name">'+n[0]+'</div><div class="ex-en">'+n[1]+'</div>' +
+        '<div class="ex-reps" style="color:var(--cyan)">×'+cur[1]+'</div></div>' +
+        '<div class="dots">'+dots+'</div></div>' +
+      '<button class="mega lime act" id="done-ex"><span class="big">בוצע ✓</span>' +
+        '<span class="small">'+(isRoundEnd?"סיום סיבוב +1":"הבא: "+nxtName)+'</span></button>';
+    document.getElementById("abandon").onclick=function(){clearTimer();S.screen="menu";render();};
+    document.getElementById("early").onclick=finishAmrap;
+    document.getElementById("done-ex").onclick=advanceAmrapEx;
+    tickAmrap();
+  }
+  function startAmrap(){ AudioEngine.unlock(); S.aRounds=0; S.aEx=0; S.aPB=false; S.prevTick=-1; S.endTime=performance.now()+AMRAP_SECONDS*1000; S.aPhase="running"; render(); clearTimer(); timer=setInterval(tickAmrap,100); }
+  function advanceAmrapEx(){
+    if (S.aEx>=AMRAP_ROUND.length-1){ S.aEx=0; S.aRounds++; AudioEngine.round(); }
+    else { S.aEx++; AudioEngine.blip(); }
+    render(); clearTimer(); timer=setInterval(tickAmrap,100);
+  }
+  function tickAmrap(){
+    var remaining=S.endTime-performance.now();
+    if (remaining<=0){ finishAmrap(); return; }
+    var clock=document.getElementById("clock"); if(!clock)return;
+    clock.textContent=fmtClock(remaining/1000);
+    var secs=Math.ceil(remaining/1000);
+    if (secs<=10) clock.classList.add("urgent"); else clock.classList.remove("urgent");
+    if (secs<=10&&secs>=1&&secs!==S.prevTick){ S.prevTick=secs; AudioEngine.tick(secs); }
+  }
+  function finishAmrap(){ clearTimer(); S.finalRounds=S.aRounds; S.aPB=saveAmrapPB(S.finalRounds)&&S.finalRounds>0; if(S.finalRounds>0)AudioEngine.finish();else AudioEngine.gameOver(); S.aPhase="done"; render(); }
+
+  // =================== LADDER ===================
+  function renderLadder() {
+    var eq=S.equip;
+    if (S.lPhase==="ready") {
+      S.running=false; releaseWake(); clearTimer();
+      var pb=getLadderPB();
+      var list=MULT.map(function(m){return '<li><span class="name">'+exName(m[0],eq)[0]+'</span><span class="muted num">רמה × '+m[1]+'</span></li>';}).join("");
+      app.innerHTML = topBar("סולם "+fmtInt(LADDER_TOTAL),"Monster Ladder") +
+        '<div class="animbox pop" style="color:var(--pink)">'+animSVG(animType(MULT[0][0],eq))+'</div>' +
+        '<section class="panel"><p class="muted" style="margin:0 0 10px">רמות 1→10→1 ('+SEQ.length+' שלבים) · תרגיל אחד בכל לחיצה:</p><ul class="ex" style="gap:7px">'+list+'</ul>' +
+        '<p class="muted" style="font-size:.75rem;margin:12px 0 0">דוגמה — רמה 2: 2 מתח, 4 מקבילים, 6 שכיבות, 8 בטן, 10 סקוואט.</p></section>' +
+        '<p class="center" style="font-size:.95rem">🏆 הכי מהיר: <span class="pb-val num">'+(pb!=null?fmtStop(pb):"—")+'</span></p>' +
+        '<button class="mega pink" id="start"><span class="big">התחל ▶</span></button>';
+      wireMenuBtn(); document.getElementById("start").onclick=startLadder; return;
+    }
+    if (S.lPhase==="done") {
+      S.running=false; releaseWake(); clearTimer();
+      app.innerHTML = topBar("סולם "+fmtInt(LADDER_TOTAL),"Monster Ladder") +
+        '<div class="grow center">'+(S.lPB?'<div class="pbflag blink">🎉 שיא חדש!</div>':"") +
+          '<div style="font-size:3.2rem">🏁</div><div class="muted">זמן סופי</div>' +
+          '<div class="lvl" style="font-size:clamp(2.6rem,16vw,4rem)">'+fmtStop(S.finalMs)+'</div>' +
+          '<div class="muted" style="font-size:.9rem"><span class="num">'+fmtInt(LADDER_TOTAL)+'</span> חזרות הושלמו 💪</div></div>' +
+        '<div class="grid2"><button class="done-btn primary-pink" id="again">שוב ↺</button><button class="done-btn ghost" id="menu2">תפריט</button></div>';
+      wireMenuBtn();
+      document.getElementById("again").onclick=function(){S.lPhase="ready";render();};
+      document.getElementById("menu2").onclick=function(){S.screen="menu";render();}; return;
+    }
+    // running — one exercise at a time
+    S.running=true; requestWake();
+    var level=SEQ[S.lStep], reps=ladderReps(level), cur=reps[S.lEx], n=exName(cur[0],eq);
+    var isLevelEnd=S.lEx===reps.length-1;
+    var isLastLevel=S.lStep>=SEQ.length-1;
+    var nextLevel=isLastLevel?null:SEQ[S.lStep+1];
+    var goingUp=nextLevel!=null&&nextLevel>level;
+    var exDots=reps.map(function(_,i){return '<span class="dot '+(i<S.lEx?"done":(i===S.lEx?"cur":""))+'"></span>';}).join("");
+    var doneReps=repsBefore(S.lStep); for(var i=0;i<S.lEx;i++) doneReps+=reps[i][1];
+    var sub = isLevelEnd ? (isLastLevel?"סיום 🏁":"רמה "+nextLevel+" "+(goingUp?"↑":"↓")) : "הבא: "+exName(reps[S.lEx+1][0],eq)[0];
+    app.innerHTML =
+      '<div class="row"><button class="btn-ghost" id="abandon">← יציאה</button>' +
+        '<div class="num" style="font-size:1.4rem;font-weight:700;color:var(--cyan)" id="sw">00:00.0</div></div>' +
+      '<div class="center muted" style="font-size:.8rem">רמה <span class="num" style="color:var(--pink);font-weight:700">'+level+'</span>' +
+        ' · שלב <span class="num">'+(S.lStep+1)+'</span>/'+SEQ.length+' · <span class="num">'+fmtInt(doneReps)+'</span>/<span class="num">'+fmtInt(LADDER_TOTAL)+'</span></div>' +
+      '<div class="stage"><div class="animbox pop" style="color:var(--pink)">'+animSVG(animType(cur[0],eq))+'</div>' +
+        '<div class="center"><div class="ex-name">'+n[0]+'</div><div class="ex-en">'+n[1]+'</div>' +
+        '<div class="ex-reps" style="color:var(--pink)">×'+cur[1]+'</div></div>' +
+        '<div class="dots">'+exDots+'</div></div>' +
+      '<button class="mega '+(isLevelEnd&&isLastLevel?"lime":"pink")+' act" id="done-ex"><span class="big">בוצע ✓</span><span class="small">'+sub+'</span></button>';
+    document.getElementById("abandon").onclick=function(){clearTimer();S.screen="menu";render();};
+    document.getElementById("done-ex").onclick=advanceLadderEx;
+    tickLadder();
+  }
+  function startLadder(){ AudioEngine.unlock(); S.lStep=0; S.lEx=0; S.lPB=false; S.startTime=performance.now(); S.lPhase="running"; render(); clearTimer(); timer=setInterval(tickLadder,100); }
+  function advanceLadderEx(){
+    var level=SEQ[S.lStep];
+    if (S.lEx>=ladderReps(level).length-1){
+      if (S.lStep>=SEQ.length-1){ finishLadder(); return; }
+      S.lStep++; S.lEx=0; AudioEngine.round();
+    } else { S.lEx++; AudioEngine.blip(); }
+    render(); clearTimer(); timer=setInterval(tickLadder,100);
+  }
+  function tickLadder(){ var sw=document.getElementById("sw"); if(!sw)return; sw.textContent=fmtStop(performance.now()-S.startTime); }
+  function finishLadder(){ clearTimer(); S.finalMs=performance.now()-S.startTime; S.lPB=saveLadderPB(S.finalMs); AudioEngine.finish(); S.lPhase="done"; render(); }
+
+  // ----- router -----
+  function render(){ if(S.screen==="menu")renderMenu(); else if(S.screen==="amrap")renderAmrap(); else if(S.screen==="ladder")renderLadder(); }
+  AudioEngine.setMuted(getMuted());
+  render();
+})();
+</script>
+</body>
+</html>
