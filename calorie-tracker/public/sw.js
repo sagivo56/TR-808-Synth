@@ -1,6 +1,11 @@
 // Service Worker בסיסי לתמיכת PWA (התקנה ומעטפת אפליקציה)
-const CACHE = "calorie-tracker-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
+const CACHE = "calorie-tracker-v2";
+const APP_SHELL = [
+  "/",
+  "/workout",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

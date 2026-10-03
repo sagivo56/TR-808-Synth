@@ -17,6 +17,11 @@ const config: Config = {
         "meter-green": "#8FBF6B",
         "meter-amber": "#E0A94C",
         "meter-red": "#D9634B",
+        // גווני ניאון ללשונית האימונים (high-contrast)
+        "neon-lime": "#B6FF3C",
+        "neon-cyan": "#22E3E3",
+        "neon-pink": "#FF3D7F",
+        "neon-amber": "#FFB020",
       },
       fontFamily: {
         display: ["var(--font-space-grotesk)", "sans-serif"],
