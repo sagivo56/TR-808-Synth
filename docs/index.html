@@ -9,12 +9,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-  /* Layout: full-height arcade app, single centered column, one exercise at a time
-     with an animated demo + giant tap target. Committed single dark "neon arcade" world. */
+  /* Layout: full-height arcade app, one exercise at a time with an animated demo
+     (two-pose morph) + giant tap target. Committed single dark "neon arcade" world. */
   :root {
     --bg: #0C0E12; --panel: #15181E; --line: #262B33; --line2: #39414C;
     --fg: #EDEDE6; --muted: #868D96;
-    --cyan: #22E3E3; --pink: #FF3D7F; --lime: #B6FF3C; --amber: #FFB020;
+    --cyan: #22E3E3; --pink: #FF3D7F; --lime: #B6FF3C; --amber: #FFB020; --yt: #FF3D3D;
     --disp: "Space Grotesk", system-ui, sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, monospace;
     color-scheme: dark;
@@ -33,14 +33,18 @@
   .sub { color: var(--muted); font-size: .85rem; margin: 2px 0 0; }
   .muted { color: var(--muted); }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .tools { display: flex; gap: 8px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
 
   .btn-ghost { height: 42px; padding: 0 14px; border-radius: 12px; background: transparent;
                border: 1px solid var(--line2); color: var(--muted); font-family: var(--disp);
                font-weight: 700; font-size: .9rem; cursor: pointer; }
   .btn-ghost:hover { color: var(--fg); }
-  .icon-btn { height: 44px; width: 44px; border-radius: 12px; border: 1px solid var(--line2);
-              background: transparent; font-size: 1.2rem; cursor: pointer; color: var(--fg); }
+  .icon-btn { height: 44px; min-width: 44px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line2);
+              background: transparent; font-size: 1.15rem; cursor: pointer; color: var(--fg);
+              display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+  a.icon-btn { color: var(--fg); }
+  .icon-btn.yt { border-color: color-mix(in srgb, var(--yt) 55%, transparent); color: #ff8b8b; font-size: .85rem; font-weight: 700; font-family: var(--disp); }
 
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--bg);
          border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
@@ -71,7 +75,7 @@
   .mega.lime { background: var(--lime); box-shadow: 0 0 52px -10px var(--lime); color: #0d1f00; }
   .mega .big { font-size: clamp(2rem, 10vw, 2.8rem); line-height: 1.05; text-align: center; }
   .mega .small { font-family: var(--mono); font-size: 1.15rem; opacity: .82; }
-  .mega.act { min-height: 28vh; min-height: 28dvh; }
+  .mega.act { min-height: 26vh; min-height: 26dvh; }
 
   .clock { font-family: var(--mono); font-weight: 700; line-height: 1; font-size: clamp(2.1rem, 11vw, 3rem); }
   .clock.urgent { color: var(--pink); animation: pulse 1s infinite; }
@@ -101,16 +105,15 @@
   .done-btn.primary-pink { background: transparent; border: 2px solid var(--pink); color: var(--pink); }
   .done-btn.ghost { background: transparent; border: 1px solid var(--line2); color: var(--fg); }
 
-  /* exercise demo animation */
   .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; }
   .animbox { display: flex; align-items: center; justify-content: center; }
   .animbox.pop { animation: pop .28s ease-out; }
   @keyframes pop { from { transform: scale(.82); opacity: .35; } to { transform: scale(1); opacity: 1; } }
-  .fig { width: clamp(132px, 46vw, 196px); height: auto; display: block; }
+  .fig { width: clamp(150px, 50vw, 220px); height: auto; display: block; }
   .ex-name { font-weight: 700; font-size: 1.5rem; text-align: center; }
   .ex-en { color: var(--muted); font-size: .8rem; margin-top: 2px; }
   .ex-reps { font-family: var(--mono); font-weight: 700; line-height: 1; margin-top: 4px; font-size: clamp(2.6rem, 15vw, 4rem); }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { .fig *, .blink, .animbox { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -119,6 +122,8 @@
 <script>
 (function () {
   "use strict";
+
+  var YT_URL = "https://www.youtube.com/results?search_query=workout+music+mix";
 
   var EX = {
     pullups:   { full: ["מתח", "Pull-ups"],          none: ["משיכות סופרמן", "Superman Pull-downs"] },
@@ -142,68 +147,77 @@
     if (key === "dips") return eq === "full" ? "dip" : "chairdip";
     if (key === "pushups") return "pushup";
     if (key === "situps") return "situp";
-    return "squat"; // airsquats / squats
+    return "squat";
   }
   function fmtInt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
   function fmtClock(sec) { sec = Math.max(0, Math.round(sec)); return pad(Math.floor(sec/60)) + ":" + pad(sec%60); }
   function fmtStop(ms) { var t = Math.floor(Math.max(0,ms)/100), d = t%10, ts = Math.floor(t/10); return pad(Math.floor(ts/60)) + ":" + pad(ts%60) + "." + d; }
   function pad(n) { return (n < 10 ? "0" : "") + n; }
 
-  // ----- exercise demo animations (SVG + SMIL, self-contained) -----
+  // ----- exercise demos: morph a stick figure between two clear poses (SVG+SMIL) -----
   function fig(inner) {
-    return '<svg class="fig" viewBox="0 0 160 120" fill="none" stroke="currentColor" stroke-width="6" ' +
+    return '<svg class="fig" viewBox="0 0 160 120" fill="none" stroke="currentColor" stroke-width="7" ' +
            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
   }
-  var AT = '<animateTransform attributeName="transform" type=';
+  var SP = ' calcMode="spline" keyTimes="0;0.5;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"';
+  function anim(attr, a, b, dur) { return '<animate attributeName="' + attr + '" values="' + a + ';' + b + ';' + a + '" dur="' + dur + '" repeatCount="indefinite"' + SP + '/>'; }
+  function ml(a, b, dur) {
+    var n = ["x1","y1","x2","y2"], s = "";
+    for (var i = 0; i < 4; i++) if (a[i] !== b[i]) s += anim(n[i], a[i], b[i], dur);
+    return '<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+a[2]+'" y2="'+a[3]+'">' + s + '</line>';
+  }
+  function mc(a, b, r, dur) {
+    var s = "";
+    if (a[0] !== b[0]) s += anim("cx", a[0], b[0], dur);
+    if (a[1] !== b[1]) s += anim("cy", a[1], b[1], dur);
+    return '<circle cx="'+a[0]+'" cy="'+a[1]+'" r="'+r+'">' + s + '</circle>';
+  }
+  function L(A, B, p, q, dur) { return ml([A[p][0],A[p][1],A[q][0],A[q][1]], [B[p][0],B[p][1],B[q][0],B[q][1]], dur); }
+
   function animSVG(type) {
-    switch (type) {
-      case "squat": return fig(
-        '<line x1="70" y1="80" x2="58" y2="108"/>' +
-        '<g>' + AT + '"rotate" values="0 70 80;30 70 80;0 70 80" dur="1.6s" repeatCount="indefinite"/>' +
-          '<line x1="70" y1="58" x2="70" y2="80"/>' +
-          '<g>' + AT + '"rotate" values="0 70 58;-26 70 58;0 70 58" dur="1.6s" repeatCount="indefinite"/>' +
-            '<line x1="70" y1="58" x2="70" y2="36"/><circle cx="70" cy="26" r="8"/>' +
-            '<g>' + AT + '"rotate" values="0 70 38;-38 70 38;0 70 38" dur="1.6s" repeatCount="indefinite"/>' +
-              '<line x1="70" y1="38" x2="94" y2="46"/></g>' +
-          '</g></g>');
-      case "pushup": return fig(
-        '<line x1="38" y1="104" x2="128" y2="104" stroke-width="4" opacity=".35"/>' +
-        '<g>' + AT + '"rotate" values="0 122 98;9 122 98;0 122 98" dur="1.3s" repeatCount="indefinite"/>' +
-          '<line x1="122" y1="98" x2="60" y2="78"/><circle cx="52" cy="76" r="8"/>' +
-          '<line x1="60" y1="78" x2="58" y2="100"/><line x1="92" y1="88" x2="92" y2="100"/></g>');
-      case "pullup": return fig(
-        '<line x1="40" y1="14" x2="100" y2="14"/>' +
-        '<g>' + AT + '"translate" values="0 0;0 -18;0 0" dur="1.6s" repeatCount="indefinite"/>' +
-          '<circle cx="70" cy="42" r="8"/><line x1="70" y1="50" x2="70" y2="78"/>' +
-          '<line x1="70" y1="78" x2="60" y2="96"/><line x1="70" y1="78" x2="80" y2="96"/></g>' +
-        '<line x1="60" y1="14" x2="66" y2="50"><animate attributeName="y2" values="50;32;50" dur="1.6s" repeatCount="indefinite"/></line>' +
-        '<line x1="80" y1="14" x2="74" y2="50"><animate attributeName="y2" values="50;32;50" dur="1.6s" repeatCount="indefinite"/></line>');
-      case "superman": return fig(
-        '<circle cx="70" cy="24" r="8"/><line x1="70" y1="32" x2="70" y2="72"/>' +
-        '<line x1="70" y1="72" x2="60" y2="100"/><line x1="70" y1="72" x2="80" y2="100"/>' +
-        '<g>' + AT + '"rotate" values="0 70 38;70 70 38;0 70 38" dur="1.4s" repeatCount="indefinite"/><line x1="70" y1="38" x2="50" y2="16"/></g>' +
-        '<g>' + AT + '"rotate" values="0 70 38;-70 70 38;0 70 38" dur="1.4s" repeatCount="indefinite"/><line x1="70" y1="38" x2="90" y2="16"/></g>');
-      case "dip": return fig(
-        '<line x1="40" y1="40" x2="58" y2="40"/><line x1="82" y1="40" x2="100" y2="40"/>' +
-        '<g>' + AT + '"translate" values="0 0;0 14;0 0" dur="1.5s" repeatCount="indefinite"/>' +
-          '<circle cx="70" cy="30" r="7"/><line x1="70" y1="37" x2="70" y2="64"/>' +
-          '<line x1="70" y1="64" x2="80" y2="74"/><line x1="80" y1="74" x2="72" y2="86"/></g>' +
-        '<line x1="52" y1="40" x2="66" y2="40"><animate attributeName="y2" values="40;54;40" dur="1.5s" repeatCount="indefinite"/></line>' +
-        '<line x1="88" y1="40" x2="74" y2="40"><animate attributeName="y2" values="40;54;40" dur="1.5s" repeatCount="indefinite"/></line>');
-      case "chairdip": return fig(
-        '<rect x="92" y="44" width="40" height="8" rx="2"/><line x1="98" y1="52" x2="98" y2="86"/><line x1="126" y1="52" x2="126" y2="86"/>' +
-        '<line x1="40" y1="100" x2="60" y2="100"/>' +
-        '<g>' + AT + '"translate" values="0 0;0 14;0 0" dur="1.5s" repeatCount="indefinite"/>' +
-          '<circle cx="74" cy="40" r="7"/><line x1="74" y1="47" x2="70" y2="70"/>' +
-          '<line x1="70" y1="70" x2="48" y2="86"/><line x1="48" y1="86" x2="48" y2="100"/></g>' +
-        '<line x1="100" y1="46" x2="78" y2="46"><animate attributeName="y2" values="46;60;46" dur="1.5s" repeatCount="indefinite"/></line>');
-      case "situp": return fig(
-        '<line x1="40" y1="100" x2="112" y2="100" stroke-width="4" opacity=".35"/>' +
-        '<line x1="96" y1="96" x2="74" y2="78"/><line x1="74" y1="78" x2="74" y2="100"/>' +
-        '<g>' + AT + '"rotate" values="0 96 96;-55 96 96;0 96 96" dur="1.6s" repeatCount="indefinite"/>' +
-          '<line x1="96" y1="96" x2="62" y2="96"/><circle cx="54" cy="94" r="7"/><line x1="72" y1="96" x2="64" y2="86"/></g>');
-      default: return fig('<circle cx="70" cy="40" r="10"/>');
+    var d = "1.3s", A, B, env = "", segs = "", head = "";
+    if (type === "squat") {
+      A = { H:[80,22], S:[80,36], P:[80,62], E:[94,48], D:[106,46], K:[80,86], F:[80,108] };
+      B = { H:[92,58], S:[88,66], P:[72,84], E:[108,62], D:[120,60], K:[98,90], F:[80,108] };
+      segs = L(A,B,"S","P",d)+L(A,B,"P","K",d)+L(A,B,"K","F",d)+L(A,B,"S","E",d)+L(A,B,"E","D",d);
+      head = mc(A.H,B.H,9,d);
+    } else if (type === "pushup") {
+      env = '<line x1="34" y1="104" x2="132" y2="104" stroke-width="4" opacity=".3"/>';
+      A = { H:[56,70], S:[70,76], P:[98,86], F:[124,96], E:[66,89], D:[66,101] };
+      B = { H:[56,84], S:[70,90], P:[98,94], F:[124,99], E:[56,95], D:[66,101] };
+      segs = L(A,B,"S","P",d)+L(A,B,"P","F",d)+L(A,B,"S","E",d)+L(A,B,"E","D",d);
+      head = mc(A.H,B.H,9,d);
+    } else if (type === "pullup") {
+      env = '<line x1="38" y1="14" x2="102" y2="14"/>';
+      A = { H:[70,42], S:[70,52], P:[70,80], K1:[61,98], K2:[79,98], E1:[61,34], E2:[79,34], D1:[58,14], D2:[82,14] };
+      B = { H:[70,24], S:[70,34], P:[70,62], K1:[61,78], K2:[79,78], E1:[60,22], E2:[80,22], D1:[58,14], D2:[82,14] };
+      segs = L(A,B,"S","P",d)+L(A,B,"P","K1",d)+L(A,B,"P","K2",d)+L(A,B,"D1","E1",d)+L(A,B,"E1","S",d)+L(A,B,"D2","E2",d)+L(A,B,"E2","S",d);
+      head = mc(A.H,B.H,8,d);
+    } else if (type === "superman") {
+      A = { H:[80,24], S:[80,36], P:[80,66], L1:[71,104], L2:[89,104], E1:[70,20], D1:[62,8], E2:[90,20], D2:[98,8] };
+      B = { H:[80,24], S:[80,36], P:[80,66], L1:[71,104], L2:[89,104], E1:[66,36], D1:[56,48], E2:[94,36], D2:[104,48] };
+      segs = L(A,B,"S","P",d)+L(A,B,"P","L1",d)+L(A,B,"P","L2",d)+L(A,B,"S","E1",d)+L(A,B,"E1","D1",d)+L(A,B,"S","E2",d)+L(A,B,"E2","D2",d);
+      head = mc(A.H,B.H,9,d);
+    } else if (type === "dip") {
+      env = '<line x1="44" y1="40" x2="64" y2="40"/><line x1="96" y1="40" x2="116" y2="40"/>';
+      A = { H:[80,32], S:[80,42], P:[80,70], K:[92,82], F:[83,92], E1:[66,46], D1:[60,40], E2:[94,46], D2:[100,40] };
+      B = { H:[80,48], S:[80,58], P:[80,86], K:[92,98], F:[83,108], E1:[58,50], D1:[60,40], E2:[102,50], D2:[100,40] };
+      segs = L(A,B,"S","P",d)+L(A,B,"P","K",d)+L(A,B,"K","F",d)+L(A,B,"D1","E1",d)+L(A,B,"E1","S",d)+L(A,B,"D2","E2",d)+L(A,B,"E2","S",d);
+      head = mc(A.H,B.H,9,d);
+    } else if (type === "chairdip") {
+      env = '<rect x="96" y="44" width="42" height="8" rx="2"/><line x1="102" y1="52" x2="102" y2="88"/><line x1="132" y1="52" x2="132" y2="88"/><line x1="38" y1="100" x2="60" y2="100" stroke-width="4" opacity=".3"/>';
+      A = { H:[84,46], S:[80,54], P:[70,68], K:[52,82], F:[42,100], E:[94,52], D:[102,46] };
+      B = { H:[84,60], S:[80,68], P:[70,82], K:[52,90], F:[42,100], E:[98,60], D:[102,46] };
+      segs = L(A,B,"S","P",d)+L(A,B,"P","K",d)+L(A,B,"K","F",d)+L(A,B,"D","E",d)+L(A,B,"E","S",d);
+      head = mc(A.H,B.H,9,d);
+    } else { // situp
+      env = '<line x1="38" y1="100" x2="112" y2="100" stroke-width="4" opacity=".3"/>';
+      A = { H:[50,92], S:[60,96], P:[94,96], K:[72,76], F:[72,100], Hd:[70,94] };
+      B = { H:[66,64], S:[74,72], P:[94,96], K:[72,76], F:[72,100], Hd:[80,78] };
+      segs = L(A,B,"P","S",d)+L(A,B,"P","K",d)+L(A,B,"K","F",d)+L(A,B,"S","Hd",d);
+      head = mc(A.H,B.H,9,d);
     }
+    return fig(env + segs + head);
   }
 
   // ----- storage -----
@@ -222,16 +236,16 @@
   var AudioEngine = (function () {
     var ctx = null, muted = getMuted();
     function ensure(){ if(typeof window==="undefined")return null; if(!ctx){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;try{ctx=new AC();}catch(e){return null;}} if(ctx.state==="suspended"){ctx.resume().catch(function(){});} return ctx; }
-    function note(f,at,dur,wave,peak){ if(!ctx)return; var o=ctx.createOscillator(),g=ctx.createGain(); o.type=wave||"square"; o.frequency.setValueAtTime(f,at); g.gain.setValueAtTime(0.0001,at); g.gain.exponentialRampToValueAtTime(peak||0.22,at+0.008); g.gain.exponentialRampToValueAtTime(0.0001,at+dur); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+dur+0.02); }
+    function note(f,at,dur,wave,peak){ if(!ctx)return; var o=ctx.createOscillator(),g=ctx.createGain(); o.type=wave||"square"; o.frequency.setValueAtTime(f,at); g.gain.setValueAtTime(0.0001,at); g.gain.exponentialRampToValueAtTime(peak||0.3,at+0.008); g.gain.exponentialRampToValueAtTime(0.0001,at+dur); o.connect(g).connect(ctx.destination); o.start(at); o.stop(at+dur+0.02); }
     function play(seq){ if(muted)return; var c=ensure(); if(!c)return; var t=c.currentTime+0.01; for(var i=0;i<seq.length;i++){note(seq[i].f,t,seq[i].d,seq[i].w,seq[i].p);t+=seq[i].d;} }
     return {
       unlock:function(){ensure();},
       setMuted:function(m){muted=m;}, isMuted:function(){return muted;},
-      blip:function(){play([{f:784,d:0.05},{f:1046,d:0.08}]);},                       // tap one exercise
-      round:function(){play([{f:660,d:0.06},{f:880,d:0.06},{f:1318,d:0.11}]);},       // finished a round / level
-      tick:function(s){var f=500+Math.max(0,Math.min(10,s))*40;play([{f:f,d:0.09,p:0.18}]);},
-      finish:function(){play([{f:523,d:0.11},{f:659,d:0.11},{f:784,d:0.11},{f:1046,d:0.16},{f:784,d:0.09},{f:1046,d:0.3,p:0.26}]);},
-      gameOver:function(){play([{f:440,d:0.14,w:"triangle"},{f:349,d:0.14,w:"triangle"},{f:262,d:0.3,w:"triangle",p:0.24}]);}
+      blip:function(){play([{f:784,d:0.05,p:0.34},{f:1046,d:0.09,p:0.34}]);},
+      round:function(){play([{f:660,d:0.07,p:0.34},{f:880,d:0.07,p:0.34},{f:1318,d:0.12,p:0.34}]);},
+      tick:function(s){var f=500+Math.max(0,Math.min(10,s))*40;play([{f:f,d:0.1,p:0.26}]);},
+      finish:function(){play([{f:523,d:0.12,p:0.3},{f:659,d:0.12,p:0.3},{f:784,d:0.12,p:0.3},{f:1046,d:0.18,p:0.32},{f:784,d:0.1,p:0.3},{f:1046,d:0.32,p:0.34}]);},
+      gameOver:function(){play([{f:440,d:0.15,w:"triangle",p:0.3},{f:349,d:0.15,w:"triangle",p:0.3},{f:262,d:0.32,w:"triangle",p:0.32}]);}
     };
   })();
 
@@ -251,6 +265,9 @@
   function clearTimer(){ if(timer){clearInterval(timer);timer=null;} }
   var app = document.getElementById("app");
 
+  function musicBtn(){ return '<a class="icon-btn yt" href="'+YT_URL+'" target="_blank" rel="noopener" title="פתח מוזיקה ביוטיוב">▶ YouTube</a>'; }
+  function backRow(id){ return '<button class="btn-ghost" id="'+id+'">← חזרה</button>'; }
+
   // =================== MENU ===================
   function renderMenu() {
     S.running=false; releaseWake(); clearTimer();
@@ -259,7 +276,7 @@
     var amrapPB=getAmrapPB(), ladderPB=getLadderPB();
     app.innerHTML =
       '<div class="row"><div><h1>אימוני כוח</h1><p class="sub">Tom Holland · Calisthenics</p></div>' +
-      '<button class="icon-btn" id="mute">'+(AudioEngine.isMuted()?"🔇":"🔊")+'</button></div>' +
+      '<div class="tools">'+musicBtn()+'<button class="icon-btn" id="mute">'+(AudioEngine.isMuted()?"🔇":"🔊")+'</button></div></div>' +
       '<section class="panel"><div class="row" style="margin-bottom:10px"><span style="font-weight:700">ציוד זמין</span>' +
         '<span class="muted" style="font-size:.75rem">משנה שמות + אנימציות</span></div>' +
         '<div class="seg"><button class="on-cyan" data-eq="full" aria-pressed="'+(eq==="full")+'">מוט מתח + מקבילים</button>' +
@@ -269,13 +286,14 @@
         '<p style="margin:0;font-size:.9rem">🏆 שיא: <span class="pb-val num">'+(amrapPB!=null?amrapPB+" סיבובים":"—")+'</span></p></button>' +
       '<button class="card pink" id="go-ladder"><div class="row"><span class="title">סולם '+fmtInt(LADDER_TOTAL)+' חזרות</span><span class="muted">Monster</span></div>' +
         '<p class="muted" style="margin:0;font-size:.88rem">רמות 1→10→1 · מתח ×1, מקבילים ×2, שכיבות ×3, בטן ×4, סקוואט ×5</p>' +
-        '<p style="margin:0;font-size:.9rem">🏆 שיא: <span class="pb-val num">'+(ladderPB!=null?fmtStop(ladderPB):"—")+'</span></p></button>';
+        '<p style="margin:0;font-size:.9rem">🏆 שיא: <span class="pb-val num">'+(ladderPB!=null?fmtStop(ladderPB):"—")+'</span></p></button>' +
+      '<p class="muted center" style="font-size:.72rem;margin:0">הסאונד הוא אפקטי 8-ביט על כל לחיצה · למוזיקה רציפה פתח YouTube בטאב מקביל</p>';
     document.getElementById("mute").onclick=function(){var m=!AudioEngine.isMuted();AudioEngine.setMuted(m);saveMuted(m);this.innerHTML=m?"🔇":"🔊";};
     Array.prototype.forEach.call(app.querySelectorAll(".seg button"),function(b){b.onclick=function(){S.equip=b.getAttribute("data-eq");saveEquip(S.equip);renderMenu();};});
     document.getElementById("go-amrap").onclick=function(){AudioEngine.unlock();S.screen="amrap";S.aPhase="ready";render();};
     document.getElementById("go-ladder").onclick=function(){AudioEngine.unlock();S.screen="ladder";S.lPhase="ready";render();};
   }
-  function topBar(title,sub){ return '<div class="row"><div><h1 style="font-size:1.2rem">'+title+'</h1><p class="sub">'+sub+'</p></div><button class="btn-ghost" id="to-menu">← תפריט</button></div>'; }
+  function topBar(title,sub){ return '<div class="row"><div><h1 style="font-size:1.2rem">'+title+'</h1><p class="sub">'+sub+'</p></div><div class="tools">'+musicBtn()+backRow("to-menu")+'</div></div>'; }
   function wireMenuBtn(){ var b=document.getElementById("to-menu"); if(b) b.onclick=function(){S.screen="menu";render();}; }
 
   // =================== AMRAP ===================
@@ -298,7 +316,7 @@
         '<div class="grow center">'+(S.aPB?'<div class="pbflag blink">🎉 שיא חדש!</div>':"") +
           '<div class="muted">סיבובים שהושלמו</div><div class="big-count">'+S.finalRounds+'</div>' +
           '<div class="muted" style="font-size:.9rem">= <span class="num">'+(S.finalRounds*REPS_PER_ROUND)+'</span> חזרות סה״כ</div></div>' +
-        '<div class="grid2"><button class="done-btn primary-cyan" id="again">שוב ↺</button><button class="done-btn ghost" id="menu2">תפריט</button></div>';
+        '<div class="grid2"><button class="done-btn primary-cyan" id="again">שוב ↺</button><button class="done-btn ghost" id="menu2">← חזרה</button></div>';
       wireMenuBtn();
       document.getElementById("again").onclick=function(){S.aPhase="ready";render();};
       document.getElementById("menu2").onclick=function(){S.screen="menu";render();}; return;
@@ -310,10 +328,10 @@
     var nxt=AMRAP_ROUND[(S.aEx+1)%AMRAP_ROUND.length], nxtName=exName(nxt[0],eq)[0];
     var dots=AMRAP_ROUND.map(function(_,i){return '<span class="dot cyan '+(i<S.aEx?"done":(i===S.aEx?"cur":""))+'"></span>';}).join("");
     app.innerHTML =
-      '<div class="row"><button class="btn-ghost" id="abandon">← יציאה</button>' +
+      '<div class="row">'+backRow("abandon") +
         '<div class="center"><div class="muted" style="font-size:.65rem">זמן</div><div class="clock num" id="clock">20:00</div></div>' +
-        '<button class="btn-ghost" id="early">סיום</button></div>' +
-      '<div class="center muted" style="font-size:.8rem">סיבוב <span class="num" id="rnum">'+(S.aRounds+1)+'</span> · תרגיל <span class="num">'+(S.aEx+1)+'</span>/'+AMRAP_ROUND.length+'</div>' +
+        '<div class="tools">'+musicBtn()+'<button class="btn-ghost" id="early">סיום</button></div></div>' +
+      '<div class="center muted" style="font-size:.8rem">סיבוב <span class="num">'+(S.aRounds+1)+'</span> · תרגיל <span class="num">'+(S.aEx+1)+'</span>/'+AMRAP_ROUND.length+'</div>' +
       '<div class="stage"><div class="animbox pop" style="color:var(--cyan)">'+animSVG(animType(cur[0],eq))+'</div>' +
         '<div class="center"><div class="ex-name">'+n[0]+'</div><div class="ex-en">'+n[1]+'</div>' +
         '<div class="ex-reps" style="color:var(--cyan)">×'+cur[1]+'</div></div>' +
@@ -364,7 +382,7 @@
           '<div style="font-size:3.2rem">🏁</div><div class="muted">זמן סופי</div>' +
           '<div class="lvl" style="font-size:clamp(2.6rem,16vw,4rem)">'+fmtStop(S.finalMs)+'</div>' +
           '<div class="muted" style="font-size:.9rem"><span class="num">'+fmtInt(LADDER_TOTAL)+'</span> חזרות הושלמו 💪</div></div>' +
-        '<div class="grid2"><button class="done-btn primary-pink" id="again">שוב ↺</button><button class="done-btn ghost" id="menu2">תפריט</button></div>';
+        '<div class="grid2"><button class="done-btn primary-pink" id="again">שוב ↺</button><button class="done-btn ghost" id="menu2">← חזרה</button></div>';
       wireMenuBtn();
       document.getElementById("again").onclick=function(){S.lPhase="ready";render();};
       document.getElementById("menu2").onclick=function(){S.screen="menu";render();}; return;
@@ -380,8 +398,8 @@
     var doneReps=repsBefore(S.lStep); for(var i=0;i<S.lEx;i++) doneReps+=reps[i][1];
     var sub = isLevelEnd ? (isLastLevel?"סיום 🏁":"רמה "+nextLevel+" "+(goingUp?"↑":"↓")) : "הבא: "+exName(reps[S.lEx+1][0],eq)[0];
     app.innerHTML =
-      '<div class="row"><button class="btn-ghost" id="abandon">← יציאה</button>' +
-        '<div class="num" style="font-size:1.4rem;font-weight:700;color:var(--cyan)" id="sw">00:00.0</div></div>' +
+      '<div class="row">'+backRow("abandon") +
+        '<div class="tools"><div class="num" style="font-size:1.4rem;font-weight:700;color:var(--cyan)" id="sw">00:00.0</div>'+musicBtn()+'</div></div>' +
       '<div class="center muted" style="font-size:.8rem">רמה <span class="num" style="color:var(--pink);font-weight:700">'+level+'</span>' +
         ' · שלב <span class="num">'+(S.lStep+1)+'</span>/'+SEQ.length+' · <span class="num">'+fmtInt(doneReps)+'</span>/<span class="num">'+fmtInt(LADDER_TOTAL)+'</span></div>' +
       '<div class="stage"><div class="animbox pop" style="color:var(--pink)">'+animSVG(animType(cur[0],eq))+'</div>' +
