@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C0E12">
+<meta name="description" content="מסך פתיחה — קלוריות ואימונים">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="האפליקציות שלי">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>האפליקציות שלי</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  /* Launcher hub: two large app tiles, committed dark neon world. */
+  :root {
+    --bg:#0C0E12; --panel:#15181E; --line:#262B33; --line2:#39414C;
+    --fg:#EDEDE6; --muted:#868D96;
+    --green:#8FBF6B; --cyan:#22E3E3; --lime:#B6FF3C; --amber:#FFB020;
+    --disp:"Space Grotesk",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; }
+  body { margin:0; background:radial-gradient(120% 70% at 50% -10%, #141926 0%, var(--bg) 55%) fixed, var(--bg);
+         color:var(--fg); font-family:var(--disp); -webkit-font-smoothing:antialiased; direction:rtl; }
+  .wrap { max-width:480px; margin:0 auto; min-height:100%; padding:16px; padding-block:22px;
+          display:flex; flex-direction:column; gap:16px; }
+  header h1 { margin:0; font-size:1.7rem; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:.9rem; }
+  .cards { flex:1; display:flex; flex-direction:column; gap:16px; justify-content:center; }
+  .tile { display:flex; align-items:center; gap:16px; text-decoration:none; color:var(--fg);
+          background:var(--panel); border:2px solid var(--line); border-radius:24px;
+          padding:22px; min-height:26vh; min-height:26dvh; cursor:pointer; width:100%; text-align:right;
+          font-family:var(--disp); transition:transform .06s, border-color .15s; }
+  .tile:active { transform:scale(.985); }
+  .tile .emoji { font-size:3.2rem; line-height:1; flex:none; }
+  .tile .t-name { font-size:1.8rem; font-weight:700; }
+  .tile .t-sub { color:var(--muted); font-size:.92rem; margin-top:4px; }
+  .tile .t-go { margin-inline-start:auto; font-size:1.6rem; opacity:.7; flex:none; }
+  .tile.cal { border-color:color-mix(in srgb, var(--green) 55%, transparent); }
+  .tile.cal:hover { border-color:var(--green); }
+  .tile.cal .t-name { color:var(--green); }
+  .tile.wk { border-color:color-mix(in srgb, var(--cyan) 55%, transparent); }
+  .tile.wk:hover { border-color:var(--cyan); }
+  .tile.wk .t-name { color:var(--cyan); }
+  .setbar { display:flex; gap:8px; align-items:center; }
+  .setbar input { flex:1; min-width:0; background:var(--bg); border:1px solid var(--line2); color:var(--fg);
+                  border-radius:12px; padding:12px; font-family:var(--mono); font-size:.9rem; direction:ltr; }
+  .setbar button { border:0; border-radius:12px; padding:12px 16px; font-family:var(--disp); font-weight:700;
+                   background:var(--green); color:#0c1a06; cursor:pointer; font-size:.95rem; }
+  .editlink { background:none; border:0; color:var(--muted); font-size:.8rem; cursor:pointer; text-decoration:underline;
+              font-family:var(--disp); padding:0; align-self:center; }
+  .hint { color:var(--muted); font-size:.75rem; text-align:center; margin:0; }
+  [hidden] { display:none !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>האפליקציות שלי</h1>
+    <p>בחר אפליקציה</p>
+  </header>
+
+  <div class="cards">
+    <!-- קלוריות -->
+    <a class="tile cal" id="cal-tile" href="#" hidden>
+      <span class="emoji">🍽️</span>
+      <span><span class="t-name">קלוריות</span><span class="t-sub">מעקב קלוריות ומאקרו</span></span>
+      <span class="t-go">←</span>
+    </a>
+    <div id="cal-setup" class="tile cal" style="flex-direction:column; align-items:stretch; gap:12px;">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <span class="emoji">🍽️</span>
+        <span><span class="t-name">קלוריות</span><span class="t-sub">הדבק את כתובת ה-Railway שלך פעם אחת</span></span>
+      </div>
+      <div class="setbar">
+        <input id="cal-url" type="url" inputmode="url" placeholder="https://xxxx.up.railway.app" autocomplete="off" />
+        <button id="cal-save">שמור</button>
+      </div>
+    </div>
+
+    <!-- אימונים -->
+    <a class="tile wk" href="../workout/">
+      <span class="emoji">💪</span>
+      <span><span class="t-name">אימונים</span><span class="t-sub">AMRAP · סולם 1,500</span></span>
+      <span class="t-go">←</span>
+    </a>
+  </div>
+
+  <button class="editlink" id="edit-cal" hidden>✎ שנה את כתובת הקלוריות</button>
+  <p class="hint">אפשר לשמור את הדף הזה למסך הבית כאפליקציה</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // כתובת ברירת מחדל לאפליקציית הקלוריות (אפשר להטמיע כאן קבוע). ריק = המשתמש מזין פעם אחת.
+  var CALORIES_DEFAULT = "";
+  var KEY = "calories_url";
+
+  function getUrl() {
+    if (CALORIES_DEFAULT) return CALORIES_DEFAULT;
+    try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; }
+  }
+  function setUrl(u) { try { localStorage.setItem(KEY, u); } catch (e) {} }
+  function normalize(u) {
+    u = (u || "").trim();
+    if (!u) return "";
+    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    try { new URL(u); return u; } catch (e) { return ""; }
+  }
+
+  var tile = document.getElementById("cal-tile");
+  var setup = document.getElementById("cal-setup");
+  var input = document.getElementById("cal-url");
+  var editBtn = document.getElementById("edit-cal");
+
+  function showLinked(u) {
+    tile.href = u;
+    tile.hidden = false;
+    setup.hidden = true;
+    editBtn.hidden = false;
+  }
+  function showSetup() {
+    tile.hidden = true;
+    setup.hidden = false;
+    editBtn.hidden = true;
+    input.value = getUrl();
+    input.focus();
+  }
+
+  function save() {
+    var u = normalize(input.value);
+    if (!u) { input.focus(); input.select(); return; }
+    setUrl(u);
+    showLinked(u);
+  }
+  document.getElementById("cal-save").onclick = save;
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") save(); });
+  editBtn.onclick = showSetup;
+
+  var existing = getUrl();
+  if (existing) showLinked(existing); else showSetup();
+})();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+}
+</script>
+</body>
+</html>
