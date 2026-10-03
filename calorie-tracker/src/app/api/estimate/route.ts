@@ -14,24 +14,19 @@ function buildSystemPrompt(muscleGoal: boolean): string {
 
   return `אתה עוזר תזונה שמעריך את הערך הקלורי והמאקרו-נוטריאנטים של מנה מתוך טקסט חופשי ו/או תמונה, בעברית.
 
-עליך להחזיר JSON תקין בלבד — ללא טקסט נוסף, ללא הסברים, וללא code fences. אחת משתי הצורות בלבד:
+התשובה שלך חייבת להיות קריאה לאחד משני הכלים שברשותך (לא טקסט חופשי):
+- report_estimate — להחזרת הערכה סופית: name (שם/תיאור קצר של המנה בעברית), ו-calories, protein_g, carbs_g, fat_g כמספרים עבור כל המנה כפי שתוארה, ו-tip (טיפ קצר).
+- ask_question — כאשר המנה אינה ברורה מספיק והבהרה אחת תשנה מהותית את ההערכה (למשל גודל מנה לא ידוע, רוטב/שמן לא ברור, כמות לא ידועה).
 
-1. אם המנה אינה ברורה מספיק והבהרה תשנה מהותית את ההערכה (למשל גודל מנה לא ידוע, רוטב/שמן לא ברור, כמות לא ידועה) — החזר שאלת הבהרה אחת קצרה בעברית:
-{"status":"question","question":"..."}
-
-2. אחרת — החזר הערכה סופית. שדה name בעברית ותיאורי בקצרה. כל הערכים המספריים הם מספרים (לא מחרוזות), לכל המנה כפי שתוארה. שדה tip הוא טיפ קצר (משפט אחד-שניים) בעברית כיצד לשפר את מאזן המאקרו של המנה הזו:
-{"status":"result","name":"...","calories":N,"protein_g":N,"carbs_g":N,"fat_g":N,"tip":"..."}
-
-לגבי הטיפ:
+לגבי הטיפ (שדה tip):
 - ${goalLine}
 - התייחס למאזן של המנה הספציפית (חלבון/פחמימות/שומן) והצע שיפור מעשי אחד או שניים (מה להוסיף/להחליף/להפחית).
-- קצר, ידידותי ומעשי. אם המנה כבר מאוזנת היטב — ציין זאת בקצרה.
+- קצר (משפט אחד-שניים), ידידותי ומעשי. אם המנה כבר מאוזנת היטב — ציין זאת בקצרה.
 
 כללים:
-- שאל שאלה רק כאשר זה באמת משנה מהותית את ההערכה. אם ניתן להעריך בהנחות סבירות — העדף להחזיר result.
-- אל תשאל יותר משאלה אחת בכל פעם.
-- החזר תמיד אובייקט JSON חוקי אחד בלבד, ללא טקסט לפניו או אחריו, וללא אובייקט שני.
-- אל תוסיף שדות שלא צוינו למעלה. שמור על שם המנה (name) קצר וסביר.`;
+- העדף report_estimate. אם ניתן להעריך בהנחות סבירות — העדף הערכה על פני שאלה.
+- השתמש ב-ask_question רק כאשר ההבהרה באמת מהותית, ולכל היותר שאלה אחת.
+- שמור על שם המנה (name) קצר וסביר.`;
 }
 
 // המרת בלוק צד-לקוח לבלוק תוכן של Anthropic, עם ולידציה בסיסית.
@@ -120,6 +115,49 @@ function validateResult(obj: unknown): EstimateResult | null {
   return null;
 }
 
+// כלים ל-structured output: המודל מחזיר אובייקט מובנה ותקין מובטח (ללא פענוח JSON ידני).
+const TOOLS: Anthropic.Tool[] = [
+  {
+    name: "report_estimate",
+    description: "דיווח הערכת קלוריות ומאקרו סופית למנה שתוארה.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "שם/תיאור קצר של המנה בעברית" },
+        calories: { type: "number", description: "סך הקלוריות לכל המנה" },
+        protein_g: { type: "number", description: "חלבון בגרמים לכל המנה" },
+        carbs_g: { type: "number", description: "פחמימות בגרמים לכל המנה" },
+        fat_g: { type: "number", description: "שומן בגרמים לכל המנה" },
+        tip: { type: "string", description: "טיפ קצר בעברית לשיפור מאזן המנה" },
+      },
+      required: ["name", "calories", "protein_g", "carbs_g", "fat_g", "tip"],
+    },
+  },
+  {
+    name: "ask_question",
+    description: "שאלת הבהרה אחת קצרה כאשר חסר מידע מהותי להערכה.",
+    input_schema: {
+      type: "object",
+      properties: {
+        question: { type: "string", description: "שאלת הבהרה אחת קצרה בעברית" },
+      },
+      required: ["question"],
+    },
+  },
+];
+
+// מיפוי קריאת כלי ל-EstimateResult (דרך הוולידציה הקיימת).
+function resultFromToolUse(block: Anthropic.ToolUseBlock): EstimateResult | null {
+  const input = (block.input ?? {}) as Record<string, unknown>;
+  if (block.name === "ask_question") {
+    return validateResult({ status: "question", question: input.question });
+  }
+  if (block.name === "report_estimate") {
+    return validateResult({ status: "result", ...input });
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -176,6 +214,9 @@ export async function POST(req: NextRequest) {
       max_tokens: 1000,
       system: buildSystemPrompt(muscleGoal),
       messages: apiMessages,
+      tools: TOOLS,
+      // כופה על המודל לקרוא לאחד הכלים - מבטיח פלט מובנה ותקין
+      tool_choice: { type: "any" },
     });
   } catch (err) {
     // טיפול שגיאות מפורט: קוד סטטוס HTTP והודעת השגיאה האמיתית
@@ -202,44 +243,36 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // איסוף הטקסט מהתשובה
+  // מסלול ראשי: קריאת הכלי מחזירה אובייקט מובנה ותקין - אין פענוח JSON ידני.
+  const toolUse = response.content.find(
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+  );
+  let result = toolUse ? resultFromToolUse(toolUse) : null;
+
+  // גיבוי: אם המודל בכל זאת החזיר טקסט במקום קריאת כלי - ננסה לחלץ JSON.
   const rawText = response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("")
     .trim();
 
-  if (!rawText) {
-    return NextResponse.json(
-      {
-        error: `המודל החזיר תשובה ללא טקסט (stop_reason: ${response.stop_reason ?? "לא ידוע"})`,
-      },
-      { status: 502 }
-    );
+  if (!result && rawText) {
+    try {
+      result = validateResult(JSON.parse(extractJson(rawText)));
+    } catch {
+      /* ייפול לשגיאה המובנית למטה */
+    }
   }
 
-  const jsonStr = extractJson(rawText);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
-    // שגיאת פענוח JSON - להציג את הסיבה האמיתית ואת הטקסט שהתקבל
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json(
-      {
-        error: `כשל בפענוח JSON מתשובת המודל: ${msg}`,
-        raw: rawText.slice(0, 500),
-      },
-      { status: 502 }
-    );
-  }
-
-  const result = validateResult(parsed);
   if (!result) {
+    const raw = toolUse
+      ? JSON.stringify(toolUse.input).slice(0, 500)
+      : rawText.slice(0, 500) ||
+        `(ללא פלט; stop_reason: ${response.stop_reason ?? "לא ידוע"})`;
     return NextResponse.json(
       {
-        error: "תשובת המודל אינה בפורמט הצפוי (status question/result)",
-        raw: rawText.slice(0, 500),
+        error: "תשובת המודל אינה בפורמט הצפוי (לא התקבלה הערכה או שאלה תקינה)",
+        raw,
       },
       { status: 502 }
     );
