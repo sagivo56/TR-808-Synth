@@ -100,13 +100,13 @@
 <script>
 (function () {
   "use strict";
-  // כתובת ברירת מחדל לאפליקציית הקלוריות (אפשר להטמיע כאן קבוע). ריק = המשתמש מזין פעם אחת.
-  var CALORIES_DEFAULT = "";
+  // כתובת ברירת מחדל לאפליקציית הקלוריות (Railway). עקיפה ידנית נשמרת ב-localStorage.
+  var CALORIES_DEFAULT = "https://tr-808-synth-production.up.railway.app";
   var KEY = "calories_url";
 
   function getUrl() {
-    if (CALORIES_DEFAULT) return CALORIES_DEFAULT;
-    try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; }
+    try { var o = localStorage.getItem(KEY); if (o) return o; } catch (e) {}
+    return CALORIES_DEFAULT;
   }
   function setUrl(u) { try { localStorage.setItem(KEY, u); } catch (e) {} }
   function normalize(u) {
