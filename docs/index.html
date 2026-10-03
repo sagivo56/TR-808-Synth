@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0C0E12">
-<meta name="description" content="מעקב אימוני קליסטניקס (Tom Holland) — AMRAP 20 דקות וסולם 1,500 חזרות">
+<meta name="description" content="מעקב אימוני קליסטניקס (Tom Holland) — AMRAP, סולם 1,500, ואשף בטן 7 דקות">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -22,6 +22,7 @@
     --bg: #0C0E12; --panel: #15181E; --line: #262B33; --line2: #39414C;
     --fg: #EDEDE6; --muted: #868D96;
     --cyan: #22E3E3; --pink: #FF3D7F; --lime: #B6FF3C; --amber: #FFB020; --yt: #FF3D3D;
+    --work: #76F23A; --rest: #4F8BF0; --green: #8FBF6B;
     --disp: "Space Grotesk", system-ui, sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, monospace;
     color-scheme: dark;
@@ -120,6 +121,24 @@
   .ex-name { font-weight: 700; font-size: 1.5rem; text-align: center; }
   .ex-en { color: var(--muted); font-size: .8rem; margin-top: 2px; }
   .ex-reps { font-family: var(--mono); font-weight: 700; line-height: 1; margin-top: 4px; font-size: clamp(2.6rem, 15vw, 4rem); }
+
+  /* אשף בטן: טבעת התקדמות + מצבי אינטרוול */
+  .ringwrap { position: relative; width: clamp(200px, 64vw, 300px); aspect-ratio: 1; margin: 0 auto; }
+  .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--line); stroke-width: 9; }
+  .ring-fg { fill: none; stroke: var(--ring, var(--work)); stroke-width: 9; stroke-linecap: round;
+             transition: stroke-dashoffset .12s linear, stroke .2s; }
+  .ringctr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .ringsec { font-family: var(--mono); font-weight: 700; font-size: clamp(3.2rem, 18vw, 5rem); line-height: 1; color: var(--ring, var(--work)); }
+  .ringlbl { font-family: var(--disp); font-weight: 700; font-size: 1rem; letter-spacing: .08em; }
+  .phase-work .ringlbl { color: var(--work); }
+  .phase-rest .ringlbl { color: var(--rest); }
+  .nextname { font-size: 1.35rem; font-weight: 700; text-align: center; }
+  .nexttag { color: var(--rest); font-weight: 700; font-size: .85rem; letter-spacing: .06em; }
+  .pausebtn { width: 100%; border-radius: 20px; border: 2px solid var(--line2); background: transparent; color: var(--fg);
+              font-family: var(--disp); font-weight: 700; font-size: 1.4rem; padding: 20px; cursor: pointer; }
+  .pausebtn:active { transform: scale(.985); }
+
   @media (prefers-reduced-motion: reduce) { .fig *, .blink, .animbox { animation: none !important; } }
 </style>
 </head>
@@ -145,6 +164,28 @@
   var MULT = [["pullups", 1], ["dips", 2], ["pushups", 3], ["situps", 4], ["squats", 5]];
   var SEQ = [1,2,3,4,5,6,7,8,9,10,9,8,7,6,5,4,3,2,1];
   var LADDER_TOTAL = 1500;
+
+  // אשף בטן — 7 תרגילים, 45ש' עבודה + 15ש' מנוחה כל אחד = בדיוק 7:00.
+  var ABS_WORK = 45, ABS_REST = 15;
+  var ABS_EX = [
+    { anim: "bicycle",     he: "כפיפות בטן אופניים",  en: "Bicycle Crunches", cue: "מרפק לברך הנגדית, רגליים מדוושות" },
+    { anim: "legraise",    he: "הרמות רגליים",        en: "Lying Leg Raises", cue: "גב תחתון צמוד לרצפה" },
+    { anim: "plank",       he: "פלאנק סטטי",          en: "Plank",            cue: "גוף ישר, בטן נעולה" },
+    { anim: "russiantwist",he: "פיתולים רוסיים",      en: "Russian Twists",   cue: "סובב מצד לצד, רגליים באוויר" },
+    { anim: "climber",     he: "מטפסי הרים",          en: "Mountain Climbers",cue: "ברכיים לחזה בקצב, דופק עולה" },
+    { anim: "heeltouch",   he: "נגיעות בעקבים",       en: "Heel Touches",     cue: "נגיעה חלופית בעקבים" },
+    { anim: "hollow",      he: "גוף חלול (בננה)",     en: "Hollow Body Hold", cue: "שכמות ורגליים מורמות, החזק" }
+  ];
+  // רצף מצבים: לכל תרגיל מנוחה (15ש') ואז עבודה (45ש'). המנוחה מציגה את התרגיל שאחריה.
+  var ABS_PHASES = (function () {
+    var out = [];
+    for (var i = 0; i < ABS_EX.length; i++) {
+      out.push({ type: "rest", i: i, dur: ABS_REST });
+      out.push({ type: "work", i: i, dur: ABS_WORK });
+    }
+    return out;
+  })();
+  var ABS_TOTAL = ABS_EX.length * (ABS_WORK + ABS_REST); // 420
 
   function exName(key, eq) { return EX[key][eq]; }
   function ladderReps(level) { return MULT.map(function (m) { return [m[0], level * m[1]]; }); }
@@ -217,12 +258,52 @@
       B = { H:[84,60], S:[80,68], P:[70,82], K:[52,90], F:[42,100], E:[98,60], D:[102,46] };
       segs = L(A,B,"S","P",d)+L(A,B,"P","K",d)+L(A,B,"K","F",d)+L(A,B,"D","E",d)+L(A,B,"E","S",d);
       head = mc(A.H,B.H,9,d);
-    } else { // situp
+    } else if (type === "situp") {
       env = '<line x1="38" y1="100" x2="112" y2="100" stroke-width="4" opacity=".3"/>';
       A = { H:[50,92], S:[60,96], P:[94,96], K:[72,76], F:[72,100], Hd:[70,94] };
       B = { H:[66,64], S:[74,72], P:[94,96], K:[72,76], F:[72,100], Hd:[80,78] };
       segs = L(A,B,"P","S",d)+L(A,B,"P","K",d)+L(A,B,"K","F",d)+L(A,B,"S","Hd",d);
       head = mc(A.H,B.H,9,d);
+    } else if (type === "bicycle") {
+      env = '<line x1="30" y1="100" x2="150" y2="100" stroke-width="4" opacity=".25"/>';
+      A = { H:[36,80], SH:[46,84], HP:[96,90], HN:[34,78], K1:[74,74], F1:[88,80], K2:[126,92], F2:[148,94] };
+      B = { H:[36,80], SH:[46,84], HP:[96,90], HN:[34,78], K1:[126,90], F1:[148,92], K2:[74,72], F2:[88,78] };
+      segs = L(A,B,"HP","SH",d)+L(A,B,"SH","HN",d)+L(A,B,"HP","K1",d)+L(A,B,"K1","F1",d)+L(A,B,"HP","K2",d)+L(A,B,"K2","F2",d);
+      head = mc(A.H,B.H,8,d);
+    } else if (type === "legraise") {
+      env = '<line x1="20" y1="100" x2="150" y2="100" stroke-width="4" opacity=".25"/>';
+      A = { H:[28,90], SH:[42,94], HP:[96,94], HN:[22,96], F:[140,86] };
+      B = { H:[28,90], SH:[42,94], HP:[96,94], HN:[22,96], F:[98,48] };
+      segs = L(A,B,"SH","HP",d)+L(A,B,"SH","HN",d)+L(A,B,"HP","F",d);
+      head = mc(A.H,B.H,8,d);
+    } else if (type === "plank") {
+      env = '<line x1="22" y1="86" x2="142" y2="86" stroke-width="4" opacity=".25"/>';
+      A = { H:[42,56], SH:[54,60], HP:[94,74], FT:[132,86], EL:[54,80], HN:[74,80] };
+      B = { H:[42,54], SH:[54,58], HP:[94,72], FT:[132,84], EL:[54,80], HN:[74,80] };
+      segs = L(A,B,"SH","HP",d)+L(A,B,"HP","FT",d)+L(A,B,"SH","EL",d)+L(A,B,"EL","HN",d);
+      head = mc(A.H,B.H,8,d);
+    } else if (type === "russiantwist") {
+      A = { H:[80,28], SH:[80,48], HP:[80,70], K1:[64,84], F1:[58,98], K2:[96,84], F2:[102,98], HND:[54,60] };
+      B = { H:[80,28], SH:[80,48], HP:[80,70], K1:[64,84], F1:[58,98], K2:[96,84], F2:[102,98], HND:[106,60] };
+      segs = L(A,B,"SH","HP",d)+L(A,B,"HP","K1",d)+L(A,B,"K1","F1",d)+L(A,B,"HP","K2",d)+L(A,B,"K2","F2",d)+L(A,B,"SH","HND",d);
+      head = mc(A.H,B.H,8,d);
+    } else if (type === "climber") {
+      env = '<line x1="30" y1="92" x2="150" y2="92" stroke-width="4" opacity=".25"/>';
+      A = { H:[46,66], SH:[56,70], HP:[92,78], HN:[48,90], K1:[84,84], F1:[74,90], K2:[118,86], F2:[132,92] };
+      B = { H:[46,66], SH:[56,70], HP:[92,78], HN:[48,90], K1:[118,84], F1:[132,90], K2:[84,82], F2:[74,88] };
+      segs = L(A,B,"SH","HP",d)+L(A,B,"SH","HN",d)+L(A,B,"HP","K1",d)+L(A,B,"K1","F1",d)+L(A,B,"HP","K2",d)+L(A,B,"K2","F2",d);
+      head = mc(A.H,B.H,8,d);
+    } else if (type === "heeltouch") {
+      A = { H:[80,34], SH:[80,46], HP:[80,66], K1:[66,80], F1:[68,98], K2:[94,80], F2:[92,98], HND:[56,88] };
+      B = { H:[80,34], SH:[80,46], HP:[80,66], K1:[66,80], F1:[68,98], K2:[94,80], F2:[92,98], HND:[104,88] };
+      segs = L(A,B,"SH","HP",d)+L(A,B,"HP","K1",d)+L(A,B,"K1","F1",d)+L(A,B,"HP","K2",d)+L(A,B,"K2","F2",d)+L(A,B,"SH","HND",d);
+      head = mc(A.H,B.H,8,d);
+    } else { // hollow
+      env = '<line x1="20" y1="98" x2="150" y2="98" stroke-width="4" opacity=".25"/>';
+      A = { H:[34,70], HND:[16,64], SH:[46,74], HP:[86,88], FT:[134,64] };
+      B = { H:[34,67], HND:[16,60], SH:[46,72], HP:[86,86], FT:[134,60] };
+      segs = L(A,B,"HND","SH",d)+L(A,B,"SH","HP",d)+L(A,B,"HP","FT",d);
+      head = mc(A.H,B.H,8,d);
     }
     return fig(env + segs + head);
   }
@@ -238,6 +319,8 @@
   function saveEquip(eq){try{localStorage.setItem("workout_equipment",eq);}catch(e){}}
   function getMuted(){try{return localStorage.getItem("workout_muted")==="1";}catch(e){return false;}}
   function saveMuted(m){try{localStorage.setItem("workout_muted",m?"1":"0");}catch(e){}}
+  function getAbsDone(){return readNum("workout_abs_done")||0;}
+  function incAbsDone(){var n=getAbsDone()+1;writeNum("workout_abs_done",n);return n;}
 
   // ----- 8-bit audio -----
   var AudioEngine = (function () {
@@ -252,7 +335,13 @@
       round:function(){play([{f:660,d:0.07,p:0.34},{f:880,d:0.07,p:0.34},{f:1318,d:0.12,p:0.34}]);},
       tick:function(s){var f=500+Math.max(0,Math.min(10,s))*40;play([{f:f,d:0.1,p:0.26}]);},
       finish:function(){play([{f:523,d:0.12,p:0.3},{f:659,d:0.12,p:0.3},{f:784,d:0.12,p:0.3},{f:1046,d:0.18,p:0.32},{f:784,d:0.1,p:0.3},{f:1046,d:0.32,p:0.34}]);},
-      gameOver:function(){play([{f:440,d:0.15,w:"triangle",p:0.3},{f:349,d:0.15,w:"triangle",p:0.3},{f:262,d:0.32,w:"triangle",p:0.32}]);}
+      gameOver:function(){play([{f:440,d:0.15,w:"triangle",p:0.3},{f:349,d:0.15,w:"triangle",p:0.3},{f:262,d:0.32,w:"triangle",p:0.32}]);},
+      // אשף בטן: ביפ אזהרה קצר (3 שניות אחרונות של מנוחה)
+      countdown:function(){play([{f:880,d:0.09,p:0.3}]);},
+      // צפצוף ארוך ושונה — תחילת מקטע עבודה
+      segStart:function(){play([{f:660,d:0.1,p:0.32},{f:1175,d:0.4,p:0.36}]);},
+      // צליל רך — תחילת מנוחה
+      restStart:function(){play([{f:520,d:0.22,w:"sine",p:0.26}]);}
     };
   })();
 
@@ -262,11 +351,36 @@
   function releaseWake(){ if(wake){try{wake.release();}catch(e){} wake=null;} }
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible"&&S.running) requestWake(); });
 
+  // ----- קריין (TTS) — אומר את התרגיל ומכריז מנוחה/עבודה -----
+  var heVoice = null;
+  function pickVoice(){
+    try {
+      var vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+      heVoice = vs.filter(function(v){ return /he|iw/i.test(v.lang); })[0] || null;
+    } catch (e) {}
+  }
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    pickVoice();
+    try { speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}
+  }
+  function speak(text){
+    if (AudioEngine.isMuted()) return;           // ההשתקה משתיקה גם את הקריין
+    try {
+      if (!window.speechSynthesis) return;
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "he-IL"; u.rate = 1.02; u.pitch = 1;
+      if (heVoice) u.voice = heVoice;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
   // ----- state -----
   var S = {
     screen:"menu", equip:getEquip(), running:false,
     aPhase:"ready", aRounds:0, aEx:0, endTime:0, finalRounds:0, aPB:false, prevTick:-1,
-    lPhase:"ready", lStep:0, lEx:0, startTime:0, finalMs:0, lPB:false
+    lPhase:"ready", lStep:0, lEx:0, startTime:0, finalMs:0, lPB:false,
+    absPhase:"ready", absP:0, absEnd:0, absBeep:-1, absPaused:false, absLeftAtPause:0
   };
   var timer = null;
   function clearTimer(){ if(timer){clearInterval(timer);timer=null;} }
@@ -280,7 +394,7 @@
     S.running=false; releaseWake(); clearTimer();
     var eq=S.equip;
     var roundDesc = AMRAP_ROUND.map(function(r){return r[1]+" "+exName(r[0],eq)[0];}).join(" · ");
-    var amrapPB=getAmrapPB(), ladderPB=getLadderPB();
+    var amrapPB=getAmrapPB(), ladderPB=getLadderPB(), absDone=getAbsDone();
     app.innerHTML =
       '<div class="row"><div><h1>אימוני כוח</h1><p class="sub">Tom Holland · Calisthenics</p></div>' +
       '<div class="tools">'+musicBtn()+'<button class="icon-btn" id="mute">'+(AudioEngine.isMuted()?"🔇":"🔊")+'</button></div></div>' +
@@ -294,11 +408,16 @@
       '<button class="card pink" id="go-ladder"><div class="row"><span class="title">סולם '+fmtInt(LADDER_TOTAL)+' חזרות</span><span class="muted">Monster</span></div>' +
         '<p class="muted" style="margin:0;font-size:.88rem">רמות 1→10→1 · מתח ×1, מקבילים ×2, שכיבות ×3, בטן ×4, סקוואט ×5</p>' +
         '<p style="margin:0;font-size:.9rem">🏆 שיא: <span class="pb-val num">'+(ladderPB!=null?fmtStop(ladderPB):"—")+'</span></p></button>' +
-      '<p class="muted center" style="font-size:.72rem;margin:0">הסאונד הוא אפקטי 8-ביט על כל לחיצה · למוזיקה רציפה פתח YouTube בטאב מקביל</p>';
+      '<button class="card" id="go-abs" style="border-color:color-mix(in srgb, var(--work) 55%, transparent)">' +
+        '<div class="row"><span class="title" style="color:var(--work)">אימון בטן · 7 דקות</span><span class="muted">Abs</span></div>' +
+        '<p class="muted" style="margin:0;font-size:.88rem">7 תרגילים · 45ש׳ עבודה / 15ש׳ מנוחה · קריין + ביפים · ללא מגע</p>' +
+        (absDone>0 ? '<p style="margin:0;font-size:.9rem">🔥 אימונים שהושלמו: <span class="pb-val num">'+absDone+'</span></p>' : "") + '</button>' +
+      '<p class="muted center" style="font-size:.72rem;margin:0">הסאונד הוא אפקטי 8-ביט + קריין קולי · למוזיקה רציפה פתח YouTube בטאב מקביל</p>';
     document.getElementById("mute").onclick=function(){var m=!AudioEngine.isMuted();AudioEngine.setMuted(m);saveMuted(m);this.innerHTML=m?"🔇":"🔊";};
     Array.prototype.forEach.call(app.querySelectorAll(".seg button"),function(b){b.onclick=function(){S.equip=b.getAttribute("data-eq");saveEquip(S.equip);renderMenu();};});
     document.getElementById("go-amrap").onclick=function(){AudioEngine.unlock();S.screen="amrap";S.aPhase="ready";render();};
     document.getElementById("go-ladder").onclick=function(){AudioEngine.unlock();S.screen="ladder";S.lPhase="ready";render();};
+    document.getElementById("go-abs").onclick=function(){AudioEngine.unlock();S.screen="abs";S.absPhase="ready";render();};
   }
   function topBar(title,sub){ return '<div class="row"><div><h1 style="font-size:1.2rem">'+title+'</h1><p class="sub">'+sub+'</p></div><div class="tools">'+musicBtn()+backRow("to-menu")+'</div></div>'; }
   function wireMenuBtn(){ var b=document.getElementById("to-menu"); if(b) b.onclick=function(){S.screen="menu";render();}; }
@@ -430,18 +549,142 @@
   function tickLadder(){ var sw=document.getElementById("sw"); if(!sw)return; sw.textContent=fmtStop(performance.now()-S.startTime); }
   function finishLadder(){ clearTimer(); S.finalMs=performance.now()-S.startTime; S.lPB=saveLadderPB(S.finalMs); AudioEngine.finish(); S.lPhase="done"; render(); }
 
+  // =================== אשף בטן (אינטרוולים) ===================
+  function renderAbs() {
+    if (S.absPhase === "ready") {
+      S.running=false; releaseWake(); clearTimer();
+      var done=getAbsDone();
+      var list=ABS_EX.map(function(e,idx){
+        return '<li><span class="name">'+(idx+1)+'. '+e.he+'</span><span class="en">'+e.en+'</span></li>';
+      }).join("");
+      app.innerHTML = topBar("אימון בטן · 7 דקות","Abs Circuit") +
+        '<div class="animbox pop" style="color:var(--work)">'+animSVG(ABS_EX[0].anim)+'</div>' +
+        '<section class="panel"><p class="muted" style="margin:0 0 10px">7 תרגילים · 45ש׳ עבודה / 15ש׳ מנוחה · הקריין יכריז הכל, לא צריך להסתכל:</p>' +
+        '<ul class="ex" style="gap:7px">'+list+'</ul></section>' +
+        (done>0 ? '<p class="center" style="font-size:.95rem">🔥 אימונים שהושלמו: <span class="pb-val num">'+done+'</span></p>' : "") +
+        '<button class="mega" id="start" style="background:var(--work);box-shadow:0 0 48px -10px var(--work);color:#0a1f00"><span class="big">התחל ▶</span><span class="small">7:00</span></button>';
+      wireMenuBtn(); document.getElementById("start").onclick=startAbs; return;
+    }
+    if (S.absPhase === "done") {
+      S.running=false; releaseWake(); clearTimer();
+      app.innerHTML = topBar("אימון בטן · 7 דקות","Abs Circuit") +
+        '<div class="grow center">' +
+          '<div style="font-size:3.4rem">🔥</div>' +
+          '<div class="pbflag" style="color:var(--work)">כל הכבוד!</div>' +
+          '<div class="muted">7 דקות בטן הושלמו</div>' +
+          '<div class="muted" style="font-size:.9rem">אימונים שהושלמו: <span class="num" style="color:var(--work)">'+getAbsDone()+'</span></div>' +
+        '</div>' +
+        '<div class="grid2"><button class="done-btn" id="again" style="border:2px solid var(--work);color:var(--work)">שוב ↺</button>' +
+        '<button class="done-btn ghost" id="menu2">← חזרה</button></div>';
+      wireMenuBtn();
+      document.getElementById("again").onclick=function(){S.absPhase="ready";render();};
+      document.getElementById("menu2").onclick=function(){S.screen="menu";render();}; return;
+    }
+    // running
+    S.running=true; requestWake();
+    var ph=ABS_PHASES[S.absP];
+    var ex=ABS_EX[ph.i];
+    var isWork=ph.type==="work";
+    var ringColor=isWork?"var(--work)":"var(--rest)";
+    app.innerHTML =
+      '<div class="row">'+backRow("abandon") +
+        '<div class="center muted" style="font-size:.78rem">תרגיל <span class="num">'+(ph.i+1)+'</span>/'+ABS_EX.length+'</div>' +
+        '<div class="tools">'+musicBtn()+'</div></div>' +
+      '<div class="ringwrap '+(isWork?"phase-work":"phase-rest")+'" style="--ring:'+ringColor+'">' +
+        '<svg class="ring" viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52" pathLength="100"/>' +
+        '<circle class="ring-fg" id="ring" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0"/></svg>' +
+        '<div class="ringctr"><div class="ringsec num" id="secs">'+ph.dur+'</div><div class="ringlbl">'+(isWork?"עבודה":"מנוחה")+'</div></div>' +
+      '</div>' +
+      '<div class="stage" style="flex:none;gap:6px">' +
+        (isWork ? "" : '<div class="nexttag">הבא</div>') +
+        '<div class="animbox pop" style="color:'+ringColor+'">'+animSVG(ex.anim)+'</div>' +
+        '<div class="nextname">'+ex.he+'</div>' +
+        '<div class="ex-en">'+ex.en+' · '+ex.cue+'</div>' +
+      '</div>' +
+      '<button class="pausebtn" id="pause">'+(S.absPaused?"▶ המשך":"⏸ השהה")+'</button>';
+    document.getElementById("abandon").onclick=function(){clearTimer();try{speechSynthesis.cancel();}catch(e){}S.absPaused=false;S.screen="menu";render();};
+    document.getElementById("pause").onclick=toggleAbsPause;
+    absPaint();
+  }
+
+  function startAbs(){
+    AudioEngine.unlock();
+    speak("מתכוננים. התרגיל הראשון: " + ABS_EX[0].he); // תחילת הקריינות בתוך מחוות המשתמש (iOS)
+    S.absP=0; S.absBeep=-1; S.absPaused=false;
+    S.absPhase="running";
+    S.absEnd=performance.now()+ABS_PHASES[0].dur*1000;
+    onAbsPhaseStart(ABS_PHASES[0], true);
+    render();
+    clearTimer(); timer=setInterval(absTick,100);
+  }
+
+  function onAbsPhaseStart(ph, first){
+    var ex=ABS_EX[ph.i];
+    if (ph.type==="rest"){
+      AudioEngine.restStart();
+      if (!first) speak("מנוחה. הבא: " + ex.he);
+    } else {
+      AudioEngine.segStart();
+      speak(ex.he);
+    }
+  }
+
+  function absTick(){
+    if (S.absPaused) return;
+    var rem=S.absEnd-performance.now();
+    if (rem<=0){
+      S.absP++;
+      if (S.absP>=ABS_PHASES.length){ finishAbs(); return; }
+      S.absBeep=-1;
+      S.absEnd=performance.now()+ABS_PHASES[S.absP].dur*1000;
+      onAbsPhaseStart(ABS_PHASES[S.absP], false);
+      render();
+      return;
+    }
+    absPaint();
+    var ph=ABS_PHASES[S.absP];
+    var sec=Math.ceil(rem/1000);
+    // 3 ביפי אזהרה בשניות האחרונות של המנוחה
+    if (ph.type==="rest" && sec<=3 && sec>=1 && sec!==S.absBeep){ S.absBeep=sec; AudioEngine.countdown(); }
+  }
+
+  function absPaint(){
+    var ph=ABS_PHASES[S.absP];
+    var rem=Math.max(0,S.absEnd-performance.now());
+    var secsEl=document.getElementById("secs");
+    var ring=document.getElementById("ring");
+    if (secsEl) secsEl.textContent=Math.ceil(rem/1000);
+    if (ring){ var frac=1-(rem/(ph.dur*1000)); if(frac<0)frac=0; if(frac>1)frac=1; ring.setAttribute("stroke-dashoffset",(frac*100).toFixed(2)); }
+  }
+
+  function toggleAbsPause(){
+    if (!S.absPaused){
+      S.absPaused=true;
+      S.absLeftAtPause=S.absEnd-performance.now();
+      try{speechSynthesis.cancel();}catch(e){}
+    } else {
+      S.absPaused=false;
+      S.absEnd=performance.now()+Math.max(0,S.absLeftAtPause);
+    }
+    var b=document.getElementById("pause"); if(b) b.textContent=S.absPaused?"▶ המשך":"⏸ השהה";
+  }
+
+  function finishAbs(){
+    clearTimer(); S.running=false; releaseWake();
+    incAbsDone();
+    AudioEngine.finish();
+    speak("סיימת! כל הכבוד.");
+    S.absPhase="done"; render();
+  }
+
   // ----- router -----
-  function render(){ if(S.screen==="menu")renderMenu(); else if(S.screen==="amrap")renderAmrap(); else if(S.screen==="ladder")renderLadder(); }
+  function render(){ if(S.screen==="menu")renderMenu(); else if(S.screen==="amrap")renderAmrap(); else if(S.screen==="ladder")renderLadder(); else if(S.screen==="abs")renderAbs(); }
   AudioEngine.setMuted(getMuted());
   render();
 })();
 </script>
 <script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
-  });
-}
+if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
 </script>
 </body>
 </html>
